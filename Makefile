@@ -17,7 +17,7 @@ libhangouts.dll: libhangouts.c hangouts.pb-c.c
 	$(CC) -shared -o $@ hangouts.pb-c.c libhangouts.c $(CFLAGS) $(LDFLAGS)
 	
 libhangouts.exe: libhangouts.c hangouts.pb-c.c
-	$(CC) -o $@ libhangouts.c hangouts.pb-c.c $(CFLAGS) $(LDFLAGS)
+	$(CC) -o $@ -DDEBUG libhangouts.c hangouts.pb-c.c $(CFLAGS) $(LDFLAGS)
 
 all: libhangouts.dll
 

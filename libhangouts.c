@@ -99,7 +99,7 @@ JsonArray *pblite_encode(ProtobufCMessage *message);
 #define STRUCT_MEMBER(member_type, struct_p, struct_offset) \
     (*(member_type *) STRUCT_MEMBER_P((struct_p), (struct_offset)))
 
-void
+gboolean
 pblite_decode_field(const ProtobufCFieldDescriptor *field, JsonNode *value, gpointer member)
 {
 	
@@ -111,11 +111,11 @@ pblite_decode_field(const ProtobufCFieldDescriptor *field, JsonNode *value, gpoi
 		case PROTOBUF_C_TYPE_FLOAT:
 		case PROTOBUF_C_TYPE_ENUM:
 			*(uint32_t *) member = json_node_get_int(value);
-			break;
+			return TRUE;
 			
 		case PROTOBUF_C_TYPE_SINT32:
 			*(int32_t *) member = json_node_get_int(value);
-			break;
+			return TRUE;
 	
 		case PROTOBUF_C_TYPE_INT64:
 		case PROTOBUF_C_TYPE_UINT64:
@@ -123,15 +123,15 @@ pblite_decode_field(const ProtobufCFieldDescriptor *field, JsonNode *value, gpoi
 		case PROTOBUF_C_TYPE_FIXED64:
 		case PROTOBUF_C_TYPE_DOUBLE:
 			*(uint64_t *) member = json_node_get_int(value);
-			break;
+			return TRUE;
 		
 		case PROTOBUF_C_TYPE_SINT64:
 			*(int64_t *) member = json_node_get_int(value);
-			break;
+			return TRUE;
 		
 		case PROTOBUF_C_TYPE_BOOL:
 			*(protobuf_c_boolean *) member = json_node_get_int(value);
-			break;
+			return TRUE;
 			
 		case PROTOBUF_C_TYPE_STRING: {
 			char **pstr = member;
@@ -142,8 +142,8 @@ pblite_decode_field(const ProtobufCFieldDescriptor *field, JsonNode *value, gpoi
 				// if (*pstr != NULL && *pstr != def)
 					// do_free(allocator, *pstr);
 			// }
-			*pstr = g_strdup(json_node_get_string(value));			
-			break;
+			*pstr = g_strdup(json_node_get_string(value));
+			return TRUE;
 		}
 		case PROTOBUF_C_TYPE_BYTES: {
 			ProtobufCBinaryData *bd = member;
@@ -157,8 +157,7 @@ pblite_decode_field(const ProtobufCFieldDescriptor *field, JsonNode *value, gpoi
 				// do_free(allocator, bd->data);
 			// }
 			bd->data = g_base64_decode(json_node_get_string(value), &bd->len);
-		
-			break;
+			return TRUE;
 		}
 		
 		case PROTOBUF_C_TYPE_MESSAGE: {
@@ -185,8 +184,12 @@ pblite_decode_field(const ProtobufCFieldDescriptor *field, JsonNode *value, gpoi
 			}
 #endif
 			
-			pblite_decode(*pmessage, json_node_get_array(value), FALSE);
-			break;
+			return pblite_decode(*pmessage, json_node_get_array(value), FALSE);
+		}
+		
+		default: {
+			//todo glib fail thing
+			return FALSE;
 		}
 	}
 }
@@ -272,12 +275,68 @@ pblite_encode_field(const ProtobufCFieldDescriptor *field, gpointer value)
 	return node;
 }
 
+static gboolean
+pblite_decode_element(ProtobufCMessage *message, guint index, JsonNode *value)
+{
+	const ProtobufCFieldDescriptor *field;
+	gboolean success = TRUE;
+	
+	if (JSON_NODE_HOLDS_NULL(value)) {
+#ifdef DEBUG
+		printf("pblite_decode_element field %d skipped\n", index);
+#endif
+		return TRUE;
+	}
+	
+#ifdef DEBUG
+	printf("pblite_decode_element field %d ", index);
+#endif
+	field = protobuf_c_message_descriptor_get_field(message->descriptor, index + 1);
+	if (!field) {
+#ifdef DEBUG
+	printf("skipped\n");
+#endif
+		return TRUE;
+	}
+#ifdef DEBUG
+	printf("is %s\n", field->name);
+#endif
+		
+	if (field->label == PROTOBUF_C_LABEL_REPEATED) {
+		JsonArray *value_array = json_node_get_array(value);
+		guint j;
+		size_t siz;
+		size_t array_len;
+		
+		array_len = json_array_get_length(value_array);
+#ifdef DEBUG
+		printf(" which is an array of length %d\n", array_len);
+#endif
+		
+		//see protobuf-c.c:3068
+		siz = sizeof_elt_in_repeated_array(field->type);
+		STRUCT_MEMBER(size_t, message, field->quantifier_offset) = array_len;
+		STRUCT_MEMBER(void *, message, field->offset) = g_malloc0(siz * array_len);
+		
+		for (j = 0; j < array_len; j++) {
+			success = pblite_decode_field(field, json_array_get_element(value_array, j), STRUCT_MEMBER_P(message, field->offset + siz * j));
+			g_return_val_if_fail(success, FALSE);
+		}
+	} else {
+		success = pblite_decode_field(field, value, STRUCT_MEMBER_P(message, field->offset));
+		g_return_val_if_fail(success, FALSE);
+	}
+	
+	return TRUE;
+}
+
 gboolean
 pblite_decode(ProtobufCMessage *message, JsonArray *pblite_array, gboolean ignore_first_item)
 {
 	const ProtobufCMessageDescriptor *descriptor = message->descriptor;
 	guint i, len;
 	guint offset = (ignore_first_item ? 1 : 0);
+	gboolean last_element_is_object = FALSE;
 	
 	g_return_val_if_fail(descriptor, FALSE);
 	
@@ -287,55 +346,34 @@ pblite_decode(ProtobufCMessage *message, JsonArray *pblite_array, gboolean ignor
 	
 	if (JSON_NODE_HOLDS_OBJECT(json_array_get_element(pblite_array, len - 1))) {
 		printf("ZOMG the last element is an object\n");
-		exit(-1);
+		last_element_is_object = TRUE;
+		len = len - 1;
+		//exit(-1);
 	}
 #endif
 	
-	for (i = offset; i < len; i ++) {
+	for (i = offset; i < len; i++) {
 		//stuff
 		JsonNode *value = json_array_get_element(pblite_array, i);
-		const ProtobufCFieldDescriptor *field;
+		gboolean success = pblite_decode_element(message, i - offset, value);
 		
-		if (JSON_NODE_HOLDS_NULL(value)) {
-#ifdef DEBUG
-			printf("pblite_decode field %d skipped\n", i - offset);
-#endif
-			continue;
-		}
-		
-		//g_return_val_if_fail(i - offset < descriptor->n_fields, FALSE);
-		//field = descriptor->fields[i - offset];
-		field = protobuf_c_message_descriptor_get_field(descriptor, i - offset + 1);
-		g_return_val_if_fail(field, FALSE);
-#ifdef DEBUG
-		printf("pblite_decode field %d is %s\n", i - offset, field->name);
-#endif
-		
-		if (field->label == PROTOBUF_C_LABEL_REPEATED) {
-			JsonArray *value_array = json_node_get_array(value);
-			guint j, array_len;
-			size_t siz;
-			size_t *n_ptr;
-			
-			array_len = json_array_get_length(value_array);
-#ifdef DEBUG
-			printf(" which is an array of length %d\n", array_len);
-#endif
-			
-			//see protobuf-c.c:3068
-			siz = sizeof_elt_in_repeated_array(field->type);
-			n_ptr = STRUCT_MEMBER_PTR(size_t, message, field->quantifier_offset);
-			*n_ptr = array_len;
-			STRUCT_MEMBER(void *, message, field->offset) = g_malloc0(siz * array_len);
-			for (j = 0; j < array_len; j++) {
-				pblite_decode_field(field, json_array_get_element(value_array, j), STRUCT_MEMBER_P(message, field->offset + siz * j));
-			}
-		} else {
-			pblite_decode_field(field, value, STRUCT_MEMBER_P(message, field->offset));
-		}
+		g_return_val_if_fail(success, FALSE);
 	}
 	
-	//TODO repeate the array loop with an object loop, if the last element of the array is an object
+	//Continue on the array with the objects
+	if (last_element_is_object) {
+		JsonObject *last_object = json_array_get_object_element(pblite_array, len);
+		GList *members = json_object_get_members(last_object);
+		for (; members != NULL; members = members->next) {
+			const gchar *member_name = members->data;
+			guint64 member = g_ascii_strtoull(member_name, NULL, 0);
+			JsonNode *value = json_object_get_member(last_object, member_name);
+			
+			gboolean success = pblite_decode_element(message, member - offset, value);
+		
+			g_return_val_if_fail(success, FALSE);
+		}
+	}
 	
 	return TRUE;
 }
@@ -345,11 +383,12 @@ pblite_encode(ProtobufCMessage *message)
 {
 	//Maiku asked for more dinosaurs
 	JsonArray *pblite = json_array_new();
+	JsonObject *cheats_object = json_object_new();
 	const ProtobufCMessageDescriptor *descriptor = message->descriptor;
 	guint i;
 	
+	json_array_add_object_element(pblite, cheats_object);
 	for (i = 0; i < descriptor->n_fields; i++) {
-		//const ProtobufCFieldDescriptor field_descriptor = descriptor->fields[i];
 		const ProtobufCFieldDescriptor *field_descriptor = descriptor->fields + i;
 		void *field = STRUCT_MEMBER_P(message, field_descriptor->offset);
 		JsonNode *encoded_value;
@@ -357,14 +396,14 @@ pblite_encode(ProtobufCMessage *message)
 		if (field_descriptor->label == PROTOBUF_C_LABEL_REPEATED) {
 			guint j;
 			size_t siz;
-			size_t *n_ptr;
+			size_t array_len;
 			JsonArray *value_array;
 			
 			siz = sizeof_elt_in_repeated_array(field_descriptor->type);
-			n_ptr = STRUCT_MEMBER_PTR(size_t, message, field_descriptor->quantifier_offset);
+			array_len = STRUCT_MEMBER(size_t, message, field_descriptor->quantifier_offset);
 			
 			value_array = json_array_new();
-			for (j = 0; j < *n_ptr; j++) {
+			for (j = 0; j < array_len; j++) {
 				field = STRUCT_MEMBER_P(message, field_descriptor->offset + siz * j);
 				json_array_add_element(value_array, pblite_encode_field(field_descriptor, field));
 			}
@@ -375,7 +414,13 @@ pblite_encode(ProtobufCMessage *message)
 		}
 		
 		//need to insert at point [field_descriptor->id - 1] of the array, somehow
-		json_array_add_element(pblite, encoded_value);
+		//json_array_add_element(pblite, encoded_value);
+		//... so dont, just cheat!
+		{
+			gchar *obj_id = g_strdup_printf("%ud", field_descriptor->id - 1);
+			json_object_add_member(cheats_object, obj_id, encoded_value);
+			g_free(obj_id);
+		}
 	}
 	
 	return pblite;
@@ -479,10 +524,17 @@ json_decode(const gchar *data, gssize len)
 static void
 hangouts_process_data_chunks(const gchar *data, gsize len)
 {
+	JsonNode *root;
 	JsonArray *chunks;
 	guint i, num_chunks;
 	
-	chunks = json_node_get_array(json_decode(data, len));
+	root = json_decode(data, len);
+	if (!JSON_NODE_HOLDS_ARRAY(root)) {
+		// That ain't my belly button
+		json_node_free(root);
+		return;
+	}
+	chunks = json_node_get_array(root);
 	
 	for (i = 0, num_chunks = json_array_get_length(chunks); i < num_chunks; i++) {
 		JsonArray *chunk;
@@ -503,7 +555,8 @@ hangouts_process_data_chunks(const gchar *data, gsize len)
 			}
 		} else {
 			const gchar *p = json_object_get_string_member(json_node_get_object(array0), "p");
-			JsonObject *wrapper = json_node_get_object(json_decode(p, -1));
+			JsonNode *p_node = json_decode(p, -1);
+			JsonObject *wrapper = json_node_get_object(p_node);
 			
 			if (json_object_has_member(wrapper, "3")) {
 				const gchar *new_client_id = json_object_get_string_member(json_object_get_object_member(wrapper, "3"), "2");
@@ -511,7 +564,19 @@ hangouts_process_data_chunks(const gchar *data, gsize len)
 			}
 			if (json_object_has_member(wrapper, "2")) {
 				const gchar *wrapper22 = json_object_get_string_member(json_object_get_object_member(wrapper, "2"), "2");
-				JsonArray *pblite_message = json_node_get_array(json_decode(wrapper22, -1));
+				JsonNode *wrapper22_node = json_decode(wrapper22, -1);
+				JsonArray *pblite_message;
+
+				if (!JSON_NODE_HOLDS_ARRAY(wrapper22_node)) {
+					// That ain't my thumb, neither!
+#ifdef DEBUG
+					printf("bad wrapper22 %s\n", wrapper22);
+#endif
+					json_node_free(wrapper22_node);
+					json_node_free(p_node);
+					continue;
+				}
+				pblite_message = json_node_get_array(wrapper22_node);
 				
 				if (g_strcmp0(json_array_get_string_element(pblite_message, 0), "cbu") == 0) {
 					BatchUpdate batch_update = BATCH_UPDATE__INIT;
@@ -519,14 +584,14 @@ hangouts_process_data_chunks(const gchar *data, gsize len)
 					pblite_decode((ProtobufCMessage *) &batch_update, pblite_message, TRUE);
 				}
 				
-				json_array_unref(pblite_message);
+				json_node_free(wrapper22_node);
 			}
 			
-			json_object_unref(wrapper);
+			json_node_free(p_node);
 		}
 	}
 	
-	json_array_unref(chunks);
+	json_node_free(root);
 }
 
 static int

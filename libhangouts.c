@@ -37,6 +37,7 @@
 #define JSON_NODE_HOLDS_NULL(node)   (JSON_NODE_HOLDS ((node), JSON_NODE_NULL))
 #endif
 
+gchar *json_encode(JsonNode *node, gsize *len);
 
 /**
  * Given a field type, return the in-memory size.
@@ -267,7 +268,9 @@ pblite_encode_field(const ProtobufCFieldDescriptor *field, gpointer value)
 			ProtobufCMessage **pmessage = value;
 			
 			node = json_node_new(JSON_NODE_ARRAY);
-			json_node_take_array(node, pblite_encode(*pmessage));
+			if (pmessage != NULL) {
+				json_node_take_array(node, pblite_encode(*pmessage));
+			}
 			break;
 		}
 	}
@@ -280,13 +283,6 @@ pblite_decode_element(ProtobufCMessage *message, guint index, JsonNode *value)
 {
 	const ProtobufCFieldDescriptor *field;
 	gboolean success = TRUE;
-	
-	if (JSON_NODE_HOLDS_NULL(value)) {
-#ifdef DEBUG
-		printf("pblite_decode_element field %d skipped\n", index);
-#endif
-		return TRUE;
-	}
 	
 #ifdef DEBUG
 	printf("pblite_decode_element field %d ", index);
@@ -301,6 +297,16 @@ pblite_decode_element(ProtobufCMessage *message, guint index, JsonNode *value)
 #ifdef DEBUG
 	printf("is %s\n", field->name);
 #endif
+	
+	if (JSON_NODE_HOLDS_NULL(value)) {
+#ifdef DEBUG
+		printf("pblite_decode_element field %d skipped\n", index);
+#endif
+		if (field->default_value != NULL) {
+			*(const void **) STRUCT_MEMBER(void *, message, field->offset) = field->default_value;
+		}
+		return TRUE;
+	}
 		
 	if (field->label == PROTOBUF_C_LABEL_REPEATED) {
 		JsonArray *value_array = json_node_get_array(value);
@@ -319,7 +325,12 @@ pblite_decode_element(ProtobufCMessage *message, guint index, JsonNode *value)
 		STRUCT_MEMBER(void *, message, field->offset) = g_malloc0(siz * array_len);
 		
 		for (j = 0; j < array_len; j++) {
-			success = pblite_decode_field(field, json_array_get_element(value_array, j), STRUCT_MEMBER_P(message, field->offset + siz * j));
+#ifdef DEBUG
+			if (JSON_NODE_HOLDS_NULL(json_array_get_element(value_array, j))) {
+				printf("array %d contains null\n", j);
+			}
+#endif
+			success = pblite_decode_field(field, json_array_get_element(value_array, j), STRUCT_MEMBER(void *, message, field->offset) + (siz * j));
 			g_return_val_if_fail(success, FALSE);
 		}
 	} else {
@@ -386,12 +397,22 @@ pblite_encode(ProtobufCMessage *message)
 	JsonObject *cheats_object = json_object_new();
 	const ProtobufCMessageDescriptor *descriptor = message->descriptor;
 	guint i;
+#ifdef DEBUG
+	printf("pblite_encode of %s with length %d\n", descriptor->name, descriptor->n_fields);
+#endif
 	
 	json_array_add_object_element(pblite, cheats_object);
 	for (i = 0; i < descriptor->n_fields; i++) {
 		const ProtobufCFieldDescriptor *field_descriptor = descriptor->fields + i;
 		void *field = STRUCT_MEMBER_P(message, field_descriptor->offset);
-		JsonNode *encoded_value;
+		JsonNode *encoded_value = NULL;
+		
+#ifdef DEBUG
+		printf("pblite_encode_element field %d (%d) ", i, field_descriptor->id);
+#endif
+#ifdef DEBUG
+		printf("is %s\n", field_descriptor->name);
+#endif
 		
 		if (field_descriptor->label == PROTOBUF_C_LABEL_REPEATED) {
 			guint j;
@@ -402,22 +423,41 @@ pblite_encode(ProtobufCMessage *message)
 			siz = sizeof_elt_in_repeated_array(field_descriptor->type);
 			array_len = STRUCT_MEMBER(size_t, message, field_descriptor->quantifier_offset);
 			
+#ifdef DEBUG
+			printf(" which is an array of length %d\n", array_len);
+#endif
+			
 			value_array = json_array_new();
 			for (j = 0; j < array_len; j++) {
-				field = STRUCT_MEMBER_P(message, field_descriptor->offset + siz * j);
+				field = STRUCT_MEMBER(void *, message, field_descriptor->offset) + (siz * j);
 				json_array_add_element(value_array, pblite_encode_field(field_descriptor, field));
 			}
 			encoded_value = json_node_new(JSON_NODE_ARRAY);
 			json_node_take_array(encoded_value, value_array);
 		} else {
-			encoded_value = pblite_encode_field(field_descriptor, field);
+			if (field_descriptor->label == PROTOBUF_C_LABEL_OPTIONAL) {
+				if (field_descriptor->type == PROTOBUF_C_TYPE_MESSAGE || 
+				    field_descriptor->type == PROTOBUF_C_TYPE_STRING)
+				{
+					const void *ptr = *(const void * const *) field;
+					if (ptr == NULL || ptr == field_descriptor->default_value)
+						encoded_value = json_node_new(JSON_NODE_NULL);
+				} else {
+					const protobuf_c_boolean *val = field;
+					if (!*val)
+						encoded_value = json_node_new(JSON_NODE_NULL);
+				}
+			}
+			if (encoded_value == NULL) {
+				encoded_value = pblite_encode_field(field_descriptor, field);
+			}
 		}
 		
 		//need to insert at point [field_descriptor->id - 1] of the array, somehow
 		//json_array_add_element(pblite, encoded_value);
 		//... so dont, just cheat!
-		{
-			gchar *obj_id = g_strdup_printf("%ud", field_descriptor->id - 1);
+		if (!JSON_NODE_HOLDS_NULL(encoded_value)) {
+			gchar *obj_id = g_strdup_printf("%u", field_descriptor->id - 1);
 			json_object_add_member(cheats_object, obj_id, encoded_value);
 			g_free(obj_id);
 		}
@@ -485,6 +525,21 @@ static PurplePluginInfo info =
 typedef struct {
 	long long a;
 } Test;
+
+gchar *
+json_encode(JsonNode *node, gsize *len)
+{
+	gchar *data;
+	JsonGenerator *generator = json_generator_new();
+	
+	json_generator_set_root(generator, node);
+	
+	data = json_generator_to_data(generator, len);
+	
+	g_object_unref(generator);
+	
+	return data;
+}
 
 static JsonNode *
 json_decode(const gchar *data, gssize len)
@@ -581,7 +636,31 @@ hangouts_process_data_chunks(const gchar *data, gsize len)
 				if (g_strcmp0(json_array_get_string_element(pblite_message, 0), "cbu") == 0) {
 					BatchUpdate batch_update = BATCH_UPDATE__INIT;
 					
+#ifdef DEBUG
+					printf("----------------------\n");
+#endif
 					pblite_decode((ProtobufCMessage *) &batch_update, pblite_message, TRUE);
+#ifdef DEBUG
+					printf("======================\n");
+					printf("Is valid? %s\n", protobuf_c_message_check((ProtobufCMessage *) &batch_update) ? "Yes" : "No");
+					printf("======================\n");
+					JsonArray *debug = pblite_encode((ProtobufCMessage *) &batch_update);
+					JsonNode *node = json_node_new(JSON_NODE_ARRAY);
+					json_node_take_array(node, debug);
+					gchar *json = json_encode(node, NULL);
+					printf("Old: %s\nNew: %s\n", wrapper22, json);
+					
+					
+					pblite_decode((ProtobufCMessage *) &batch_update, debug, TRUE);
+					debug = pblite_encode((ProtobufCMessage *) &batch_update);
+					json_node_take_array(node, debug);
+					gchar *json2 = json_encode(node, NULL);
+					printf("Mine1: %s\nMine2: %s\n", json, json2);
+					
+					g_free(json);
+					g_free(json2);
+					printf("----------------------\n");
+#endif
 				}
 				
 				json_node_free(wrapper22_node);

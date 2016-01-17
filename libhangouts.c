@@ -7,14 +7,81 @@
 
 #include "debug.h"
 #include "plugin.h"
+#include "request.h"
 #include "version.h"
 #ifdef _WIN32
 #include "win32/win32dep.h"
 #endif
 
+#include "hangouts_auth.h"
 #include "hangouts_pblite.h"
 #include "hangouts_json.h"
 #include "hangouts.pb-c.h"
+
+
+/*****************************************************************************/
+//TODO move to nicer place
+
+
+
+static void
+hangouts_authcode_input_cb(gpointer user_data, const gchar *auth_code)
+{
+	HangoutsAccount *ha = user_data;
+	PurpleConnection *pc = ha->pc;
+
+	purple_connection_update_progress(pc, _("Authenticating"), 1, 3);
+	hangouts_oauth_with_code(ha, auth_code);
+}
+
+static void
+hangouts_authcode_input_cancel_cb(gpointer user_data)
+{
+	HangoutsAccount *ha = user_data;
+	purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_AUTHENTICATION_IMPOSSIBLE, 
+		_("User cancelled authorization"));
+}
+
+static void
+hangouts_login(PurpleAccount *account)
+{
+	PurpleConnection *pc;
+	HangoutsAccount *ha; //hahaha
+	const gchar *password;
+
+	pc = purple_account_get_connection(account);
+	password = purple_connection_get_password(pc);
+	
+	ha = g_new0(HangoutsAccount, 1);
+	ha->account = account;
+	ha->pc = pc;
+	ha->cookie_jar = purple_http_cookie_jar_new();
+	
+	purple_connection_set_protocol_data(pc, ha);
+	
+	if (password && *password) {
+		ha->refresh_token = g_strdup(password);
+		purple_connection_update_progress(pc, _("Authenticating"), 1, 3);
+		hangouts_oauth_refresh_token(ha);
+	} else {
+		//TODO get this code automatically
+		purple_notify_uri(pc, MINIFIED_OAUTH_URL);
+		purple_request_input(pc, _("Authorization Code"), NULL,
+			_ ("Please paste the Google OAuth code here"),
+			NULL, FALSE, FALSE, NULL, 
+			_("OK"), G_CALLBACK(hangouts_authcode_input_cb), 
+			_("Cancel"), G_CALLBACK(hangouts_authcode_input_cancel_cb), 
+			purple_request_cpar_from_connection(pc), ha);
+	}
+}
+
+
+
+
+
+
+
+/*****************************************************************************/
 
 static gboolean
 plugin_load(PurplePlugin *plugin)
@@ -71,6 +138,24 @@ static PurplePluginInfo info =
 static void
 init_plugin(PurplePlugin *plugin)
 {
+	PurplePluginInfo *info;
+	PurplePluginProtocolInfo *prpl_info = g_new0(PurplePluginProtocolInfo, 1);
+	
+	info = plugin->info;
+	if (info == NULL) {
+		plugin->info = info = g_new0(PurplePluginInfo, 1);
+	}
+	
+	prpl_info->login = hangouts_login;
+	
+	info->extra_info = prpl_info;
+	#if PURPLE_MINOR_VERSION >= 5
+		prpl_info->struct_size = sizeof(PurplePluginProtocolInfo);
+	#endif
+	#if PURPLE_MINOR_VERSION >= 8
+		//prpl_info->add_buddy_with_invite = skypeweb_add_buddy_with_invite;
+	#endif
+	
 }
 	
 

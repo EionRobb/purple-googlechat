@@ -8,9 +8,6 @@
 #	define PURPLE_PLUGINS
 #endif
 
-#include "hangouts_json.h"
-#include "hangouts_pblite.h"
-#include "hangouts_connection.h"
 #include "http.h"
 
 #define HANGOUTS_PLUGIN_ID "prpl-hangouts"
@@ -39,6 +36,11 @@ typedef struct {
 	gchar *refresh_token;
 	gchar *access_token;
 } HangoutsAccount;
+
+
+#include "hangouts_json.h"
+#include "hangouts_pblite.h"
+#include "hangouts_connection.h"
 
 
 #define purple_request_cpar_from_connection(a)  purple_connection_get_account(a), NULL, NULL

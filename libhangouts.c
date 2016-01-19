@@ -56,6 +56,8 @@ hangouts_login(PurpleAccount *account)
 	ha->account = account;
 	ha->pc = pc;
 	ha->cookie_jar = purple_http_cookie_jar_new();
+	ha->channel_buffer = purple_circular_buffer_new(0);
+	ha->channel_keepalive_pool = purple_http_keepalive_pool_new();
 	
 	purple_connection_set_protocol_data(pc, ha);
 	
@@ -73,6 +75,23 @@ hangouts_login(PurpleAccount *account)
 			_("Cancel"), G_CALLBACK(hangouts_authcode_input_cancel_cb), 
 			purple_request_cpar_from_connection(pc), ha);
 	}
+}
+
+static void
+hangouts_close(PurpleConnection *pc)
+{
+	HangoutsAccount *ha; //not so funny anymore
+	
+	ha = purple_connection_get_protocol_data(pc);
+	
+	purple_http_keepalive_pool_unref(ha->channel_keepalive_pool);
+	g_free(ha->refresh_token);
+	g_free(ha->access_token);
+	g_free(ha->gsessionid_param);
+	g_free(ha->sid_param);
+	purple_http_cookie_jar_unref(ha->cookie_jar);
+	purple_circular_buffer_destroy(ha->channel_buffer);
+	g_free(ha);
 }
 
 
@@ -147,6 +166,7 @@ init_plugin(PurplePlugin *plugin)
 	}
 	
 	prpl_info->login = hangouts_login;
+	prpl_info->close = hangouts_close;
 	
 	info->extra_info = prpl_info;
 	#if PURPLE_MINOR_VERSION >= 5

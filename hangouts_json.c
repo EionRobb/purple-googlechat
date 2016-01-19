@@ -91,3 +91,68 @@ json_decode_object(const gchar *data, gssize len)
 	
 	return json_node_get_object(root);
 }
+
+
+JsonNode *
+hangouts_json_path_query(JsonNode *root, const gchar *expr, GError **error)
+{
+	JsonNode *ret;
+	JsonNode *node;
+	JsonArray *result;
+
+	if (g_str_equal(expr, "$")) {
+		return root;
+	}
+	
+	node = json_path_query(expr, root, error);
+
+	if (error != NULL)
+	{
+		json_node_free(node);
+		return NULL;
+	}
+
+	result = json_node_get_array(node);
+
+	ret = json_array_dup_element(result, 0);
+	json_node_free(node);
+	return ret;
+
+}
+
+gchar *
+hangouts_json_path_query_string(JsonNode *root, const gchar *expr, GError **error)
+{
+	gchar *ret;
+	JsonNode *rslt;
+
+	rslt = hangouts_json_path_query(root, expr, error);
+
+	if (rslt == NULL)
+	{
+		return NULL;
+	}
+
+	ret = g_strdup(json_node_get_string(rslt));
+	json_node_free(rslt);
+	return ret;
+}
+
+gint64
+hangouts_json_path_query_int(JsonNode *root, const gchar *expr, GError **error)
+{
+	gint64 ret;
+	JsonNode *rslt;
+
+	rslt = hangouts_json_path_query(root, expr, error);
+
+	if (rslt == NULL)
+	{
+		return 0;
+	}
+
+	ret = json_node_get_int(rslt);
+	json_node_free(rslt);
+	return ret;
+}
+

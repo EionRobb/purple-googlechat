@@ -160,6 +160,228 @@ hangouts_process_channel(int fd)
 	}
 }
 
+void
+hangouts_process_channel_buffer(HangoutsAccount *ha)
+{
+	const gchar *bufdata;
+	gsize remaining;
+	gchar *len_end;
+	gchar *len_str;
+	guint64 len;
+	
+	g_return_if_fail(ha);
+	g_return_if_fail(ha->channel_buffer);
+	
+	do {
+		bufdata = purple_circular_buffer_get_output(ha->channel_buffer);
+		remaining = purple_circular_buffer_get_max_read(ha->channel_buffer);
+		
+		len_end = g_strstr_len(bufdata, remaining, "\n");
+		if (len_end == NULL) {
+			// Not enough data to read
+			return;
+		}
+		len_str = g_strndup(bufdata, len_end - bufdata);
+		len = g_ascii_strtoull(len_str, NULL, 10);
+		g_free(len_str);
+		
+		bufdata = len_end + 1;
+		remaining = remaining - (len_end - bufdata) - 1;
+		
+		if (len > remaining) {
+			// Not enough data to read
+			return;
+		}
+		
+		hangouts_process_data_chunks(bufdata, len);
+		
+		purple_circ_buffer_mark_read(ha->channel_buffer, len);
+		remaining = purple_circular_buffer_get_max_read(ha->channel_buffer);
+		
+	} while (remaining);
+}
+
+static void
+hangouts_set_auth_headers(HangoutsAccount *ha, PurpleHttpRequest *request)
+{
+	gint64 mstime;
+	gchar *mstime_str;
+	GTimeVal time;
+	PurpleCipherContext *sha1_ctx;
+	gchar sha1[41];
+	const gchar *sapisid_cookie;
+	
+	g_get_current_time(&time);
+	mstime = time.tv_sec * 1000 + time.tv_usec / 1000;
+	mstime_str = g_strdup_printf("%" G_GINT64_FORMAT, mstime);
+	sapisid_cookie = purple_http_cookie_jar_get(ha->cookie_jar, "SAPISID");
+	
+	sha1_ctx = purple_cipher_context_new(purple_ciphers_find_cipher("sha1"), NULL);
+    purple_cipher_context_append(sha1_ctx, (guchar *) mstime_str, strlen(mstime_str));
+    purple_cipher_context_append(sha1_ctx, (guchar *) " ", 1);
+    purple_cipher_context_append(sha1_ctx, (guchar *) sapisid_cookie, strlen(sapisid_cookie));
+    purple_cipher_context_append(sha1_ctx, (guchar *) " ", 1);
+    purple_cipher_context_append(sha1_ctx, (guchar *) HANGOUTS_PBLITE_XORIGIN_URL, strlen(HANGOUTS_PBLITE_XORIGIN_URL));
+    purple_cipher_context_digest_to_str(sha1_ctx, 40, sha1, NULL);
+	sha1[40] = '\0';
+    purple_cipher_context_destroy(sha1_ctx);
+	
+	purple_http_request_header_set_printf(request, "Authorization", "SAPISIDHASH %s_%s", mstime_str, sha1);
+	purple_http_request_header_set(request, "X-Origin", HANGOUTS_PBLITE_XORIGIN_URL);
+	purple_http_request_header_set(request, "X-Goog-AuthUser", "0");
+}
+
+
+static gboolean
+hangouts_longpoll_request_content(PurpleHttpConnection *http_conn, PurpleHttpResponse *response, const gchar *buffer, size_t offset, size_t length, gpointer user_data)
+{
+	HangoutsAccount *ha = user_data;
+	
+	purple_circular_buffer_append(ha->channel_buffer, buffer, length);
+	
+	hangouts_process_channel_buffer(ha);
+	
+	return TRUE;
+}
+
+void
+hangouts_longpoll_request(HangoutsAccount *ha)
+{
+	PurpleHttpRequest *request;
+	GString *url;
+
+	
+	url = g_string_new(HANGOUTS_CHANNEL_URL_PREFIX "channel/bind" "?");
+	g_string_append(url, "VER=8&");           // channel protocol version
+    g_string_append_printf(url, "gsessionid=%s&", purple_url_encode(ha->gsessionid_param));
+    g_string_append(url, "RID=rpc&");         // request identifier
+    g_string_append(url, "t=1&");             // trial
+    g_string_append_printf(url, "SID=%s&", purple_url_encode(ha->sid_param));  // session ID
+    g_string_append(url, "CI=0&");            // 0 if streaming/chunked requests should be used
+    g_string_append(url, "ctype=hangouts&");  // client type
+    g_string_append(url, "TYPE=xmlhttp&");    // type of request
+	
+	request = purple_http_request_new(NULL);
+	purple_http_request_set_cookie_jar(request, ha->cookie_jar);
+	purple_http_request_set_url(request, url->str);
+	purple_http_request_set_timeout(request, -1);  // to infinity and beyond!
+	purple_http_request_set_response_writer(request, hangouts_longpoll_request_content, ha);
+	purple_http_request_set_keepalive_pool(request, ha->channel_keepalive_pool);
+	
+	hangouts_set_auth_headers(ha, request);
+	
+	g_string_free(url, TRUE);
+}
+
+
+
+void
+hangouts_fetch_channel_sid(HangoutsAccount *ha)
+{
+	g_free(ha->sid_param);
+	g_free(ha->gsessionid_param);
+	ha->sid_param = NULL;
+	ha->gsessionid_param = NULL;
+	
+	hangouts_send_maps(ha, NULL);
+}
+
+static void
+hangouts_send_maps_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse *response, gpointer user_data)
+{
+	/*111
+	 * [
+	 * [0,["c","<sid>","",8]],
+	 * [1,[{"gsid":"<gsid>"}]]
+	 * ]
+	 */
+	JsonNode *node;
+	HangoutsAccount *ha = user_data;
+	const gchar *res_raw;
+	size_t res_len;
+	gchar *gsid;
+	gchar *sid;
+
+	res_raw = purple_http_response_get_data(response, &res_len);
+	res_raw = g_strstr_len(res_raw, res_len, "\n");
+	res_raw++;
+	node = json_decode(res_raw, -1);
+	sid = hangouts_json_path_query_string(node, "$[0][1][1]", NULL);
+	gsid = hangouts_json_path_query_string(node, "$[1][1][0].gsid", NULL);
+
+	ha->sid_param = sid;
+	ha->gsessionid_param = gsid;
+
+	json_node_free (node);
+	
+	hangouts_longpoll_request(ha);
+}
+
+void
+hangouts_send_maps(HangoutsAccount *ha, JsonArray *map_list)
+{
+	PurpleHttpRequest *request;
+	GString *url, *postdata;
+	guint map_list_len, i;
+	
+	url = g_string_new(HANGOUTS_CHANNEL_URL_PREFIX "channel/bind" "?");
+	g_string_append(url, "VER=8&");           // channel protocol version
+    g_string_append(url, "RID=81188&");       // request identifier
+    g_string_append(url, "ctype=hangouts&");  // client type
+	if (ha->gsessionid_param)
+		g_string_append_printf(url, "gsessionid=%s&", purple_url_encode(ha->gsessionid_param));
+	if (ha->sid_param)
+		g_string_append_printf(url, "SID=%s&", purple_url_encode(ha->sid_param));  // session ID
+	
+	request = purple_http_request_new(NULL);
+	purple_http_request_set_cookie_jar(request, ha->cookie_jar);
+	purple_http_request_set_url(request, url->str);
+	purple_http_request_set_method(request, "POST");
+	purple_http_request_header_set(request, "Content-Type", "application/x-www-form-urlencoded");
+	purple_http_request_header_set_printf(request, "Authorization", "Bearer %s", ha->access_token);
+	
+	hangouts_set_auth_headers(ha, request);
+	
+	postdata = g_string_new(NULL);
+	if (map_list != NULL) {
+		for(i = 0, map_list_len = json_array_get_length(map_list); i < map_list_len; i++) {
+			JsonObject *obj = json_array_get_object_element(map_list, i);
+			GList *members = json_object_get_members(obj);
+			
+			for (; members != NULL; members = members->next) {
+				const gchar *member_name = members->data;
+				JsonNode *value = json_object_get_member(obj, member_name);
+				gchar *json = json_encode(value, NULL);
+				
+				g_string_append_printf(postdata, "req%u_%s=", i, purple_url_encode(member_name));
+				g_string_append_printf(postdata, "%s&", purple_url_encode(json));
+				
+				g_free(json);
+			}
+		}
+	}
+	purple_http_request_set_contents(request, postdata->str, postdata->len);
+
+	purple_http_request(ha->pc, request, hangouts_send_maps_cb, ha);
+	
+	g_string_free(postdata, TRUE);
+	g_string_free(url, TRUE);	
+}
+
+void
+hangouts_add_channel_services(HangoutsAccount *ha)
+{
+	JsonArray *map_list = json_array_new();
+	JsonObject *obj = json_object_new();
+	
+	json_object_set_string_member(obj, "p", "{\"3\":{\"1\":{\"1\":\"babel\"}}}");
+	json_array_add_object_element(map_list, obj);
+	hangouts_send_maps(ha, map_list);
+	
+	json_array_unref(map_list);
+}
+
+
 typedef struct {
 	HangoutsAccount *ha;
 	HangoutsPbliteResponseFunc callback;
@@ -191,8 +413,6 @@ hangouts_pblite_request_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse *
 	g_free(request_info);
 }
 
-#define HANGOUTS_PBLITE_XORIGIN_URL "https://talkgadget.google.com"
-
 void
 hangouts_pblite_request(HangoutsAccount *ha, const gchar *endpoint, ProtobufCMessage *request_message, HangoutsPbliteResponseFunc callback, ProtobufCMessage *response_message, gpointer user_data)
 {
@@ -201,12 +421,6 @@ hangouts_pblite_request(HangoutsAccount *ha, const gchar *endpoint, ProtobufCMes
 	gsize request_len;
 	gchar *request_data;
 	LazyPblistRequestStore *request_info = g_new0(LazyPblistRequestStore, 1);
-	gint64 mstime;
-	gchar *mstime_str;
-	GTimeVal time;
-	PurpleCipherContext *sha1_ctx;
-	gchar sha1[41];
-	const gchar *sapisid_cookie;
 	
 	request_array = pblite_encode(request_message);
 	request_data = json_encode_array(request_array, &request_len);
@@ -223,24 +437,8 @@ hangouts_pblite_request(HangoutsAccount *ha, const gchar *endpoint, ProtobufCMes
 	request_info->response_message = response_message;
 	request_info->user_data = user_data;
 	
-	g_get_current_time(&time);
-	mstime = time.tv_sec * 1000 + time.tv_usec / 1000;
-	mstime_str = g_strdup_printf("%" G_GINT64_FORMAT, mstime);
-	sapisid_cookie = purple_http_cookie_jar_get(ha->cookie_jar, "SAPISID");
 	
-	sha1_ctx = purple_cipher_context_new(purple_ciphers_find_cipher("sha1"), NULL);
-    purple_cipher_context_append(sha1_ctx, (guchar *) mstime_str, strlen(mstime_str));
-    purple_cipher_context_append(sha1_ctx, (guchar *) " ", 1);
-    purple_cipher_context_append(sha1_ctx, (guchar *) sapisid_cookie, strlen(sapisid_cookie));
-    purple_cipher_context_append(sha1_ctx, (guchar *) " ", 1);
-    purple_cipher_context_append(sha1_ctx, (guchar *) HANGOUTS_PBLITE_XORIGIN_URL, strlen(HANGOUTS_PBLITE_XORIGIN_URL));
-    purple_cipher_context_digest_to_str(sha1_ctx, 40, sha1, NULL);
-	sha1[40] = '\0';
-    purple_cipher_context_destroy(sha1_ctx);
-	
-	purple_http_request_header_set_printf(request, "Authorization", "SAPISIDHASH %s_%s", mstime_str, sha1);
-	purple_http_request_header_set(request, "X-Origin", HANGOUTS_PBLITE_XORIGIN_URL);
-	purple_http_request_header_set(request, "X-Goog-AuthUser", "0");
+	hangouts_set_auth_headers(ha, request);
 	
 	purple_http_request(ha->pc, request, hangouts_pblite_request_cb, request_info);
 	

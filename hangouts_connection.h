@@ -11,10 +11,18 @@
 #include "hangouts_pblite.h"
 #include "hangouts.pb-c.h"
 
+#define HANGOUTS_PBLITE_XORIGIN_URL "https://talkgadget.google.com"
+#define HANGOUTS_CHANNEL_URL_PREFIX "https://0.client-channel.google.com/client-channel/"
 
 void hangouts_process_data_chunks(const gchar *data, gsize len);
 
 void hangouts_process_channel(int fd);
+
+
+void hangouts_longpoll_request(HangoutsAccount *ha);
+void hangouts_fetch_channel_sid(HangoutsAccount *ha);
+void hangouts_send_maps(HangoutsAccount *ha, JsonArray *map_list);
+void hangouts_add_channel_services(HangoutsAccount *ha);
 
 
 typedef void(* HangoutsPbliteResponseFunc)(HangoutsAccount *ha, ProtobufCMessage *response, gpointer user_data);

@@ -8,6 +8,9 @@
 #	define PURPLE_PLUGINS
 #endif
 
+#include "account.h"
+#include "connection.h"
+#include "circbuffer.h"
 #include "http.h"
 
 #define HANGOUTS_PLUGIN_ID "prpl-hangouts"
@@ -28,6 +31,18 @@
 #define HANGOUTS_API_OAUTH2_REDIRECT_URI "urn:ietf:wg:oauth:2.0:oob"
 #define HANGOUTS_API_OAUTH2_AUTHORIZATION_CODE_URL MINIFIED_OAUTH_URL
 
+
+#define purple_request_cpar_from_connection(a)  purple_connection_get_account(a), NULL, NULL
+#define purple_connection_error                 purple_connection_error_reason
+
+#define PurpleCircularBuffer                    PurpleCircBuffer
+#define purple_circular_buffer_new              purple_circ_buffer_new
+#define purple_circular_buffer_destroy          purple_circ_buffer_destroy
+#define purple_circular_buffer_append           purple_circ_buffer_append
+#define purple_circular_buffer_get_max_read     purple_circ_buffer_get_max_read
+#define purple_circular_buffer_mark_read        purple_circ_buffer_mark_read
+#define purple_circular_buffer_get_output(buf)  ((const gchar *) (buf)->outptr)
+
 typedef struct {
 	PurpleAccount *account;
 	PurpleConnection *pc;
@@ -35,16 +50,12 @@ typedef struct {
 	PurpleHttpCookieJar *cookie_jar;
 	gchar *refresh_token;
 	gchar *access_token;
+	gchar *gsessionid_param;
+	gchar *sid_param;
+	
+	PurpleCircularBuffer *channel_buffer;
+	PurpleHttpKeepalivePool *channel_keepalive_pool;
 } HangoutsAccount;
-
-
-#include "hangouts_json.h"
-#include "hangouts_pblite.h"
-#include "hangouts_connection.h"
-
-
-#define purple_request_cpar_from_connection(a)  purple_connection_get_account(a), NULL, NULL
-#define purple_connection_error                 purple_connection_error_reason
 
 
 #endif /*_LIBHANGOUTS_H_*/

@@ -52,4 +52,11 @@ JsonNode *json_decode(const gchar *data, gssize len);
 JsonArray *json_decode_array(const gchar *data, gssize len);
 JsonObject *json_decode_object(const gchar *data, gssize len);
 
+
+JsonNode *hangouts_json_path_query(JsonNode *root, const gchar *expr, GError **error);
+
+gchar *hangouts_json_path_query_string(JsonNode *root, const gchar *expr, GError **error);
+
+gint64 hangouts_json_path_query_int(JsonNode *root, const gchar *expr, GError **error);
+
 #endif /* _HANGOUTS_JSON_H_ */

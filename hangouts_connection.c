@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "cipher.h"
 #include "debug.h"
 #ifdef _WIN32
 #include "win32/win32dep.h"
@@ -190,6 +191,8 @@ hangouts_pblite_request_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse *
 	g_free(request_info);
 }
 
+#define HANGOUTS_PBLITE_XORIGIN_URL "https://talkgadget.google.com"
+
 void
 hangouts_pblite_request(HangoutsAccount *ha, const gchar *endpoint, ProtobufCMessage *request_message, HangoutsPbliteResponseFunc callback, ProtobufCMessage *response_message, gpointer user_data)
 {
@@ -198,6 +201,12 @@ hangouts_pblite_request(HangoutsAccount *ha, const gchar *endpoint, ProtobufCMes
 	gsize request_len;
 	gchar *request_data;
 	LazyPblistRequestStore *request_info = g_new0(LazyPblistRequestStore, 1);
+	gint64 mstime;
+	gchar *mstime_str;
+	GTimeVal time;
+	PurpleCipherContext *sha1_ctx;
+	gchar sha1[41];
+	const gchar *sapisid_cookie;
 	
 	request_array = pblite_encode(request_message);
 	request_data = json_encode_array(request_array, &request_len);
@@ -207,13 +216,31 @@ hangouts_pblite_request(HangoutsAccount *ha, const gchar *endpoint, ProtobufCMes
 	purple_http_request_set_cookie_jar(request, ha->cookie_jar);
 	purple_http_request_set_method(request, "POST");
 	purple_http_request_header_set(request, "Content-Type", "application/json+protobuf");
-	purple_http_request_header_set_printf(request, "Authorization", "Bearer %s", "TODO");
 	purple_http_request_set_contents(request, request_data, request_len);
 	
 	request_info->ha = ha;
 	request_info->callback = callback;
 	request_info->response_message = response_message;
 	request_info->user_data = user_data;
+	
+	g_get_current_time(&time);
+	mstime = time.tv_sec * 1000 + time.tv_usec / 1000;
+	mstime_str = g_strdup_printf("%" G_GINT64_FORMAT, mstime);
+	sapisid_cookie = purple_http_cookie_jar_get(ha->cookie_jar, "SAPISID");
+	
+	sha1_ctx = purple_cipher_context_new(purple_ciphers_find_cipher("sha1"), NULL);
+    purple_cipher_context_append(sha1_ctx, (guchar *) mstime_str, strlen(mstime_str));
+    purple_cipher_context_append(sha1_ctx, (guchar *) " ", 1);
+    purple_cipher_context_append(sha1_ctx, (guchar *) sapisid_cookie, strlen(sapisid_cookie));
+    purple_cipher_context_append(sha1_ctx, (guchar *) " ", 1);
+    purple_cipher_context_append(sha1_ctx, (guchar *) HANGOUTS_PBLITE_XORIGIN_URL, strlen(HANGOUTS_PBLITE_XORIGIN_URL));
+    purple_cipher_context_digest_to_str(sha1_ctx, 40, sha1, NULL);
+	sha1[40] = '\0';
+    purple_cipher_context_destroy(sha1_ctx);
+	
+	purple_http_request_header_set_printf(request, "Authorization", "SAPISIDHASH %s_%s", mstime_str, sha1);
+	purple_http_request_header_set(request, "X-Origin", HANGOUTS_PBLITE_XORIGIN_URL);
+	purple_http_request_header_set(request, "X-Goog-AuthUser", "0");
 	
 	purple_http_request(ha->pc, request, hangouts_pblite_request_cb, request_info);
 	

@@ -52,6 +52,8 @@ hangouts_login(PurpleAccount *account)
 	pc = purple_account_get_connection(account);
 	password = purple_connection_get_password(pc);
 	
+	purple_debug_set_unsafe(TRUE);
+	
 	ha = g_new0(HangoutsAccount, 1);
 	ha->account = account;
 	ha->pc = pc;
@@ -67,7 +69,7 @@ hangouts_login(PurpleAccount *account)
 		hangouts_oauth_refresh_token(ha);
 	} else {
 		//TODO get this code automatically
-		purple_notify_uri(pc, MINIFIED_OAUTH_URL);
+		purple_notify_uri(pc, HANGOUTS_API_OAUTH2_AUTHORIZATION_CODE_URL);
 		purple_request_input(pc, _("Authorization Code"), NULL,
 			_ ("Please paste the Google OAuth code here"),
 			NULL, FALSE, FALSE, NULL, 
@@ -95,7 +97,26 @@ hangouts_close(PurpleConnection *pc)
 }
 
 
+static const char *
+hangouts_list_icon(PurpleAccount *account, PurpleBuddy *buddy)
+{
+	return "hangouts";
+}
 
+
+GList *
+hangouts_status_types(PurpleAccount *account)
+{
+	GList *types = NULL;
+	PurpleStatusType *status;
+	
+	status = purple_status_type_new_full(PURPLE_STATUS_OFFLINE, NULL, NULL, TRUE, TRUE, FALSE);
+	types = g_list_append(types, status);
+	status = purple_status_type_new_full(PURPLE_STATUS_AVAILABLE, NULL, NULL, TRUE, TRUE, FALSE);
+	types = g_list_append(types, status);
+	
+	return types;
+}
 
 
 
@@ -122,7 +143,7 @@ static PurplePluginInfo info =
 	PURPLE_PLUGIN_MAGIC,
 	PURPLE_MAJOR_VERSION,
 	PURPLE_MINOR_VERSION,
-	PURPLE_PLUGIN_STANDARD,                             /**< type           */
+	PURPLE_PLUGIN_PROTOCOL,                             /**< type           */
 	NULL,                                             /**< ui_requirement */
 	0,                                                /**< flags          */
 	NULL,                                             /**< dependencies   */
@@ -165,8 +186,11 @@ init_plugin(PurplePlugin *plugin)
 		plugin->info = info = g_new0(PurplePluginInfo, 1);
 	}
 	
+	prpl_info->options = OPT_PROTO_NO_PASSWORD;
 	prpl_info->login = hangouts_login;
 	prpl_info->close = hangouts_close;
+	prpl_info->status_types = hangouts_status_types;
+	prpl_info->list_icon = hangouts_list_icon;
 	
 	info->extra_info = prpl_info;
 	#if PURPLE_MINOR_VERSION >= 5

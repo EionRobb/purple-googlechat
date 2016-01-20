@@ -1992,7 +1992,7 @@ static gchar * purple_http_cookie_jar_gen(PurpleHttpCookieJar *cookie_jar)
 	while (g_hash_table_iter_next(&it, (gpointer*)&key,
 		(gpointer*)&cookie))
 	{
-		if (cookie->expires != -1 && cookie->expires <= now)
+		if (cookie->expires != -1 && cookie->expires != 0 && cookie->expires <= now)
 			continue;
 		g_string_append_printf(str, "%s=%s; ", key, cookie->value);
 	}
@@ -2006,7 +2006,11 @@ void purple_http_cookie_jar_set(PurpleHttpCookieJar *cookie_jar,
 	const gchar *name, const gchar *value)
 {
 	gchar *escaped_name = g_strdup(purple_url_encode(name));
-	gchar *escaped_value = g_strdup(purple_url_encode(value));
+	gchar *escaped_value = NULL;
+	
+	if (escaped_value) {
+		escaped_value = g_strdup(purple_url_encode(value));
+	}
 	
 	purple_http_cookie_jar_set_ext(cookie_jar, escaped_name, escaped_value, -1);
 	
@@ -2020,7 +2024,7 @@ static void purple_http_cookie_jar_set_ext(PurpleHttpCookieJar *cookie_jar,
 	g_return_if_fail(cookie_jar != NULL);
 	g_return_if_fail(name != NULL);
 
-	if (expires != -1 && time(NULL) >= expires)
+	if (expires != -1 && expires != 0 && time(NULL) >= expires)
 		value = NULL;
 
 	if (value != NULL) {

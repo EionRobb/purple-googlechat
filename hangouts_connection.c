@@ -239,6 +239,10 @@ hangouts_longpoll_request_content(PurpleHttpConnection *http_conn, PurpleHttpRes
 {
 	HangoutsAccount *ha = user_data;
 	
+	if (purple_http_response_get_error(response) != NULL) {
+		return FALSE;
+	}
+	
 	purple_circular_buffer_append(ha->channel_buffer, buffer, length);
 	
 	hangouts_process_channel_buffer(ha);
@@ -271,6 +275,8 @@ hangouts_longpoll_request(HangoutsAccount *ha)
 	purple_http_request_set_keepalive_pool(request, ha->channel_keepalive_pool);
 	
 	hangouts_set_auth_headers(ha, request);
+	
+	purple_http_request(ha->pc, request, NULL, ha);
 	
 	g_string_free(url, TRUE);
 }

@@ -19,7 +19,7 @@ hangouts_oauth_refresh_token_cb(PurpleHttpConnection *http_conn, PurpleHttpRespo
 	if (purple_http_response_is_successful(response) && obj)
 	{
 		ha->access_token = g_strdup(json_object_get_string_member(obj, "access_token"));
-		//hangouts_channel_set_access_token(ha->channel, ha->access_token);
+		hangouts_auth_get_session_cookies(ha);
 	} else {
 		purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED, 
 			_("Invalid response"));
@@ -39,6 +39,7 @@ hangouts_oauth_refresh_token(HangoutsAccount *ha)
 
 	postdata = g_string_new(NULL);
 	g_string_append_printf(postdata, "client_id=%s&", purple_url_encode(GOOGLE_CLIENT_ID));
+	g_string_append_printf(postdata, "client_secret=%s&", purple_url_encode(GOOGLE_CLIENT_SECRET));
 	g_string_append_printf(postdata, "refresh_token=%s&", purple_url_encode(ha->refresh_token));
 	g_string_append(postdata, "grant_type=refresh_token&");
 	
@@ -49,6 +50,8 @@ hangouts_oauth_refresh_token(HangoutsAccount *ha)
 	purple_http_request_set_contents(request, postdata->str, postdata->len);
 
 	purple_http_request(pc, request, hangouts_oauth_refresh_token_cb, ha);
+	
+	purple_debug_info("hangouts", "Postdata: %s\n", postdata->str);
 	
 	g_string_free(postdata, TRUE);
 }
@@ -71,9 +74,10 @@ hangouts_oauth_with_code_cb (PurpleHttpConnection *http_conn, PurpleHttpResponse
 		ha->access_token = g_strdup(json_object_get_string_member(obj, "access_token"));
 		ha->refresh_token = g_strdup(json_object_get_string_member(obj, "refresh_token"));
 		
-		//hangouts_channel_set_access_token(ha->channel, ha->access_token);
 		purple_account_set_remember_password(account, TRUE);
 		purple_account_set_password(account, ha->refresh_token);
+		
+		hangouts_auth_get_session_cookies(ha);
 	} else {
 		purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED, 
 			_("Invalid response"));
@@ -93,6 +97,7 @@ hangouts_oauth_with_code(HangoutsAccount *ha, const gchar *auth_code)
 
 	postdata = g_string_new(NULL);
 	g_string_append_printf(postdata, "client_id=%s&", purple_url_encode(GOOGLE_CLIENT_ID));
+	g_string_append_printf(postdata, "client_secret=%s&", purple_url_encode(GOOGLE_CLIENT_SECRET));
 	g_string_append_printf(postdata, "code=%s&", purple_url_encode(auth_code));
 	g_string_append_printf(postdata, "redirect_uri=%s&", purple_url_encode(HANGOUTS_API_OAUTH2_REDIRECT_URI));
 	g_string_append(postdata, "grant_type=authorization_code&");
@@ -138,12 +143,19 @@ hangouts_auth_get_session_cookies_uberauth_cb(PurpleHttpConnection *http_conn, P
 
 	uberauth = purple_http_response_get_data(response, NULL);
 
+	if (purple_http_response_get_error(response) != NULL) {
+		purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED, 
+			_("Auth error"));
+		return;
+	}
+	
 	purple_debug_misc("hangouts-prpl", "uberauth: %s", uberauth);
 
 	request = purple_http_request_new(NULL);
 	purple_http_request_set_url_printf(request, "https://accounts.google.com/MergeSession" "?service=mail&continue=http://www.google.com&uberauth=%s", purple_url_encode(uberauth));
 	purple_http_request_set_cookie_jar(request, ha->cookie_jar);
 	purple_http_request_header_set_printf(request, "Authorization", "Bearer %s", ha->access_token);
+	purple_http_request_set_max_redirects(request, 0);
 	
 	purple_http_request(ha->pc, request, hangouts_auth_get_session_cookies_got_cb, ha);
 }

@@ -2005,7 +2005,13 @@ static gchar * purple_http_cookie_jar_gen(PurpleHttpCookieJar *cookie_jar)
 void purple_http_cookie_jar_set(PurpleHttpCookieJar *cookie_jar,
 	const gchar *name, const gchar *value)
 {
-	purple_http_cookie_jar_set_ext(cookie_jar, name, value, -1);
+	gchar *escaped_name = g_strdup(purple_url_encode(name));
+	gchar *escaped_value = g_strdup(purple_url_encode(value));
+	
+	purple_http_cookie_jar_set_ext(cookie_jar, escaped_name, escaped_value, -1);
+	
+	g_free(escaped_name);
+	g_free(escaped_value);
 }
 
 static void purple_http_cookie_jar_set_ext(PurpleHttpCookieJar *cookie_jar,
@@ -2025,7 +2031,7 @@ static void purple_http_cookie_jar_set_ext(PurpleHttpCookieJar *cookie_jar,
 		g_hash_table_remove(cookie_jar->tab, name);
 }
 
-const gchar * purple_http_cookie_jar_get(PurpleHttpCookieJar *cookie_jar,
+gchar * purple_http_cookie_jar_get(PurpleHttpCookieJar *cookie_jar,
 	const gchar *name)
 {
 	PurpleHttpCookie *cookie;
@@ -2037,7 +2043,7 @@ const gchar * purple_http_cookie_jar_get(PurpleHttpCookieJar *cookie_jar,
 	if (!cookie)
 		return NULL;
 
-	return cookie->value;
+	return g_strdup(purple_url_decode(cookie->value));
 }
 
 gchar * purple_http_cookie_jar_dump(PurpleHttpCookieJar *cjar)

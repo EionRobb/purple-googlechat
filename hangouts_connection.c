@@ -209,7 +209,7 @@ hangouts_set_auth_headers(HangoutsAccount *ha, PurpleHttpRequest *request)
 	GTimeVal time;
 	PurpleCipherContext *sha1_ctx;
 	gchar sha1[41];
-	const gchar *sapisid_cookie;
+	gchar *sapisid_cookie;
 	
 	g_get_current_time(&time);
 	mstime = time.tv_sec * 1000 + time.tv_usec / 1000;
@@ -229,6 +229,8 @@ hangouts_set_auth_headers(HangoutsAccount *ha, PurpleHttpRequest *request)
 	purple_http_request_header_set_printf(request, "Authorization", "SAPISIDHASH %s_%s", mstime_str, sha1);
 	purple_http_request_header_set(request, "X-Origin", HANGOUTS_PBLITE_XORIGIN_URL);
 	purple_http_request_header_set(request, "X-Goog-AuthUser", "0");
+	
+	g_free(sapisid_cookie);
 }
 
 

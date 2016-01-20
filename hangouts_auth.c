@@ -1,7 +1,9 @@
 #include "hangouts_auth.h"
 
+#include "debug.h"
 #include "http.h"
 #include "hangouts_json.h"
+#include "hangouts_connection.h"
 
 static void
 hangouts_oauth_refresh_token_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse *response, gpointer user_data)
@@ -104,4 +106,57 @@ hangouts_oauth_with_code(HangoutsAccount *ha, const gchar *auth_code)
 	purple_http_request(pc, request, hangouts_oauth_with_code_cb, ha);
 	
 	g_string_free(postdata, TRUE);
+}
+
+
+/*****************************************************************************/
+
+
+void
+hangouts_auth_get_session_cookies_got_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse *response, gpointer user_data)
+{
+	HangoutsAccount *ha = user_data;
+	
+	gchar *sapisid_cookie = purple_http_cookie_jar_get(ha->cookie_jar, "SAPISID");
+	
+	if (sapisid_cookie == NULL) {
+		purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED, 
+			_("SAPISID Cookie not recieved"));
+		return;
+	}
+	
+	// SOUND THE TRUMPETS
+	hangouts_fetch_channel_sid(ha);
+}
+
+static void
+hangouts_auth_get_session_cookies_uberauth_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse *response, gpointer user_data)
+{
+	HangoutsAccount *ha = user_data;
+	PurpleHttpRequest *request;
+	const gchar *uberauth;
+
+	uberauth = purple_http_response_get_data(response, NULL);
+
+	purple_debug_misc("hangouts-prpl", "uberauth: %s", uberauth);
+
+	request = purple_http_request_new(NULL);
+	purple_http_request_set_url_printf(request, "https://accounts.google.com/MergeSession" "?service=mail&continue=http://www.google.com&uberauth=%s", purple_url_encode(uberauth));
+	purple_http_request_set_cookie_jar(request, ha->cookie_jar);
+	purple_http_request_header_set_printf(request, "Authorization", "Bearer %s", ha->access_token);
+	
+	purple_http_request(ha->pc, request, hangouts_auth_get_session_cookies_got_cb, ha);
+}
+
+void
+hangouts_auth_get_session_cookies(HangoutsAccount *ha)
+{
+	PurpleHttpRequest *request;
+
+	request = purple_http_request_new("https://accounts.google.com/accounts/OAuthLogin"
+	                                  "?source=pidgin&issueuberauth=1");
+	purple_http_request_set_cookie_jar(request, ha->cookie_jar);
+	purple_http_request_header_set_printf(request, "Authorization", "Bearer %s", ha->access_token);
+
+	purple_http_request(ha->pc, request, hangouts_auth_get_session_cookies_uberauth_cb, ha);
 }

@@ -222,8 +222,7 @@ hangouts_set_auth_headers(HangoutsAccount *ha, PurpleHttpRequest *request)
     purple_cipher_context_append(sha1_ctx, (guchar *) sapisid_cookie, strlen(sapisid_cookie));
     purple_cipher_context_append(sha1_ctx, (guchar *) " ", 1);
     purple_cipher_context_append(sha1_ctx, (guchar *) HANGOUTS_PBLITE_XORIGIN_URL, strlen(HANGOUTS_PBLITE_XORIGIN_URL));
-    purple_cipher_context_digest_to_str(sha1_ctx, 40, sha1, NULL);
-	sha1[40] = '\0';
+    purple_cipher_context_digest_to_str(sha1_ctx, 41, sha1, NULL);
     purple_cipher_context_destroy(sha1_ctx);
 	
 	purple_http_request_header_set_printf(request, "Authorization", "SAPISIDHASH %s_%s", mstime_str, sha1);

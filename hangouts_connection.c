@@ -212,18 +212,18 @@ hangouts_set_auth_headers(HangoutsAccount *ha, PurpleHttpRequest *request)
 	gchar *sapisid_cookie;
 	
 	g_get_current_time(&time);
-	mstime = time.tv_sec * 1000 + time.tv_usec / 1000;
+	mstime = (((gint64) time.tv_sec) * 1000) + (time.tv_usec / 1000);
 	mstime_str = g_strdup_printf("%" G_GINT64_FORMAT, mstime);
 	sapisid_cookie = purple_http_cookie_jar_get(ha->cookie_jar, "SAPISID");
 	
 	sha1_ctx = purple_cipher_context_new(purple_ciphers_find_cipher("sha1"), NULL);
-    purple_cipher_context_append(sha1_ctx, (guchar *) mstime_str, strlen(mstime_str));
-    purple_cipher_context_append(sha1_ctx, (guchar *) " ", 1);
-    purple_cipher_context_append(sha1_ctx, (guchar *) sapisid_cookie, strlen(sapisid_cookie));
-    purple_cipher_context_append(sha1_ctx, (guchar *) " ", 1);
-    purple_cipher_context_append(sha1_ctx, (guchar *) HANGOUTS_PBLITE_XORIGIN_URL, strlen(HANGOUTS_PBLITE_XORIGIN_URL));
-    purple_cipher_context_digest_to_str(sha1_ctx, 41, sha1, NULL);
-    purple_cipher_context_destroy(sha1_ctx);
+	purple_cipher_context_append(sha1_ctx, (guchar *) mstime_str, strlen(mstime_str));
+	purple_cipher_context_append(sha1_ctx, (guchar *) " ", 1);
+	purple_cipher_context_append(sha1_ctx, (guchar *) sapisid_cookie, strlen(sapisid_cookie));
+	purple_cipher_context_append(sha1_ctx, (guchar *) " ", 1);
+	purple_cipher_context_append(sha1_ctx, (guchar *) HANGOUTS_PBLITE_XORIGIN_URL, strlen(HANGOUTS_PBLITE_XORIGIN_URL));
+	purple_cipher_context_digest_to_str(sha1_ctx, 41, sha1, NULL);
+	purple_cipher_context_destroy(sha1_ctx);
 	
 	purple_http_request_header_set_printf(request, "Authorization", "SAPISIDHASH %s_%s", mstime_str, sha1);
 	purple_http_request_header_set(request, "X-Origin", HANGOUTS_PBLITE_XORIGIN_URL);
@@ -258,13 +258,13 @@ hangouts_longpoll_request(HangoutsAccount *ha)
 	
 	url = g_string_new(HANGOUTS_CHANNEL_URL_PREFIX "channel/bind" "?");
 	g_string_append(url, "VER=8&");           // channel protocol version
-    g_string_append_printf(url, "gsessionid=%s&", purple_url_encode(ha->gsessionid_param));
-    g_string_append(url, "RID=rpc&");         // request identifier
-    g_string_append(url, "t=1&");             // trial
-    g_string_append_printf(url, "SID=%s&", purple_url_encode(ha->sid_param));  // session ID
-    g_string_append(url, "CI=0&");            // 0 if streaming/chunked requests should be used
-    g_string_append(url, "ctype=hangouts&");  // client type
-    g_string_append(url, "TYPE=xmlhttp&");    // type of request
+	g_string_append_printf(url, "gsessionid=%s&", purple_url_encode(ha->gsessionid_param));
+	g_string_append(url, "RID=rpc&");         // request identifier
+	g_string_append(url, "t=1&");             // trial
+	g_string_append_printf(url, "SID=%s&", purple_url_encode(ha->sid_param));  // session ID
+	g_string_append(url, "CI=0&");            // 0 if streaming/chunked requests should be used
+	g_string_append(url, "ctype=hangouts&");  // client type
+	g_string_append(url, "TYPE=xmlhttp&");    // type of request
 	
 	request = purple_http_request_new(NULL);
 	purple_http_request_set_cookie_jar(request, ha->cookie_jar);
@@ -333,8 +333,8 @@ hangouts_send_maps(HangoutsAccount *ha, JsonArray *map_list)
 	
 	url = g_string_new(HANGOUTS_CHANNEL_URL_PREFIX "channel/bind" "?");
 	g_string_append(url, "VER=8&");           // channel protocol version
-    g_string_append(url, "RID=81188&");       // request identifier
-    g_string_append(url, "ctype=hangouts&");  // client type
+	g_string_append(url, "RID=81188&");       // request identifier
+	g_string_append(url, "ctype=hangouts&");  // client type
 	if (ha->gsessionid_param)
 		g_string_append_printf(url, "gsessionid=%s&", purple_url_encode(ha->gsessionid_param));
 	if (ha->sid_param)

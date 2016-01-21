@@ -167,6 +167,7 @@ hangouts_process_channel_buffer(HangoutsAccount *ha)
 	gsize remaining;
 	gchar *len_end;
 	gchar *len_str;
+	guint len_len; //len len len len len len len len len
 	guint64 len;
 	
 	g_return_if_fail(ha);
@@ -181,21 +182,27 @@ hangouts_process_channel_buffer(HangoutsAccount *ha)
 			// Not enough data to read
 			return;
 		}
-		len_str = g_strndup(bufdata, len_end - bufdata);
+		len_len = len_end - bufdata;
+		len_str = g_strndup(bufdata, len_len);
 		len = g_ascii_strtoull(len_str, NULL, 10);
 		g_free(len_str);
 		
+		// Len was 0 ?  Must have been a bad read :(
+		g_return_if_fail(len);
+		
 		bufdata = len_end + 1;
-		remaining = remaining - (len_end - bufdata) - 1;
+		remaining = remaining - len_len - 1;
 		
 		if (len > remaining) {
 			// Not enough data to read
 			return;
 		}
 		
+		purple_debug_info("hangouts", "Got chunk %.*s\n", (int) len, bufdata);
+		
 		hangouts_process_data_chunks(bufdata, len);
 		
-		purple_circ_buffer_mark_read(ha->channel_buffer, len);
+		purple_circ_buffer_mark_read(ha->channel_buffer, len + len_len + 1);
 		remaining = purple_circular_buffer_get_max_read(ha->channel_buffer);
 		
 	} while (remaining);
@@ -345,7 +352,6 @@ hangouts_send_maps(HangoutsAccount *ha, JsonArray *map_list)
 	purple_http_request_set_url(request, url->str);
 	purple_http_request_set_method(request, "POST");
 	purple_http_request_header_set(request, "Content-Type", "application/x-www-form-urlencoded");
-	purple_http_request_header_set_printf(request, "Authorization", "Bearer %s", ha->access_token);
 	
 	hangouts_set_auth_headers(ha, request);
 	

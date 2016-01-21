@@ -70,7 +70,7 @@ hangouts_login(PurpleAccount *account)
 	} else {
 		//TODO get this code automatically
 		purple_notify_uri(pc, HANGOUTS_API_OAUTH2_AUTHORIZATION_CODE_URL);
-		purple_request_input(pc, _("Authorization Code"), NULL,
+		purple_request_input(pc, _("Authorization Code"), HANGOUTS_API_OAUTH2_AUTHORIZATION_CODE_URL,
 			_ ("Please paste the Google OAuth code here"),
 			NULL, FALSE, FALSE, NULL, 
 			_("OK"), G_CALLBACK(hangouts_authcode_input_cb), 

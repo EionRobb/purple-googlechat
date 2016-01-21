@@ -52,8 +52,6 @@ hangouts_login(PurpleAccount *account)
 	pc = purple_account_get_connection(account);
 	password = purple_connection_get_password(pc);
 	
-	purple_debug_set_unsafe(TRUE);
-	
 	ha = g_new0(HangoutsAccount, 1);
 	ha->account = account;
 	ha->pc = pc;
@@ -91,6 +89,7 @@ hangouts_close(PurpleConnection *pc)
 	g_free(ha->access_token);
 	g_free(ha->gsessionid_param);
 	g_free(ha->sid_param);
+	g_free(ha->client_id);
 	purple_http_cookie_jar_unref(ha->cookie_jar);
 	purple_circular_buffer_destroy(ha->channel_buffer);
 	g_free(ha);
@@ -200,6 +199,10 @@ init_plugin(PurplePlugin *plugin)
 		//prpl_info->add_buddy_with_invite = skypeweb_add_buddy_with_invite;
 	#endif
 	
+	purple_signal_register(plugin, "hangouts-received-stateupdate",
+			purple_marshal_VOID__POINTER_POINTER, NULL, 2,
+			purple_value_new(PURPLE_TYPE_SUBTYPE, PURPLE_SUBTYPE_CONNECTION),
+			purple_value_new_outgoing(PURPLE_TYPE_OBJECT));
 }
 	
 

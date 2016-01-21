@@ -57,6 +57,7 @@ typedef struct {
 	gchar *access_token;
 	gchar *gsessionid_param;
 	gchar *sid_param;
+	gchar *client_id;
 	
 	PurpleCircularBuffer *channel_buffer;
 	PurpleHttpKeepalivePool *channel_keepalive_pool;

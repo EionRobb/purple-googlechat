@@ -19,7 +19,7 @@
 
 
 void
-hangouts_process_data_chunks(const gchar *data, gsize len)
+hangouts_process_data_chunks(HangoutsAccount *ha, const gchar *data, gsize len)
 {
 	JsonArray *chunks;
 	guint i, num_chunks;
@@ -54,7 +54,11 @@ hangouts_process_data_chunks(const gchar *data, gsize len)
 			if (json_object_has_member(wrapper, "3")) {
 				const gchar *new_client_id = json_object_get_string_member(json_object_get_object_member(wrapper, "3"), "2");
 				purple_debug_info("hangouts", "Received new client_id: %s\n", new_client_id);
-				//TODO set the client_id on the connection
+				
+				g_free(ha->client_id);
+				ha->client_id = g_strdup(new_client_id);
+				
+				hangouts_add_channel_services(ha);
 			}
 			if (json_object_has_member(wrapper, "2")) {
 				const gchar *wrapper22 = json_object_get_string_member(json_object_get_object_member(wrapper, "2"), "2");
@@ -71,6 +75,7 @@ hangouts_process_data_chunks(const gchar *data, gsize len)
 				//cbu == ClientBatchUpdate
 				if (g_strcmp0(json_array_get_string_element(pblite_message, 0), "cbu") == 0) {
 					BatchUpdate batch_update = BATCH_UPDATE__INIT;
+					guint j;
 					
 #ifdef DEBUG
 					printf("----------------------\n");
@@ -97,6 +102,9 @@ hangouts_process_data_chunks(const gchar *data, gsize len)
 					g_free(json2);
 					printf("----------------------\n");
 #endif
+					for(j = 0; j < batch_update.n_state_update; j++) {
+						purple_signal_emit(purple_connection_get_prpl(ha->pc), "hangouts-received-stateupdate", ha->pc, batch_update.state_update[j]);
+					}
 				}
 				
 				json_array_unref(pblite_message);
@@ -148,7 +156,7 @@ hangouts_process_channel(int fd)
 			
 			if (read_all(fd, chunk, len) > 0) {
 				//throw chunk to hangouts_process_data_chunks
-				hangouts_process_data_chunks(chunk, len);
+				hangouts_process_data_chunks(NULL, chunk, len);
 			}
 			
 			g_free(chunk);
@@ -200,7 +208,7 @@ hangouts_process_channel_buffer(HangoutsAccount *ha)
 		
 		purple_debug_info("hangouts", "Got chunk %.*s\n", (int) len, bufdata);
 		
-		hangouts_process_data_chunks(bufdata, len);
+		hangouts_process_data_chunks(ha, bufdata, len);
 		
 		purple_circ_buffer_mark_read(ha->channel_buffer, len + len_len + 1);
 		remaining = purple_circular_buffer_get_max_read(ha->channel_buffer);
@@ -256,6 +264,19 @@ hangouts_longpoll_request_content(PurpleHttpConnection *http_conn, PurpleHttpRes
 	return TRUE;
 }
 
+static void
+hangouts_longpoll_request_closed(PurpleHttpConnection *http_conn, PurpleHttpResponse *response, gpointer user_data)
+{
+	HangoutsAccount *ha = user_data;
+	
+	if (!PURPLE_CONNECTION_IS_VALID(purple_http_conn_get_purple_connection(http_conn))) {
+		return;
+	}
+	
+	//TODO error checking
+	hangouts_longpoll_request(ha);
+}
+
 void
 hangouts_longpoll_request(HangoutsAccount *ha)
 {
@@ -282,23 +303,12 @@ hangouts_longpoll_request(HangoutsAccount *ha)
 	
 	hangouts_set_auth_headers(ha, request);
 	
-	purple_http_request(ha->pc, request, NULL, ha);
+	purple_http_request(ha->pc, request, hangouts_longpoll_request_closed, ha);
 	
 	g_string_free(url, TRUE);
 }
 
 
-
-void
-hangouts_fetch_channel_sid(HangoutsAccount *ha)
-{
-	g_free(ha->sid_param);
-	g_free(ha->gsessionid_param);
-	ha->sid_param = NULL;
-	ha->gsessionid_param = NULL;
-	
-	hangouts_send_maps(ha, NULL);
-}
 
 static void
 hangouts_send_maps_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse *response, gpointer user_data)
@@ -323,8 +333,14 @@ hangouts_send_maps_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse *respo
 	sid = hangouts_json_path_query_string(node, "$[0][1][1]", NULL);
 	gsid = hangouts_json_path_query_string(node, "$[1][1][0].gsid", NULL);
 
-	ha->sid_param = sid;
-	ha->gsessionid_param = gsid;
+	if (sid != NULL) {
+		g_free(ha->sid_param);
+		ha->sid_param = sid;
+	}
+	if (gsid != NULL) {
+		g_free(ha->gsessionid_param);
+		ha->gsessionid_param = gsid;
+	}
 
 	json_node_free (node);
 	
@@ -332,7 +348,18 @@ hangouts_send_maps_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse *respo
 }
 
 void
-hangouts_send_maps(HangoutsAccount *ha, JsonArray *map_list)
+hangouts_fetch_channel_sid(HangoutsAccount *ha)
+{
+	g_free(ha->sid_param);
+	g_free(ha->gsessionid_param);
+	ha->sid_param = NULL;
+	ha->gsessionid_param = NULL;
+	
+	hangouts_send_maps(ha, NULL, hangouts_send_maps_cb);
+}
+
+void
+hangouts_send_maps(HangoutsAccount *ha, JsonArray *map_list, PurpleHttpCallback send_maps_callback)
 {
 	PurpleHttpRequest *request;
 	GString *url, *postdata;
@@ -357,25 +384,25 @@ hangouts_send_maps(HangoutsAccount *ha, JsonArray *map_list)
 	
 	postdata = g_string_new(NULL);
 	if (map_list != NULL) {
-		for(i = 0, map_list_len = json_array_get_length(map_list); i < map_list_len; i++) {
+		map_list_len = json_array_get_length(map_list);
+		g_string_append_printf(postdata, "count=%d&", map_list_len);
+		g_string_append(postdata, "ofs=0&");
+		for(i = 0; i < map_list_len; i++) {
 			JsonObject *obj = json_array_get_object_element(map_list, i);
 			GList *members = json_object_get_members(obj);
 			
 			for (; members != NULL; members = members->next) {
 				const gchar *member_name = members->data;
 				JsonNode *value = json_object_get_member(obj, member_name);
-				gchar *json = json_encode(value, NULL);
 				
 				g_string_append_printf(postdata, "req%u_%s=", i, purple_url_encode(member_name));
-				g_string_append_printf(postdata, "%s&", purple_url_encode(json));
-				
-				g_free(json);
+				g_string_append_printf(postdata, "%s&", purple_url_encode(json_node_get_string(value)));
 			}
 		}
 	}
 	purple_http_request_set_contents(request, postdata->str, postdata->len);
 
-	purple_http_request(ha->pc, request, hangouts_send_maps_cb, ha);
+	purple_http_request(ha->pc, request, send_maps_callback, ha);
 	
 	g_string_free(postdata, TRUE);
 	g_string_free(url, TRUE);	
@@ -385,11 +412,24 @@ void
 hangouts_add_channel_services(HangoutsAccount *ha)
 {
 	JsonArray *map_list = json_array_new();
-	JsonObject *obj = json_object_new();
+	JsonObject *obj;
 	
+	// TODO Work out what this is for
+	obj = json_object_new();
+	json_object_set_string_member(obj, "p", "{\"3\":{\"1\":{\"1\":\"tango_service\"}}}");
+	json_array_add_object_element(map_list, obj);
+	
+	// This is for the chat messages
+	obj = json_object_new();
 	json_object_set_string_member(obj, "p", "{\"3\":{\"1\":{\"1\":\"babel\"}}}");
 	json_array_add_object_element(map_list, obj);
-	hangouts_send_maps(ha, map_list);
+	
+	// TODO Work out what this is for
+	obj = json_object_new();
+	json_object_set_string_member(obj, "p", "{\"3\":{\"1\":{\"1\":\"hangout_invite\"}}}");
+	json_array_add_object_element(map_list, obj);
+	
+	hangouts_send_maps(ha, map_list, NULL);
 	
 	json_array_unref(map_list);
 }
@@ -465,6 +505,6 @@ hangouts_pblite_send_chat_message(HangoutsAccount *ha, SendChatMessageRequest *r
 {
 	SendChatMessageResponse response;
 	
-	send_chat_message_response__init(&response);	
+	send_chat_message_response__init(&response);
 	hangouts_pblite_request(ha, "conversations/sendchatmessage", (ProtobufCMessage *)request, (HangoutsPbliteResponseFunc)callback, (ProtobufCMessage *)&response, user_data);
 }

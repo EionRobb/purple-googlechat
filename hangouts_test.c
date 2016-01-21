@@ -32,6 +32,47 @@ typedef struct {
 	long long a;
 } Test;
 
+#include "cipher.h"
+
+void
+test_sapisidhash()
+{
+	PurpleCipherContext *sha1_ctx;
+	gchar sha1[41];
+	// GTimeVal time;
+	// gint64 mstime;
+	// gchar *mstime_str = "1447033700279";
+	// gchar *sapisid_cookie = "b4qUZKO4943exo9W/AmP2OAZLWGDwTsuh1";
+	// gchar *origin = "https://hangouts.google.com";
+	// gchar *mstime_str = "1453320676906";
+	// gchar *sapisid_cookie = "8U0lau5fPyo3YtYs/A-HOLpZCCmOZq_Dxg";
+	// gchar *origin = "https://talkgadget.google.com";
+	gchar *mstime_str = "1453320953775";
+	gchar *sapisid_cookie = "rO-0tFp4QmEPFXjq/AbNg8GFjmRRFem1SF";
+	gchar *origin = "https://hangouts.google.com";
+	
+	
+	// g_get_current_time(&time);
+	// mstime = (((gint64) time.tv_sec) * 1000) + (time.tv_usec / 1000);
+	// mstime_str = g_strdup_printf("%" G_GINT64_FORMAT, mstime);
+	// printf("mstime is %s\nexample:  1447033700279\n%ld %ld\n", mstime_str, time.tv_sec, time.tv_usec);
+	
+	purple_ciphers_init();
+	
+	sha1_ctx = purple_cipher_context_new(purple_ciphers_find_cipher("sha1"), NULL);
+	purple_cipher_context_append(sha1_ctx, (guchar *) mstime_str, strlen(mstime_str));
+	purple_cipher_context_append(sha1_ctx, (guchar *) " ", 1);
+	purple_cipher_context_append(sha1_ctx, (guchar *) sapisid_cookie, strlen(sapisid_cookie));
+	purple_cipher_context_append(sha1_ctx, (guchar *) " ", 1);
+	purple_cipher_context_append(sha1_ctx, (guchar *) origin, strlen(origin));
+	purple_cipher_context_digest_to_str(sha1_ctx, 41, sha1, NULL);
+	purple_cipher_context_destroy(sha1_ctx);
+	
+	// printf("SAPISID: %s\nExpected %s\n", sha1, "38cb670a2eaa2aca37edf07293150865121275cd");
+	// printf("SAPISID: %s\nExpected %s\n", sha1, "15f3b1c9e8fde2286fb2026bfc7e9788d56a0cec");
+	printf("SAPISID: %s\nExpected %s\n", sha1, "c151285107edadea4b3d07f0400ce69291faf4dc");
+}
+
 int main (int argc, const char * argv[])
 {
 	g_type_init();
@@ -39,6 +80,8 @@ int main (int argc, const char * argv[])
 	(void) test_string1;
 	gsize len;
 	gchar *test_string1_real = (gchar*) g_base64_decode(test_string1, &len);
+	
+	test_sapisidhash();
 	
 	hangouts_process_data_chunks(test_string2, -1);
 	hangouts_process_data_chunks(test_string1_real, len);

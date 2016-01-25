@@ -6,6 +6,7 @@
 #include "win32/win32dep.h"
 #endif
 
+#include "version.h"
 #if !PURPLE_VERSION_CHECK(3, 0, 0)
 #define purple_connection_is_disconnecting(c)   FALSE
 #define purple_proxy_info_get_proxy_type        purple_proxy_info_get_type

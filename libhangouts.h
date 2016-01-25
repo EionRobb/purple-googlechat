@@ -10,6 +10,7 @@
 
 #include "account.h"
 #include "connection.h"
+#include "version.h"
 #if PURPLE_VERSION_CHECK(3, 0, 0)
 #include "circularbuffer.h"
 #include "ciphers/sha1hash.h"

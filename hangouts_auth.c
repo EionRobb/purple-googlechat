@@ -75,7 +75,7 @@ hangouts_oauth_with_code_cb (PurpleHttpConnection *http_conn, PurpleHttpResponse
 		ha->refresh_token = g_strdup(json_object_get_string_member(obj, "refresh_token"));
 		
 		purple_account_set_remember_password(account, TRUE);
-		purple_account_set_password(account, ha->refresh_token);
+		purple_account_set_password(account, ha->refresh_token, NULL, NULL);
 		
 		hangouts_auth_get_session_cookies(ha);
 	} else {

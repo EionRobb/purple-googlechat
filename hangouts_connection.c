@@ -7,7 +7,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#if PURPLE_VERSION_CHECK(3, 0, 0)
+#include "ciphers/sha1hash.h"
+#else
 #include "cipher.h"
+#endif
 #include "debug.h"
 #ifdef _WIN32
 #include "win32/win32dep.h"
@@ -103,7 +107,7 @@ hangouts_process_data_chunks(HangoutsAccount *ha, const gchar *data, gsize len)
 					printf("----------------------\n");
 #endif
 					for(j = 0; j < batch_update.n_state_update; j++) {
-						purple_signal_emit(purple_connection_get_prpl(ha->pc), "hangouts-received-stateupdate", ha->pc, batch_update.state_update[j]);
+						purple_signal_emit(purple_connection_get_protocol(ha->pc), "hangouts-received-stateupdate", ha->pc, batch_update.state_update[j]);
 					}
 				}
 				
@@ -210,7 +214,7 @@ hangouts_process_channel_buffer(HangoutsAccount *ha)
 		
 		hangouts_process_data_chunks(ha, bufdata, len);
 		
-		purple_circ_buffer_mark_read(ha->channel_buffer, len + len_len + 1);
+		purple_circular_buffer_mark_read(ha->channel_buffer, len + len_len + 1);
 		remaining = purple_circular_buffer_get_max_read(ha->channel_buffer);
 		
 	} while (remaining);
@@ -222,7 +226,7 @@ hangouts_set_auth_headers(HangoutsAccount *ha, PurpleHttpRequest *request)
 	gint64 mstime;
 	gchar *mstime_str;
 	GTimeVal time;
-	PurpleCipherContext *sha1_ctx;
+	PurpleHash *hash;
 	gchar sha1[41];
 	gchar *sapisid_cookie;
 	
@@ -231,14 +235,14 @@ hangouts_set_auth_headers(HangoutsAccount *ha, PurpleHttpRequest *request)
 	mstime_str = g_strdup_printf("%" G_GINT64_FORMAT, mstime);
 	sapisid_cookie = purple_http_cookie_jar_get(ha->cookie_jar, "SAPISID");
 	
-	sha1_ctx = purple_cipher_context_new(purple_ciphers_find_cipher("sha1"), NULL);
-	purple_cipher_context_append(sha1_ctx, (guchar *) mstime_str, strlen(mstime_str));
-	purple_cipher_context_append(sha1_ctx, (guchar *) " ", 1);
-	purple_cipher_context_append(sha1_ctx, (guchar *) sapisid_cookie, strlen(sapisid_cookie));
-	purple_cipher_context_append(sha1_ctx, (guchar *) " ", 1);
-	purple_cipher_context_append(sha1_ctx, (guchar *) HANGOUTS_PBLITE_XORIGIN_URL, strlen(HANGOUTS_PBLITE_XORIGIN_URL));
-	purple_cipher_context_digest_to_str(sha1_ctx, 41, sha1, NULL);
-	purple_cipher_context_destroy(sha1_ctx);
+	hash = purple_sha1_hash_new();
+	purple_hash_append(hash, (guchar *) mstime_str, strlen(mstime_str));
+	purple_hash_append(hash, (guchar *) " ", 1);
+	purple_hash_append(hash, (guchar *) sapisid_cookie, strlen(sapisid_cookie));
+	purple_hash_append(hash, (guchar *) " ", 1);
+	purple_hash_append(hash, (guchar *) HANGOUTS_PBLITE_XORIGIN_URL, strlen(HANGOUTS_PBLITE_XORIGIN_URL));
+	purple_hash_digest_to_str(hash, sha1, 41);
+	purple_hash_destroy(hash);
 	
 	purple_http_request_header_set_printf(request, "Authorization", "SAPISIDHASH %s_%s", mstime_str, sha1);
 	purple_http_request_header_set(request, "X-Origin", HANGOUTS_PBLITE_XORIGIN_URL);
@@ -269,7 +273,7 @@ hangouts_longpoll_request_closed(PurpleHttpConnection *http_conn, PurpleHttpResp
 {
 	HangoutsAccount *ha = user_data;
 	
-	if (!PURPLE_CONNECTION_IS_VALID(purple_http_conn_get_purple_connection(http_conn))) {
+	if (!PURPLE_IS_CONNECTION(purple_http_conn_get_purple_connection(http_conn))) {
 		return;
 	}
 	

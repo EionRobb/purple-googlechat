@@ -6,7 +6,11 @@
 #include <glib.h>
 
 #include "debug.h"
+#if PURPLE_VERSION_CHECK(3, 0, 0)
+#include "plugins.h"
+#else
 #include "plugin.h"
+#endif
 #include "request.h"
 #include "version.h"
 #ifdef _WIN32
@@ -124,21 +128,52 @@ hangouts_status_types(PurpleAccount *account)
 
 /*****************************************************************************/
 
+#if PURPLE_VERSION_CHECK(3, 0, 0)
+static void
+hangouts_protocol_init(PurpleProtocol *);
+static void
+hangouts_protocol_class_init(PurpleProtocolClass *);
+
+PURPLE_DEFINE_TYPE(HangoutsProtocol, hangouts_protocol, PURPLE_TYPE_PROTOCOL);
+static PurpleProtocol *hangouts_protocol;
+#endif
+
 static gboolean
-plugin_load(PurplePlugin *plugin)
+plugin_load(PurplePlugin *plugin
+#if PURPLE_VERSION_CHECK(3, 0, 0)
+, GError **error
+#endif
+)
 {
+#if PURPLE_VERSION_CHECK(3, 0, 0)
+	hangouts_protocol_register_type(plugin);
+	hangouts_protocol = purple_protocols_add(HANGOUTS_TYPE_PROTOCOL, error);
+	if (!hangouts_protocol)
+		return FALSE;
+#endif
+
 	purple_http_init();
 	return TRUE;
 }
 
 static gboolean
-plugin_unload(PurplePlugin *plugin)
+plugin_unload(PurplePlugin *plugin
+#if PURPLE_VERSION_CHECK(3, 0, 0)
+, GError **error
+#endif
+)
 {
 	purple_http_uninit();
+
+#if PURPLE_VERSION_CHECK(3, 0, 0)
+	if (!purple_protocols_remove(hangouts_protocol, error))
+		return FALSE;
+#endif
+
 	return TRUE;
 }
 
-
+#if !PURPLE_VERSION_CHECK(3, 0, 0)
 static PurplePluginInfo info =
 {
 	PURPLE_PLUGIN_MAGIC,
@@ -152,7 +187,7 @@ static PurplePluginInfo info =
 
 	HANGOUTS_PLUGIN_ID,                               /**< id             */
 	N_("Hangouts"),                           /**< name           */
-	"0.1",                                  /**< version        */
+	HANGOUTS_PLUGIN_VERSION,                          /**< version        */
 	                                                  /**  summary        */
 	N_("Hangouts Protocol Plugins."),
 	                                                  /**  description    */
@@ -175,8 +210,18 @@ static PurplePluginInfo info =
 	NULL,
 	NULL
 };
+#endif
 
 static void
+#if PURPLE_VERSION_CHECK(3, 0, 0)
+hangouts_protocol_init(PurpleProtocol *prpl_info)
+{
+	PurpleProtocol *plugin = prpl_info, *info = prpl_info;
+
+	info->id = HANGOUTS_PLUGIN_ID;
+	info->name = "Hangouts";
+
+#else
 init_plugin(PurplePlugin *plugin)
 {
 	PurplePluginInfo *info;
@@ -186,13 +231,32 @@ init_plugin(PurplePlugin *plugin)
 	if (info == NULL) {
 		plugin->info = info = g_new0(PurplePluginInfo, 1);
 	}
+#endif
 	
 	prpl_info->options = OPT_PROTO_NO_PASSWORD;
+
+	
+	purple_signal_register(plugin, "hangouts-received-stateupdate",
+#if !PURPLE_VERSION_CHECK(3, 0, 0)
+			purple_marshal_VOID__POINTER_POINTER, NULL, 2,
+			PURPLE_TYPE_CONNECTION,
+			purple_value_new_outgoing(PURPLE_TYPE_OBJECT));
+#else
+			purple_marshal_VOID__POINTER_POINTER, G_TYPE_NONE, 2,
+			PURPLE_TYPE_CONNECTION,
+			G_TYPE_OBJECT);
+}
+
+static void
+hangouts_protocol_class_init(PurpleProtocolClass *prpl_info)
+{
+#endif
 	prpl_info->login = hangouts_login;
 	prpl_info->close = hangouts_close;
 	prpl_info->status_types = hangouts_status_types;
 	prpl_info->list_icon = hangouts_list_icon;
 	
+#if !PURPLE_VERSION_CHECK(3, 0, 0)
 	info->extra_info = prpl_info;
 	#if PURPLE_MINOR_VERSION >= 5
 		prpl_info->struct_size = sizeof(PurplePluginProtocolInfo);
@@ -200,13 +264,32 @@ init_plugin(PurplePlugin *plugin)
 	#if PURPLE_MINOR_VERSION >= 8
 		//prpl_info->add_buddy_with_invite = skypeweb_add_buddy_with_invite;
 	#endif
-	
-	purple_signal_register(plugin, "hangouts-received-stateupdate",
-			purple_marshal_VOID__POINTER_POINTER, NULL, 2,
-			purple_value_new(PURPLE_TYPE_SUBTYPE, PURPLE_SUBTYPE_CONNECTION),
-			purple_value_new_outgoing(PURPLE_TYPE_OBJECT));
+#endif
 }
 	
+#if !PURPLE_VERSION_CHECK(3, 0, 0)
 
 PURPLE_INIT_PLUGIN(hangouts, init_plugin, info);
 
+#else
+
+static PurplePluginInfo *
+plugin_query(GError **error)
+{
+	return purple_plugin_info_new(
+		"id",		HANGOUTS_PLUGIN_ID,
+		"name",		"Hangouts",
+		"version",	HANGOUTS_PLUGIN_VERSION,
+		"category",	N_("Protocol"),
+		"summary",	N_("Hangouts Protocol Plugins."),
+		"description",	N_("Adds Hangouts protocol support to libpurple."),
+		"website",	"TODO",
+		"abi-version",	PURPLE_ABI_VERSION,
+		"flags",	PURPLE_PLUGIN_INFO_FLAGS_INTERNAL |
+				PURPLE_PLUGIN_INFO_FLAGS_AUTO_LOAD,
+		NULL
+	);
+}
+
+PURPLE_PLUGIN_INIT(hangouts, plugin_query, plugin_load, plugin_unload);
+#endif

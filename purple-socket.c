@@ -21,6 +21,11 @@
 
 #include "purple-socket.h"
 
+#ifndef _WIN32
+#include <errno.h>
+#include <unistd.h>
+#endif
+
 #include "internal.h"
 
 #include "debug.h"

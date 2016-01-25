@@ -421,7 +421,7 @@ pblite_encode(ProtobufCMessage *message)
 		//... so dont, just cheat!
 		if (!JSON_NODE_HOLDS_NULL(encoded_value)) {
 			gchar *obj_id = g_strdup_printf("%u", field_descriptor->id - 1);
-			json_object_add_member(cheats_object, obj_id, encoded_value);
+			json_object_set_member(cheats_object, obj_id, encoded_value);
 			g_free(obj_id);
 		}
 	}

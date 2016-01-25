@@ -24,7 +24,7 @@ hangouts.pb-c.c: hangouts.proto
 	$(PROTOC-C) --c_out=. hangouts.proto
 
 libhangouts.so: $(PURPLE_C_FILES)
-	$(CC) -shared -o $@ $^ `$(PKG_CONFIG) purple glib-2.0 json-glib-1.0 protobuf-c`
+	$(CC) -shared -o $@ $^ `$(PKG_CONFIG) purple glib-2.0 json-glib-1.0 libprotobuf-c --libs --cflags`
 	
 libhangouts.dll: $(PURPLE_C_FILES)
 	$(WIN32_CC) -shared -o $@ $^ $(CFLAGS) $(LDFLAGS)

@@ -84,6 +84,8 @@ hangouts_close(PurpleConnection *pc)
 	
 	ha = purple_connection_get_protocol_data(pc);
 	
+	purple_http_conn_cancel_all(pc);
+	
 	purple_http_keepalive_pool_unref(ha->channel_keepalive_pool);
 	g_free(ha->refresh_token);
 	g_free(ha->access_token);

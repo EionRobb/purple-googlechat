@@ -8,6 +8,7 @@ WIN32_CC ?= $(WIN32_DEV_TOP)/mingw/bin/gcc
 
 CC ?= gcc
 PROTOC-C ?= protoc-c
+PKG_CONFIG ?= pkg-config
 
 
 CFLAGS = -I$(WIN32_DEV_TOP)/glib-2.28.8/include -I$(WIN32_DEV_TOP)/glib-2.28.8/include/glib-2.0 -I$(WIN32_DEV_TOP)/glib-2.28.8/lib/glib-2.0/include -I$(WIN32_DEV_TOP)/json-glib-0.14/include/json-glib-1.0 -I$(WIN32_DEV_TOP)/protobuf-c-Release-2.6/include -I$(PIDGIN_TREE_TOP)/libpurple -DENABLE_NLS -DPACKAGE_VERSION='"$(PLUGIN_VERSION)"' -Wall -Wextra -Werror -Wno-deprecated-declarations -Wno-unused-parameter -I. -fno-strict-aliasing

@@ -273,6 +273,9 @@ hangouts_longpoll_request_closed(PurpleHttpConnection *http_conn, PurpleHttpResp
 		return;
 	}
 	
+	purple_circular_buffer_destroy(ha->channel_buffer);
+	ha->channel_buffer = purple_circular_buffer_new(0);
+	
 	//TODO error checking
 	hangouts_longpoll_request(ha);
 }

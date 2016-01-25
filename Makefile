@@ -14,16 +14,22 @@ C_FILES := hangouts.pb-c.c hangouts_json.c hangouts_pblite.c hangouts_connection
 PURPLE_C_FILES := libhangouts.c $(C_FILES)
 TEST_C_FILES := hangouts_test.c $(C_FILES)
 
-all: libhangouts.dll
+all: libhangouts.so
 
 hangouts.pb-c.c: hangouts.proto
 	$(PROTOBUF_C_DIR)/bin/protoc-c.exe --c_out=. hangouts.proto
 
+libhangouts.so: $(PURPLE_C_FILES)
+	$(CC) -shared -o $@ $^ `$(PKG_CONFIG) purple glib-2.0 json-glib-1.0 protobuf-c`
+	
 libhangouts.dll: $(PURPLE_C_FILES)
 	$(CC) -shared -o $@ $^ $(CFLAGS) $(LDFLAGS)
 	
 libhangouts.exe: $(TEST_C_FILES)
 	$(CC) -o $@ -DDEBUG $^ $(CFLAGS) $(LDFLAGS)
 
-install: libhangouts.dll
-	cp libhangouts.dll "$(PROGRAMFILES)/Pidgin/plugins"
+install: libhangouts.so
+	cp $^ $(DESTDIR)`$(PKG_CONFIG) --variable=plugindir purple`
+	
+install-windows: libhangouts.dll
+	cp $^ "$(PROGRAMFILES)/Pidgin/plugins"

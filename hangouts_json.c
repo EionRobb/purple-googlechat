@@ -18,6 +18,25 @@ json_encode(JsonNode *node, gsize *len)
 }
 
 gchar *
+json_pretty_encode(JsonNode *node, gsize *len)
+{
+	gchar *data;
+	JsonGenerator *generator = json_generator_new();
+	
+	g_object_set(generator, "pretty", TRUE, NULL);
+	g_object_set(generator, "indent-char", '\t', NULL);
+	g_object_set(generator, "indent", 1, NULL);
+	
+	json_generator_set_root(generator, node);
+	
+	data = json_generator_to_data(generator, len);
+	
+	g_object_unref(generator);
+	
+	return data;
+}
+
+gchar *
 json_encode_array(JsonArray *array, gsize *len)
 {
 	JsonNode *node = json_node_new(JSON_NODE_ARRAY);

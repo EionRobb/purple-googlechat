@@ -21,6 +21,7 @@
 #include "hangouts_pblite.h"
 #include "hangouts_json.h"
 #include "hangouts.pb-c.h"
+#include "hangouts_events.h"
 
 
 /*****************************************************************************/
@@ -115,9 +116,9 @@ hangouts_status_types(PurpleAccount *account)
 	GList *types = NULL;
 	PurpleStatusType *status;
 	
-	status = purple_status_type_new_full(PURPLE_STATUS_OFFLINE, NULL, NULL, TRUE, TRUE, FALSE);
-	types = g_list_append(types, status);
 	status = purple_status_type_new_full(PURPLE_STATUS_AVAILABLE, NULL, NULL, TRUE, TRUE, FALSE);
+	types = g_list_append(types, status);
+	status = purple_status_type_new_full(PURPLE_STATUS_OFFLINE, NULL, NULL, TRUE, TRUE, FALSE);
 	types = g_list_append(types, status);
 	
 	return types;
@@ -245,6 +246,12 @@ init_plugin(PurplePlugin *plugin)
 			purple_marshal_VOID__POINTER_POINTER, G_TYPE_NONE, 2,
 			PURPLE_TYPE_CONNECTION,
 			G_TYPE_OBJECT);
+#endif
+	
+	purple_signal_connect(plugin, "hangouts-received-stateupdate", plugin, PURPLE_CALLBACK(hangouts_received_typing_notification), NULL);
+	purple_signal_connect(plugin, "hangouts-received-stateupdate", plugin, PURPLE_CALLBACK(hangouts_received_other_notification), NULL);
+	
+#if PURPLE_VERSION_CHECK(3, 0, 0)
 }
 
 static void

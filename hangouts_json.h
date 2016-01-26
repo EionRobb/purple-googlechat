@@ -33,6 +33,7 @@
  *      The JSON string or NULL if there was an error.  You are required to g_free() this when you are done.
  */
 gchar *json_encode(JsonNode *node, gsize *len);
+gchar *json_pretty_encode(JsonNode *node, gsize *len);
 
 gchar *json_encode_object(JsonObject *object, gsize *len);
 gchar *json_encode_array(JsonArray *array, gsize *len);

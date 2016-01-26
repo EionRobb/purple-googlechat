@@ -32,4 +32,7 @@ gboolean pblite_decode(ProtobufCMessage *message, JsonArray *pblite_array, gbool
  */
 JsonArray *pblite_encode(ProtobufCMessage *message);
 
+
+gchar *pblite_dump_json(ProtobufCMessage *message);
+
 #endif /* _HANGOUTS_PBLITE_H_ */

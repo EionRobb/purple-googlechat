@@ -428,3 +428,166 @@ pblite_encode(ProtobufCMessage *message)
 	
 	return pblite;
 }
+
+
+
+
+
+static JsonObject *pblite_encode_for_json(ProtobufCMessage *message);
+
+static JsonNode *
+pblite_encode_field_for_json(const ProtobufCFieldDescriptor *field, gpointer value)
+{
+	JsonNode *node = NULL;
+	
+	switch (field->type) {
+		case PROTOBUF_C_TYPE_INT32:
+		case PROTOBUF_C_TYPE_UINT32:
+		case PROTOBUF_C_TYPE_SFIXED32:
+		case PROTOBUF_C_TYPE_FIXED32:
+		case PROTOBUF_C_TYPE_FLOAT: {
+			uint32_t * member = value;
+			node = json_node_new(JSON_NODE_VALUE);
+			json_node_set_int(node, *member);
+			break;
+		}
+		case PROTOBUF_C_TYPE_ENUM: {
+			uint32_t * member = value;
+			const ProtobufCEnumDescriptor *enum_descriptor = field->descriptor;
+			const ProtobufCEnumValue *enum_value = protobuf_c_enum_descriptor_get_value(enum_descriptor, *member);
+			node = json_node_new(JSON_NODE_VALUE);
+			json_node_set_string(node, enum_value->name);
+			break;
+		}
+			
+		case PROTOBUF_C_TYPE_SINT32: {
+			int32_t * member = value;
+			node = json_node_new(JSON_NODE_VALUE);
+			json_node_set_int(node, *member);
+			break;
+		}
+	
+		case PROTOBUF_C_TYPE_INT64:
+		case PROTOBUF_C_TYPE_UINT64:
+		case PROTOBUF_C_TYPE_SFIXED64:
+		case PROTOBUF_C_TYPE_FIXED64:
+		case PROTOBUF_C_TYPE_DOUBLE: {
+			uint64_t * member = value;
+			node = json_node_new(JSON_NODE_VALUE);
+			json_node_set_int(node, *member);
+			break;
+		}
+		
+		case PROTOBUF_C_TYPE_SINT64: {
+			int64_t * member = value;
+			node = json_node_new(JSON_NODE_VALUE);
+			json_node_set_int(node, *member);
+			break;
+		}
+		
+		case PROTOBUF_C_TYPE_BOOL: {
+			protobuf_c_boolean * member = value;
+			node = json_node_new(JSON_NODE_VALUE);
+			json_node_set_int(node, *member);
+			break;
+		}
+			
+		case PROTOBUF_C_TYPE_STRING: {
+			char **pstr = value;
+			node = json_node_new(JSON_NODE_VALUE);
+			json_node_set_string(node, *pstr);		
+			break;
+		}
+		
+		case PROTOBUF_C_TYPE_BYTES: {
+			ProtobufCBinaryData *bd = value;
+			gchar *b64_data;
+			
+			b64_data = g_base64_encode(bd->data, bd->len);
+			node = json_node_new(JSON_NODE_VALUE);
+			json_node_set_string(node, b64_data);
+			g_free(b64_data);
+			break;
+		}
+		
+		case PROTOBUF_C_TYPE_MESSAGE: {
+			ProtobufCMessage **pmessage = value;
+			
+			node = json_node_new(JSON_NODE_OBJECT);
+			if (pmessage != NULL) {
+				json_node_take_object(node, pblite_encode_for_json(*pmessage));
+			}
+			break;
+		}
+	}
+	
+	return node;
+}
+
+static JsonObject *
+pblite_encode_for_json(ProtobufCMessage *message)
+{
+	JsonObject *pblite = json_object_new();
+	const ProtobufCMessageDescriptor *descriptor = message->descriptor;
+	guint i;
+	
+	for (i = 0; i < descriptor->n_fields; i++) {
+		const ProtobufCFieldDescriptor *field_descriptor = descriptor->fields + i;
+		void *field = STRUCT_MEMBER_P(message, field_descriptor->offset);
+		JsonNode *encoded_value = NULL;
+		
+		if (field_descriptor->label == PROTOBUF_C_LABEL_REPEATED) {
+			guint j;
+			size_t siz;
+			size_t array_len;
+			JsonArray *value_array;
+			
+			siz = sizeof_elt_in_repeated_array(field_descriptor->type);
+			array_len = STRUCT_MEMBER(size_t, message, field_descriptor->quantifier_offset);
+			
+			value_array = json_array_new();
+			for (j = 0; j < array_len; j++) {
+				field = STRUCT_MEMBER(void *, message, field_descriptor->offset) + (siz * j);
+				json_array_add_element(value_array, pblite_encode_field_for_json(field_descriptor, field));
+			}
+			encoded_value = json_node_new(JSON_NODE_ARRAY);
+			json_node_take_array(encoded_value, value_array);
+		} else {
+			if (field_descriptor->label == PROTOBUF_C_LABEL_OPTIONAL) {
+				if (field_descriptor->type == PROTOBUF_C_TYPE_MESSAGE || 
+				    field_descriptor->type == PROTOBUF_C_TYPE_STRING)
+				{
+					const void *ptr = *(const void * const *) field;
+					if (ptr == NULL || ptr == field_descriptor->default_value)
+						encoded_value = json_node_new(JSON_NODE_NULL);
+				} else {
+					const protobuf_c_boolean *val = field;
+					if (!*val)
+						encoded_value = json_node_new(JSON_NODE_NULL);
+				}
+			}
+			if (encoded_value == NULL) {
+				encoded_value = pblite_encode_field_for_json(field_descriptor, field);
+			}
+		}
+		
+		json_object_set_member(pblite, field_descriptor->name, encoded_value);
+	}
+	
+	return pblite;
+}
+
+
+gchar *
+pblite_dump_json(ProtobufCMessage *message)
+{
+	JsonObject *pblite = pblite_encode_for_json(message);
+	JsonNode *node = json_node_new(JSON_NODE_OBJECT);
+	gchar *json;
+	
+	json_node_take_object(node, pblite);
+	json = json_pretty_encode(node, NULL);
+	
+	json_node_free(node);
+	return json;
+}

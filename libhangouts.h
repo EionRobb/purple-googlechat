@@ -75,6 +75,7 @@ G_MODULE_EXPORT GType hangouts_protocol_get_type(void);
 #define purple_connection_get_protocol		purple_connection_get_prpl
 #define purple_connection_error                 purple_connection_error_reason
 
+#define purple_protocol_got_user_status		purple_prpl_got_user_status
 
 #define purple_account_set_password(account, password, dummy1, dummy2) \
 		purple_account_set_password(account, password);

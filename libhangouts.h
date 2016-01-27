@@ -8,15 +8,13 @@
 #	define PURPLE_PLUGINS
 #endif
 
+#include "purplecompat.h"
+
 #include "account.h"
 #include "connection.h"
 #include "version.h"
-#if PURPLE_VERSION_CHECK(3, 0, 0)
 #include "circularbuffer.h"
 #include "ciphers/sha1hash.h"
-#else
-#include "circbuffer.h"
-#endif
 #include "http.h"
 
 #define HANGOUTS_PLUGIN_ID "prpl-hangouts"
@@ -63,39 +61,6 @@ G_MODULE_EXPORT GType hangouts_protocol_get_type(void);
 #define HANGOUTS_IS_PROTOCOL_CLASS(klass)	(G_TYPE_CHECK_CLASS_TYPE((klass), HANGOUTS_TYPE_PROTOCOL))
 #define HANGOUTS_PROTOCOL_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS((obj), HANGOUTS_TYPE_PROTOCOL, HangoutsProtocolClass))
 
-#define purple_circular_buffer_destroy		g_object_unref
-#define purple_hash_destroy			g_object_unref
-
-#else
-
-#define PURPLE_TYPE_CONNECTION	purple_value_new(PURPLE_TYPE_SUBTYPE, PURPLE_SUBTYPE_CONNECTION)
-#define PURPLE_IS_CONNECTION	PURPLE_CONNECTION_IS_VALID
-
-#define PURPLE_CONNECTION_CONNECTED		PURPLE_CONNECTED
-
-#define purple_request_cpar_from_connection(a)  purple_connection_get_account(a), NULL, NULL
-#define purple_connection_get_protocol		purple_connection_get_prpl
-#define purple_connection_error                 purple_connection_error_reason
-
-#define purple_protocol_got_user_status		purple_prpl_got_user_status
-
-#define purple_account_set_password(account, password, dummy1, dummy2) \
-		purple_account_set_password(account, password);
-
-#define PurpleCircularBuffer                    PurpleCircBuffer
-#define purple_circular_buffer_new              purple_circ_buffer_new
-#define purple_circular_buffer_destroy          purple_circ_buffer_destroy
-#define purple_circular_buffer_append           purple_circ_buffer_append
-#define purple_circular_buffer_get_max_read     purple_circ_buffer_get_max_read
-#define purple_circular_buffer_mark_read        purple_circ_buffer_mark_read
-#define purple_circular_buffer_get_output(buf)  ((const gchar *) (buf)->outptr)
-
-#define PurpleHash		PurpleCipherContext
-#define purple_sha1_hash_new()	purple_cipher_context_new(purple_ciphers_find_cipher("sha1"), NULL)
-#define purple_hash_append	purple_cipher_context_append
-#define purple_hash_digest_to_str(ctx, data, size) \
-				purple_cipher_context_digest_to_str(ctx, size, data, NULL)
-#define purple_hash_destroy	purple_cipher_context_destroy
 #endif
 
 typedef struct {

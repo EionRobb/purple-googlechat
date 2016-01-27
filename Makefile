@@ -24,13 +24,13 @@ hangouts.pb-c.c: hangouts.proto
 	$(PROTOC-C) --c_out=. hangouts.proto
 
 libhangouts.so: $(PURPLE_C_FILES)
-	$(CC) -fPIC -shared -o $@ $^ `$(PKG_CONFIG) purple glib-2.0 json-glib-1.0 libprotobuf-c --libs --cflags` -I/usr/include/protobuf-c
+	$(CC) -fPIC -shared -o $@ $^ `$(PKG_CONFIG) purple glib-2.0 json-glib-1.0 libprotobuf-c --libs --cflags` -I/usr/include/protobuf-c -Ipurple2compat
 
 libhangouts3.so: $(PURPLE_C_FILES)
 	$(CC) -fPIC -shared -o $@ $^ `$(PKG_CONFIG) purple-3 glib-2.0 json-glib-1.0 libprotobuf-c --libs --cflags` -I/usr/include/protobuf-c
 	
 libhangouts.dll: $(PURPLE_C_FILES)
-	$(WIN32_CC) -shared -o $@ $^ $(CFLAGS) $(LDFLAGS)
+	$(WIN32_CC) -shared -o $@ $^ $(CFLAGS) $(LDFLAGS) -Ipurple2compat
 	
 libhangouts.exe: $(TEST_C_FILES)
 	$(WIN32_CC) -o $@ -DDEBUG $^ $(CFLAGS) $(LDFLAGS)

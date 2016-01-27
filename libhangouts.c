@@ -6,11 +6,7 @@
 #include <glib.h>
 
 #include "debug.h"
-#if PURPLE_VERSION_CHECK(3, 0, 0)
 #include "plugins.h"
-#else
-#include "plugin.h"
-#endif
 #include "request.h"
 #include "version.h"
 #ifdef _WIN32

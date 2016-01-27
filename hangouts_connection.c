@@ -7,11 +7,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#if PURPLE_VERSION_CHECK(3, 0, 0)
 #include "ciphers/sha1hash.h"
-#else
-#include "cipher.h"
-#endif
 #include "debug.h"
 #ifdef _WIN32
 #include "win32/win32dep.h"

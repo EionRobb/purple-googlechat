@@ -12,7 +12,6 @@
 
 #include "account.h"
 #include "connection.h"
-#include "version.h"
 #include "circularbuffer.h"
 #include "ciphers/sha1hash.h"
 #include "http.h"
@@ -41,27 +40,6 @@
 
 #define HANGOUTS_API_OAUTH2_AUTHORIZATION_CODE_URL "https://accounts.google.com/o/oauth2/auth?client_id=" GOOGLE_CLIENT_ID "&scope=https://www.google.com/accounts/OAuthLogin&redirect_uri=urn:ietf:wg:oauth:2.0:oob&response_type=code"
 
-
-#if PURPLE_VERSION_CHECK(3, 0, 0)
-typedef struct _HangoutsProtocol
-{
-	PurpleProtocol parent;
-} HangoutsProtocol;
-
-typedef struct _HangoutsProtocolClass
-{
-	PurpleProtocolClass parent_class;
-} HangoutsProtocolClass;
-
-G_MODULE_EXPORT GType hangouts_protocol_get_type(void);
-#define HANGOUTS_TYPE_PROTOCOL			(hangouts_protocol_get_type())
-#define HANGOUTS_PROTOCOL(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), HANGOUTS_TYPE_PROTOCOL, HangoutsProtocol))
-#define HANGOUTS_PROTOCOL_CLASS(klass)		(G_TYPE_CHECK_CLASS_CAST((klass), HANGOUTS_TYPE_PROTOCOL, HangoutsProtocolClass))
-#define HANGOUTS_IS_PROTOCOL(obj)		(G_TYPE_CHECK_INSTANCE_TYPE((obj), HANGOUTS_TYPE_PROTOCOL))
-#define HANGOUTS_IS_PROTOCOL_CLASS(klass)	(G_TYPE_CHECK_CLASS_TYPE((klass), HANGOUTS_TYPE_PROTOCOL))
-#define HANGOUTS_PROTOCOL_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS((obj), HANGOUTS_TYPE_PROTOCOL, HangoutsProtocolClass))
-
-#endif
 
 typedef struct {
 	PurpleAccount *account;

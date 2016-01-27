@@ -257,8 +257,8 @@ hangouts_received_typing_notification(PurpleConnection *pc, StateUpdate *state_u
 	SetTypingNotification *typing_notification = state_update->typing_notification;
 	const gchar *gaia_id;
 	const gchar *conv_id;
-	PurpleTypingState typing_state;
-	PurpleConversation *conv;
+	PurpleIMTypingState typing_state;
+	PurpleChatConversation *conv;
 	
 	if (typing_notification == NULL) {
 		return;
@@ -305,23 +305,23 @@ hangouts_received_typing_notification(PurpleConnection *pc, StateUpdate *state_u
 	gaia_id = typing_notification->sender_id->gaia_id;
 	conv_id = typing_notification->conversation_id->id;
 	
-	conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT, conv_id, ha->account);
+	conv = purple_conversations_find_chat_with_account(conv_id, ha->account);
 	if (conv) return;
 	
 	switch(typing_notification->type) {
 		case TYPING_TYPE__TYPING_TYPE_STARTED:
-			typing_state = PURPLE_TYPING;
+			typing_state = PURPLE_IM_TYPING;
 			break;
 		
 		case TYPING_TYPE__TYPING_TYPE_PAUSED:
-			typing_state = PURPLE_TYPED;
+			typing_state = PURPLE_IM_TYPED;
 			break;
 		
 		default:
 		case TYPING_TYPE__TYPING_TYPE_STOPPED:
-			typing_state = PURPLE_NOT_TYPING;
+			typing_state = PURPLE_IM_NOT_TYPING;
 			break;
 	}
 	
-	serv_got_typing(pc, gaia_id, 20, typing_state);
+	purple_serv_got_typing(pc, gaia_id, 20, typing_state);
 }

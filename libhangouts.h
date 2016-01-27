@@ -71,6 +71,8 @@ G_MODULE_EXPORT GType hangouts_protocol_get_type(void);
 #define PURPLE_TYPE_CONNECTION	purple_value_new(PURPLE_TYPE_SUBTYPE, PURPLE_SUBTYPE_CONNECTION)
 #define PURPLE_IS_CONNECTION	PURPLE_CONNECTION_IS_VALID
 
+#define PURPLE_CONNECTION_CONNECTED		PURPLE_CONNECTED
+
 #define purple_request_cpar_from_connection(a)  purple_connection_get_account(a), NULL, NULL
 #define purple_connection_get_protocol		purple_connection_get_prpl
 #define purple_connection_error                 purple_connection_error_reason

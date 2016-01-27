@@ -131,7 +131,7 @@ hangouts_auth_get_session_cookies_got_cb(PurpleHttpConnection *http_conn, Purple
 	}
 	
 	// SOUND THE TRUMPETS
-	purple_connection_set_state(ha->pc, PURPLE_CONNECTED);
+	purple_connection_set_state(ha->pc, PURPLE_CONNECTION_CONNECTED);
 	hangouts_fetch_channel_sid(ha);
 }
 

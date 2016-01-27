@@ -10,5 +10,6 @@
 #define purple_circular_buffer_get_max_read     purple_circ_buffer_get_max_read
 #define purple_circular_buffer_mark_read        purple_circ_buffer_mark_read
 #define purple_circular_buffer_get_output(buf)  ((const gchar *) (buf)->outptr)
+#define purple_circular_buffer_get_used(buf)    ((buf)->bufused)
 
 #endif /*_CIRCULARBUFFER_H_*/

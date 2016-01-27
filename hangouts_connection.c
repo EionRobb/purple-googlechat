@@ -172,46 +172,61 @@ void
 hangouts_process_channel_buffer(HangoutsAccount *ha)
 {
 	const gchar *bufdata;
-	gsize remaining;
+	gchar *chunk, *chunk_pos;
+	gsize remaining, bufsize;
 	gchar *len_end;
 	gchar *len_str;
 	guint len_len; //len len len len len len len len len
-	guint64 len;
+	gsize len;
 	
 	g_return_if_fail(ha);
 	g_return_if_fail(ha->channel_buffer);
 	
 	do {
 		bufdata = purple_circular_buffer_get_output(ha->channel_buffer);
-		remaining = purple_circular_buffer_get_max_read(ha->channel_buffer);
+		bufsize = purple_circular_buffer_get_max_read(ha->channel_buffer);
+		remaining = purple_circular_buffer_get_used(ha->channel_buffer);
 		
-		len_end = g_strstr_len(bufdata, remaining, "\n");
+		len_end = g_strstr_len(bufdata, bufsize, "\n");
 		if (len_end == NULL) {
 			// Not enough data to read
+			purple_debug_info("hangouts", "Couldn't find length of chunk\n");
 			return;
 		}
 		len_len = len_end - bufdata;
 		len_str = g_strndup(bufdata, len_len);
-		len = g_ascii_strtoull(len_str, NULL, 10);
+		len = (gsize) atoi(len_str);
 		g_free(len_str);
 		
 		// Len was 0 ?  Must have been a bad read :(
 		g_return_if_fail(len);
 		
-		bufdata = len_end + 1;
 		remaining = remaining - len_len - 1;
 		
 		if (len > remaining) {
 			// Not enough data to read
+			purple_debug_info("hangouts", "Couldn't read %d bytes when we have %d\n", len, remaining);
 			return;
 		}
+		purple_circular_buffer_mark_read(ha->channel_buffer, len_len + 1);
 		
-		purple_debug_info("hangouts", "Got chunk %.*s\n", (int) len, bufdata);
+		chunk_pos = chunk = g_new0(gchar, len + 1);
+		while (remaining > 0) {
+			bufsize = MIN(remaining, purple_circular_buffer_get_max_read(ha->channel_buffer));
+			bufdata = purple_circular_buffer_get_output(ha->channel_buffer);
+			
+			g_memmove(chunk_pos, bufdata, bufsize);
+			purple_circular_buffer_mark_read(ha->channel_buffer, bufsize);
+			
+			remaining -= bufsize;
+			chunk_pos += bufsize;
+		}
 		
-		hangouts_process_data_chunks(ha, bufdata, len);
+		purple_debug_info("hangouts", "Got chunk %.*s\n", (int) len, chunk);
 		
-		purple_circular_buffer_mark_read(ha->channel_buffer, len + len_len + 1);
-		remaining = purple_circular_buffer_get_max_read(ha->channel_buffer);
+		hangouts_process_data_chunks(ha, chunk, len);
+		
+		remaining = purple_circular_buffer_get_used(ha->channel_buffer);
 		
 	} while (remaining);
 }

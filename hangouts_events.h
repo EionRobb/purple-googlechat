@@ -7,6 +7,7 @@
 
 
 void hangouts_received_other_notification(PurpleConnection *pc, StateUpdate *state_update);
+void hangouts_received_event_notification(PurpleConnection *pc, StateUpdate *state_update);
 void hangouts_received_typing_notification(PurpleConnection *pc, StateUpdate *state_update);
 
 

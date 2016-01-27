@@ -27,6 +27,7 @@
 #define PurpleChatConversation	PurpleConvChat
 #define purple_conversations_find_chat_with_account(id, account) \
 		((PurpleConvChat *)purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT, id, account))
+#define purple_chat_conversation_get_id  purple_conv_chat_get_id
 
 #define PurpleIMTypingState	PurpleTypingState
 #define PURPLE_IM_NOT_TYPING	PURPLE_NOT_TYPING
@@ -40,7 +41,24 @@
 
 #define purple_proxy_info_get_proxy_type        purple_proxy_info_get_type
 
-#define purple_serv_got_typing	serv_got_typing
+#define purple_serv_got_im      serv_got_im
+#define purple_serv_got_typing  serv_got_typing
+#define purple_serv_got_alias   serv_got_alias
+#define purple_serv_got_chat_in serv_got_chat_in
+
+#define PurpleXmlNode                xmlnode
+#define purple_xmlnode_new           xmlnode_new
+#define purple_xmlnode_new_child     xmlnode_new_child
+#define purple_xmlnode_from_str      xmlnode_from_str
+#define purple_xmlnode_to_str        xmlnode_to_str
+#define purple_xmlnode_get_child     xmlnode_get_child
+#define purple_xmlnode_get_next_twin xmlnode_get_next_twin
+#define purple_xmlnode_get_data      xmlnode_get_data
+#define purple_xmlnode_get_attrib    xmlnode_get_attrib
+#define purple_xmlnode_set_attrib    xmlnode_set_attrib
+#define purple_xmlnode_insert_data   xmlnode_insert_data
+#define purple_xmlnode_free          xmlnode_free
+
 
 #endif
 

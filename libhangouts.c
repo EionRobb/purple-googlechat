@@ -176,6 +176,7 @@ hangouts_protocol_init(PurpleProtocol *prpl_info)
 			G_TYPE_OBJECT);
 
 	purple_signal_connect(plugin, "hangouts-received-stateupdate", plugin, PURPLE_CALLBACK(hangouts_received_typing_notification), NULL);
+	purple_signal_connect(plugin, "hangouts-received-stateupdate", plugin, PURPLE_CALLBACK(hangouts_received_event_notification), NULL);
 	purple_signal_connect(plugin, "hangouts-received-stateupdate", plugin, PURPLE_CALLBACK(hangouts_received_other_notification), NULL);
 }
 
@@ -307,6 +308,7 @@ init_plugin(PurplePlugin *plugin)
 			purple_value_new_outgoing(PURPLE_TYPE_OBJECT));
 	
 	purple_signal_connect(plugin, "hangouts-received-stateupdate", plugin, PURPLE_CALLBACK(hangouts_received_typing_notification), NULL);
+	purple_signal_connect(plugin, "hangouts-received-stateupdate", plugin, PURPLE_CALLBACK(hangouts_received_event_notification), NULL);
 	purple_signal_connect(plugin, "hangouts-received-stateupdate", plugin, PURPLE_CALLBACK(hangouts_received_other_notification), NULL);
 
 	prpl_info->login = hangouts_login;

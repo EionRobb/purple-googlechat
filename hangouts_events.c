@@ -191,23 +191,103 @@ hangouts_received_presence_notification(PurpleConnection *pc, StateUpdate *state
                 ]
         },*/
 }
+
+void
+hangouts_received_event_notification(PurpleConnection *pc, StateUpdate *state_update)
+{
+	HangoutsAccount *ha;
+	EventNotification *event_notification = state_update->event_notification;
+	Event *event;
+	const gchar *gaia_id;
+	const gchar *self_id;
+	const gchar *conv_id;
+	gint64 current_server_time = state_update->state_update_header->current_server_time;
+	gint64 timestamp;
+	ChatMessage *chat_message;
+	PurpleChatConversation *chatconv;
+	
+	if (event_notification == NULL) {
+		return;
+	}
+	
+	ha = purple_connection_get_protocol_data(pc);
+	event = event_notification->event;
+	gaia_id = event->sender_id->gaia_id;
+	conv_id = event->conversation_id->id;
+	self_id = event->self_event_state->user_id->gaia_id;
+	timestamp = event->timestamp;
+	chat_message = event->chat_message;
+	
+	if (chat_message != NULL) {
+		size_t n_segments = chat_message->message_content->n_segment;
+		Segment **segments = chat_message->message_content->segment;
+		guint i;
+		PurpleXmlNode *html = purple_xmlnode_new("html");
+		gchar *msg;
+		time_t message_timestamp;
+
+		for (i = 0; i < n_segments; i++) {
+			Segment *segment = segments[i];
+			Formatting *formatting = segment->formatting;
+			PurpleXmlNode *node;
+			
+			if (segment->type == SEGMENT_TYPE__SEGMENT_TYPE_TEXT) {
+				node = purple_xmlnode_new_child(html, "span");
+			} else if (segment->type == SEGMENT_TYPE__SEGMENT_TYPE_LINE_BREAK) {
+				purple_xmlnode_new_child(html, "br");
+				continue;
+			} else if (segment->type == SEGMENT_TYPE__SEGMENT_TYPE_LINK) {
+				node = purple_xmlnode_new_child(html, "a");
+				if (segment->link_data) {
+					purple_xmlnode_set_attrib(node, "href", segment->link_data->link_target);
+				}
+			} else {
+				continue;
+			}
+			
+			purple_xmlnode_insert_data(node, segment->text, -1);
+			
+			if (formatting) {
+				if (formatting->has_bold && formatting->bold) {
+					
+				}
+			}
+		}
+		
+		msg = purple_xmlnode_to_str(html, NULL);
+		message_timestamp = time(NULL) - ((current_server_time - timestamp) / 1000000);
+		
+		chatconv = purple_conversations_find_chat_with_account(conv_id, ha->account);
+		if (chatconv) {
+			purple_serv_got_chat_in(pc, purple_chat_conversation_get_id(chatconv), gaia_id, PURPLE_MESSAGE_RECV, msg, message_timestamp);
+		} else {
+			if (g_strcmp0(gaia_id, self_id)) {
+				purple_serv_got_im(pc, gaia_id, msg, PURPLE_MESSAGE_RECV, message_timestamp);
+			}
+			
+		}
+		
+		g_free(msg);
+		purple_xmlnode_free(html);
+	}
+	
 		/*
         "event_notification" : {
                 "event" : {
                         "conversation_id" : {
-                                "id" : "UgztqB4JE5L0tSWAgVd4AaABAagB2q6lCw"
+                                "id" : "UgxGdpCK_mSrhBX8hrx4AaABAQ"
                         },
                         "sender_id" : {
-                                "gaia_id" : "110174066375061118727",
-                                "chat_id" : "110174066375061118727"
+                                "gaia_id" : "111523150620250165866",
+                                "chat_id" : "111523150620250165866"
                         },
-                        "timestamp" : 1453809862342224,
+                        "timestamp" : 1453887705472924,
                         "self_event_state" : {
                                 "user_id" : {
                                         "gaia_id" : "110174066375061118727",
                                         "chat_id" : "110174066375061118727"
                                 },
-                                "client_generated_id" : "-1747376171",
+                                "client_generated_id" : null,
                                 "notification_level" : "NOTIFICATION_LEVEL_RING"
                         },
                         "source_type" : null,
@@ -230,7 +310,7 @@ hangouts_received_presence_notification(PurpleConnection *pc, StateUpdate *state
                         "membership_change" : null,
                         "conversation_rename" : null,
                         "hangout_event" : null,
-                        "event_id" : "89TbE8C56zw89TbMSYFNOM",
+                        "event_id" : "7-H0Z7-R95X89Vvpn-PwqO",
                         "expiration_timestamp" : null,
                         "otr_modification" : null,
                         "advances_sort_timestamp" : 1,
@@ -241,14 +321,42 @@ hangouts_received_presence_notification(PurpleConnection *pc, StateUpdate *state
                                 "phone" : null
                         },
                         "event_type" : "EVENT_TYPE_REGULAR_CHAT_MESSAGE",
-                        "event_version" : 1453809862342224,
+                        "event_version" : 1453887705472924,
                         "hash_modifier" : {
-                                "update_id" : "89TbE8C56zw89TbMSYFNOM",
+                                "update_id" : "7-H0Z7-R95X89Vvpn-PwqO",
                                 "hash_diff" : 24,
-                                "version" : 1453809862342224
+                                "version" : 1453887705472924
                         }
                 }
         },*/
+		
+		/*  "message_content" : {
+                                        "segment" : [
+                                                {
+                                                        "type" : "SEGMENT_TYPE_TEXT",
+                                                        "text" : "? <",
+                                                        "formatting" : null,
+                                                        "link_data" : null
+                                                },
+                                                {
+                                                        "type" : "SEGMENT_TYPE_LINK",
+                                                        "text" : "http://apps.timwhitlock.info/emoji/tables/unicode#emoji-modal",
+                                                        "formatting" : null,
+                                                        "link_data" : {
+                                                                "link_target" : "http://www.google.com/url?q=http%3A%2F%2Fapps.timwhitlock.info%2Femoji%2Ftables%2Funicode%23emoji-modal&sa=D&sntz=1&usg=AFQjCNEhwmMkBC9SCsgPdvB9UyKprYBGEQ"
+                                                        }
+                                                },
+                                                {
+                                                        "type" : "SEGMENT_TYPE_TEXT",
+                                                        "text" : ">",
+                                                        "formatting" : null,
+                                                        "link_data" : null
+                                                }
+                                        ],
+                                        "attachment" : [
+                                        ]
+                                }*/
+}
 
 void
 hangouts_received_typing_notification(PurpleConnection *pc, StateUpdate *state_update)

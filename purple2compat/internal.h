@@ -6,7 +6,7 @@
 #include "win32/win32dep.h"
 #endif
 
-#include "purplecompat.h"
+#include "../purplecompat.h"
 
 #ifndef N_
 #	define N_(a) (a)

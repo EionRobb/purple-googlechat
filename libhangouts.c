@@ -104,6 +104,8 @@ hangouts_close(PurpleConnection *pc)
 	
 	g_hash_table_remove_all(ha->one_to_ones);
 	g_hash_table_unref(ha->one_to_ones);
+	g_hash_table_remove_all(ha->one_to_ones_rev);
+	g_hash_table_unref(ha->one_to_ones_rev);
 	g_hash_table_remove_all(ha->group_chats);
 	g_hash_table_unref(ha->group_chats);
 	

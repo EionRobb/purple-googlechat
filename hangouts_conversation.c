@@ -26,21 +26,24 @@ hangouts_get_request_header(HangoutsAccount *ha)
 }
 
 EventRequestHeader *
-hangouts_get_event_request_header(HangoutsAccount *ha, const gchar *conversation_id)
+hangouts_get_event_request_header(HangoutsAccount *ha, const gchar *conv_id)
 {
 	EventRequestHeader *header = g_new0(EventRequestHeader, 1);
 	event_request_header__init(header);
 	
-	if (conversation_id != NULL) {
-		ConversationId *conv_id = g_new0(ConversationId, 1);
-		conversation_id__init(conv_id);
+	if (conv_id != NULL) {
+		ConversationId *conversation_id = g_new0(ConversationId, 1);
+		conversation_id__init(conversation_id);
 		
-		conv_id->id = g_strdup(conversation_id);
+		conversation_id->id = g_strdup(conv_id);
+		header->conversation_id = conversation_id;
 	}
+	
+	header->has_client_generated_id = TRUE;
+	header->client_generated_id = g_random_int();
 	
 	//todo off the record status
 	//todo delivery medium
-	//todo client generated id
 	
 	return header;
 }
@@ -82,7 +85,6 @@ hangouts_get_self_info(HangoutsAccount *ha)
 	hangouts_request_header_free(request.request_header);
 }
 
-
 static void
 hangouts_got_conversation_list(HangoutsAccount *ha, SyncRecentConversationsResponse *response, gpointer user_data)
 {
@@ -107,7 +109,7 @@ struct  _ConversationState
 		
 		purple_debug_info("hangouts", "got conversation state %s\n", pblite_dump_json((ProtobufCMessage *)conversation_state));
 		
-		if (conversation->has_type && conversation->type == CONVERSATION_TYPE__CONVERSATION_TYPE_ONE_TO_ONE) {
+		if (conversation->type == CONVERSATION_TYPE__CONVERSATION_TYPE_ONE_TO_ONE) {
 			const gchar *first_person = conversation->current_participant[0]->gaia_id;
 			const gchar *second_person = conversation->current_participant[1]->gaia_id;
 			const gchar *other_person;
@@ -133,6 +135,18 @@ struct  _ConversationState
 		}
 	}
 	
+	if (ha->one_to_ones) {
+		g_hash_table_remove_all(ha->one_to_ones);
+		g_hash_table_unref(ha->one_to_ones);
+	}
+	if (ha->one_to_ones_rev) {
+		g_hash_table_remove_all(ha->one_to_ones_rev);
+		g_hash_table_unref(ha->one_to_ones_rev);
+	}
+	if (ha->group_chats) {
+		g_hash_table_remove_all(ha->group_chats);
+		g_hash_table_unref(ha->group_chats);
+	}
 	ha->one_to_ones = one_to_ones;
 	ha->one_to_ones_rev = one_to_ones_rev;
 	ha->group_chats = group_chats;
@@ -232,6 +246,8 @@ const gchar *who, const gchar *message, PurpleMessageFlags flags)
 	HangoutsAccount *ha;
 	SendChatMessageRequest request;
 	MessageContent message_content;
+	Segment segment;
+	Segment *segments;
 	const gchar *conv_id;
 	
 	ha = purple_connection_get_protocol_data(pc);
@@ -241,8 +257,18 @@ const gchar *who, const gchar *message, PurpleMessageFlags flags)
 	send_chat_message_request__init(&request);
 	message_content__init(&message_content);
 	
+	segment__init(&segment);
+	segment.text = (gchar *) message;
+	
+	message_content.n_segment = 1;
+	segments = &segment;
+	message_content.segment = &segments;
+	
 	request.request_header = hangouts_get_request_header(ha);
 	request.event_request_header = hangouts_get_event_request_header(ha, conv_id);
+	request.message_content = &message_content;
+	
+	purple_debug_info("hangouts", "%s\n", pblite_dump_json((ProtobufCMessage *)&request)); //leaky
 	
 	//TODO listen to response
 	hangouts_pblite_send_chat_message(ha, &request, NULL, NULL);

@@ -60,4 +60,17 @@ gchar *hangouts_json_path_query_string(JsonNode *root, const gchar *expr, GError
 
 gint64 hangouts_json_path_query_int(JsonNode *root, const gchar *expr, GError **error);
 
+
+/**
+ * Tidies invalid JSON from Google into slightly-more-valid JSON, 
+ * so that it can be parsed by json-glib
+ * e.g. turns [,,,,,] into [null,null,null,null,null]
+ *
+ * \param json
+ *      The JSON-encoded string to clean up.
+ * \return
+ *      The JSON-encoded string that has been tidied or NULL if there was an error.  You are required to g_free() this when you are done.
+ */
+gchar *hangouts_json_tidy_blank_arrays(const gchar *json);
+
 #endif /* _HANGOUTS_JSON_H_ */

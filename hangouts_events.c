@@ -435,6 +435,9 @@ hangouts_received_typing_notification(PurpleConnection *pc, StateUpdate *state_u
 }*/
 	
 	gaia_id = typing_notification->sender_id->gaia_id;
+	if (ha->self_gaia_id && g_strcmp0(gaia_id, ha->self_gaia_id) == 0)
+		return;
+	
 	conv_id = typing_notification->conversation_id->id;
 	
 	conv = purple_conversations_find_chat_with_account(conv_id, ha->account);

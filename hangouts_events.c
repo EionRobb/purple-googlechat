@@ -199,7 +199,6 @@ hangouts_received_event_notification(PurpleConnection *pc, StateUpdate *state_up
 	EventNotification *event_notification = state_update->event_notification;
 	Event *event;
 	const gchar *gaia_id;
-	const gchar *self_id;
 	const gchar *conv_id;
 	gint64 current_server_time = state_update->state_update_header->current_server_time;
 	gint64 timestamp;
@@ -214,9 +213,12 @@ hangouts_received_event_notification(PurpleConnection *pc, StateUpdate *state_up
 	event = event_notification->event;
 	gaia_id = event->sender_id->gaia_id;
 	conv_id = event->conversation_id->id;
-	self_id = event->self_event_state->user_id->gaia_id;
 	timestamp = event->timestamp;
 	chat_message = event->chat_message;
+	
+	if (ha->self_gaia_id == NULL) {
+		ha->self_gaia_id = g_strdup(event->self_event_state->user_id->gaia_id);
+	}
 	
 	if (chat_message != NULL) {
 		size_t n_segments = chat_message->message_content->n_segment;
@@ -248,9 +250,21 @@ hangouts_received_event_notification(PurpleConnection *pc, StateUpdate *state_up
 			purple_xmlnode_insert_data(node, segment->text, -1);
 			
 			if (formatting) {
+				GString *style = g_string_new(NULL);
 				if (formatting->has_bold && formatting->bold) {
-					
+					g_string_append(style, "font-weight: bold; ");
 				}
+				if (formatting->has_italic && formatting->italic) {
+					g_string_append(style, "font-style: italic; ");
+				}
+				if (formatting->has_strikethrough && formatting->strikethrough) {
+					g_string_append(style, "text-decoration: line-through; ");
+				}
+				if (formatting->has_underline && formatting->underline) {
+					g_string_append(style, "text-decoration: underline; ");
+				}
+				purple_xmlnode_set_attrib(node, "style", style->str);
+				g_string_free(style, TRUE);
 			}
 		}
 		
@@ -261,7 +275,7 @@ hangouts_received_event_notification(PurpleConnection *pc, StateUpdate *state_up
 		if (chatconv) {
 			purple_serv_got_chat_in(pc, purple_chat_conversation_get_id(chatconv), gaia_id, PURPLE_MESSAGE_RECV, msg, message_timestamp);
 		} else {
-			if (g_strcmp0(gaia_id, self_id)) {
+			if (g_strcmp0(gaia_id, ha->self_gaia_id)) {
 				purple_serv_got_im(pc, gaia_id, msg, PURPLE_MESSAGE_RECV, message_timestamp);
 			}
 			

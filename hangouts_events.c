@@ -155,10 +155,10 @@ hangouts_received_presence_notification(PurpleConnection *pc, StateUpdate *state
 		gboolean reachable = FALSE;
 		gboolean available = FALSE;
 		
-		if (presence->presence->has_reachable && presence->presence->reachable) {
+		if (presence->presence->reachable) {
 			reachable = TRUE;
 		}
-		if (presence->presence->has_available && presence->presence->available) {
+		if (presence->presence->available) {
 			available = TRUE;
 		}
 		
@@ -251,16 +251,16 @@ hangouts_received_event_notification(PurpleConnection *pc, StateUpdate *state_up
 			
 			if (formatting) {
 				GString *style = g_string_new(NULL);
-				if (formatting->has_bold && formatting->bold) {
+				if (formatting->bold) {
 					g_string_append(style, "font-weight: bold; ");
 				}
-				if (formatting->has_italic && formatting->italic) {
+				if (formatting->italic) {
 					g_string_append(style, "font-style: italic; ");
 				}
-				if (formatting->has_strikethrough && formatting->strikethrough) {
+				if (formatting->strikethrough) {
 					g_string_append(style, "text-decoration: line-through; ");
 				}
-				if (formatting->has_underline && formatting->underline) {
+				if (formatting->underline) {
 					g_string_append(style, "text-decoration: underline; ");
 				}
 				purple_xmlnode_set_attrib(node, "style", style->str);
@@ -277,6 +277,16 @@ hangouts_received_event_notification(PurpleConnection *pc, StateUpdate *state_up
 		} else {
 			if (g_strcmp0(gaia_id, ha->self_gaia_id)) {
 				purple_serv_got_im(pc, gaia_id, msg, PURPLE_MESSAGE_RECV, message_timestamp);
+			} else {
+				gaia_id = g_hash_table_lookup(ha->one_to_ones, conv_id);
+				if (gaia_id) {
+					PurpleIMConversation *imconv = purple_conversations_find_im_with_account(gaia_id, ha->account);
+					if (imconv == NULL)
+					{
+						imconv = purple_im_conversation_new(ha->account, gaia_id);
+					}
+					purple_conversation_write(PURPLE_CONVERSATION(imconv), gaia_id, msg, PURPLE_MESSAGE_SEND, message_timestamp);
+				}
 			}
 			
 		}

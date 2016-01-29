@@ -472,6 +472,7 @@ hangouts_pblite_request_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse *
 	const gchar *raw_response;
 	guchar *decoded_response;
 	gsize response_len;
+	const gchar *content_type;
 	
 	if (purple_http_response_get_error(response) != NULL) {
 		g_free(request_info);
@@ -479,15 +480,31 @@ hangouts_pblite_request_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse *
 		return; //TODO should we send NULL to the callee?
 	}
 	
-	raw_response = purple_http_response_get_data(response, NULL);
-	decoded_response = purple_base64_decode(raw_response, &response_len);
-	unpacked_message = protobuf_c_message_unpack(response_message->descriptor, NULL, response_len, decoded_response);
-	
-	if (unpacked_message != NULL) {
-		callback(ha, unpacked_message, real_user_data);
-		protobuf_c_message_free_unpacked(unpacked_message, NULL);
-	} else {
-		purple_debug_error("hangouts", "Error decoding protobuf!\n");
+	if (callback != NULL) {
+		raw_response = purple_http_response_get_data(response, NULL);
+		
+		content_type = purple_http_response_get_header(response, "X-Goog-Safety-Content-Type");
+		if (g_strcmp0(content_type, "application/x-protobuf") == 0) {
+			decoded_response = purple_base64_decode(raw_response, &response_len);
+			unpacked_message = protobuf_c_message_unpack(response_message->descriptor, NULL, response_len, decoded_response);
+			
+			if (unpacked_message != NULL) {
+				callback(ha, unpacked_message, real_user_data);
+				protobuf_c_message_free_unpacked(unpacked_message, NULL);
+			} else {
+				purple_debug_error("hangouts", "Error decoding protobuf!\n");
+			}
+		} else {
+			gchar *tidied_json = hangouts_json_tidy_blank_arrays(raw_response);
+			JsonArray *response_array = json_decode_array(tidied_json, -1);
+			
+			pblite_decode(response_message, response_array, /*Ignore First Item= */TRUE);
+			purple_debug_info("hangouts", "A '%s' says '%s'\n", response_message->descriptor->name, json_array_get_string_element(response_array, 0));
+			callback(ha, response_message, real_user_data);
+			
+			json_array_unref(response_array);
+			g_free(tidied_json);
+		}
 	}
 	
 	g_free(request_info);
@@ -507,7 +524,7 @@ hangouts_pblite_request(HangoutsAccount *ha, const gchar *endpoint, ProtobufCMes
 	protobuf_c_message_pack(request_message, (guchar *)request_data);
 	
 	request = purple_http_request_new(NULL);
-	purple_http_request_set_url_printf(request, "https://clients6.google.com/chat/v1/%s?alt=proto", endpoint);
+	purple_http_request_set_url_printf(request, "https://clients6.google.com/chat/v1/%s?alt=protojson", endpoint);
 	purple_http_request_set_cookie_jar(request, ha->cookie_jar);
 	purple_http_request_set_method(request, "POST");
 	purple_http_request_header_set(request, "Content-Type", "application/x-protobuf");

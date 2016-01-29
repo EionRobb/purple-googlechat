@@ -8,6 +8,8 @@
 #	define PURPLE_PLUGINS
 #endif
 
+#define PROTOBUF_C_UNPACK_ERROR(...) purple_debug_error("hangouts-protobuf", __VA_ARGS__)
+
 #include "purplecompat.h"
 
 #include "account.h"
@@ -51,9 +53,14 @@ typedef struct {
 	gchar *gsessionid_param;
 	gchar *sid_param;
 	gchar *client_id;
+	gchar *self_gaia_id;
 	
 	PurpleCircularBuffer *channel_buffer;
 	PurpleHttpKeepalivePool *channel_keepalive_pool;
+	
+	GHashTable *one_to_ones;     // A store of known conv_id's->gaia_id's
+	GHashTable *one_to_ones_rev; // A store of known gaia_id's->conv_id's
+	GHashTable *group_chats;     // A store of known conv_id's
 } HangoutsAccount;
 
 

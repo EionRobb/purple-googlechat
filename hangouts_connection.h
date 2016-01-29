@@ -11,6 +11,7 @@
 #include "hangouts_pblite.h"
 #include "hangouts.pb-c.h"
 
+
 #define HANGOUTS_PBLITE_XORIGIN_URL "https://talkgadget.google.com"
 #define HANGOUTS_CHANNEL_URL_PREFIX "https://0.client-channel.google.com/client-channel/"
 
@@ -31,6 +32,12 @@ void hangouts_pblite_request(HangoutsAccount *ha, const gchar *endpoint, Protobu
 
 typedef void(* HangoutsPbliteChatMessageResponseFunc)(HangoutsAccount *ha, SendChatMessageResponse *response, gpointer user_data);
 void hangouts_pblite_send_chat_message(HangoutsAccount *ha, SendChatMessageRequest *request, HangoutsPbliteChatMessageResponseFunc callback, gpointer user_data);
+
+typedef void(* HangoutsPbliteSelfInfoResponseFunc)(HangoutsAccount *ha, GetSelfInfoResponse *response, gpointer user_data);
+void hangouts_pblite_get_self_info(HangoutsAccount *ha, GetSelfInfoRequest *request, HangoutsPbliteSelfInfoResponseFunc callback, gpointer user_data);
+
+typedef void(* HangoutsPbliteRecentConversationsResponseFunc)(HangoutsAccount *ha, SyncRecentConversationsResponse *response, gpointer user_data);
+void hangouts_pblite_get_recent_conversations(HangoutsAccount *ha, SyncRecentConversationsRequest *request, HangoutsPbliteRecentConversationsResponseFunc callback, gpointer user_data);
 
 
 #endif /*_HANGOUTS_CONNECTION_H_*/

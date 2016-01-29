@@ -17,12 +17,17 @@
 #define PURPLE_TYPE_CONNECTION	purple_value_new(PURPLE_TYPE_SUBTYPE, PURPLE_SUBTYPE_CONNECTION)
 #define PURPLE_IS_CONNECTION	PURPLE_CONNECTION_IS_VALID
 
-#define PURPLE_CONNECTION_CONNECTED		PURPLE_CONNECTED
+#define PURPLE_CONNECTION_CONNECTED        PURPLE_CONNECTED
+#define PURPLE_CONNECTION_FLAG_HTML        PURPLE_CONNECTION_HTML
+#define PURPLE_CONNECTION_FLAG_NO_BGCOLOR  PURPLE_CONNECTION_NO_BGCOLOR
+#define PURPLE_CONNECTION_FLAG_NO_FONTSIZE PURPLE_CONNECTION_NO_FONTSIZE
 
 #define purple_request_cpar_from_connection(a)  purple_connection_get_account(a), NULL, NULL
 #define purple_connection_get_protocol		purple_connection_get_prpl
 #define purple_connection_error                 purple_connection_error_reason
 #define purple_connection_is_disconnecting(c)   FALSE
+#define purple_connection_set_flags(pc, f)      ((pc)->flags = (f))
+#define purple_connection_get_flags(pc)         ((pc)->flags)
 
 #define PurpleChatConversation	PurpleConvChat
 #define purple_conversations_find_chat_with_account(id, account) \

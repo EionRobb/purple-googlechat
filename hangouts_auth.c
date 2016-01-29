@@ -4,6 +4,7 @@
 #include "http.h"
 #include "hangouts_json.h"
 #include "hangouts_connection.h"
+#include "hangouts_conversation.h"
 
 static void
 hangouts_oauth_refresh_token_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse *response, gpointer user_data)
@@ -131,8 +132,11 @@ hangouts_auth_get_session_cookies_got_cb(PurpleHttpConnection *http_conn, Purple
 	}
 	
 	// SOUND THE TRUMPETS
-	purple_connection_set_state(ha->pc, PURPLE_CONNECTION_CONNECTED);
 	hangouts_fetch_channel_sid(ha);
+	purple_connection_set_state(ha->pc, PURPLE_CONNECTION_CONNECTED);
+	//TODO trigger event instead
+	hangouts_get_self_info(ha);
+	hangouts_get_conversation_list(ha);
 }
 
 static void

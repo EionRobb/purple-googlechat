@@ -468,39 +468,50 @@ hangouts_pblite_request_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse *
 	HangoutsPbliteResponseFunc callback = request_info->callback;
 	gpointer real_user_data = request_info->user_data;
 	ProtobufCMessage *response_message = request_info->response_message;
-	JsonArray *response_array;
+	ProtobufCMessage *unpacked_message;
 	const gchar *raw_response;
+	guchar *decoded_response;
 	gsize response_len;
 	
-	raw_response = purple_http_response_get_data(response, &response_len);
-	response_array = json_decode_array(raw_response, response_len);
-	pblite_decode(response_message, response_array, /*Ignore First Item= */TRUE);
+	if (purple_http_response_get_error(response) != NULL) {
+		g_free(request_info);
+		g_free(response_message);
+		return; //TODO should we send NULL to the callee?
+	}
 	
-	purple_debug_info("hangouts", "A '%s' says '%s'\n", response_message->descriptor->name, json_array_get_string_element(response_array, 0));
+	raw_response = purple_http_response_get_data(response, NULL);
+	decoded_response = purple_base64_decode(raw_response, &response_len);
+	unpacked_message = protobuf_c_message_unpack(response_message->descriptor, NULL, response_len, decoded_response);
 	
-	callback(ha, response_message, real_user_data);
+	if (unpacked_message != NULL) {
+		callback(ha, unpacked_message, real_user_data);
+		protobuf_c_message_free_unpacked(unpacked_message, NULL);
+	} else {
+		purple_debug_error("hangouts", "Error decoding protobuf!\n");
+	}
 	
-	json_array_unref(response_array);
 	g_free(request_info);
+	g_free(response_message);
 }
 
 void
 hangouts_pblite_request(HangoutsAccount *ha, const gchar *endpoint, ProtobufCMessage *request_message, HangoutsPbliteResponseFunc callback, ProtobufCMessage *response_message, gpointer user_data)
 {
 	PurpleHttpRequest *request;
-	JsonArray *request_array;
 	gsize request_len;
 	gchar *request_data;
 	LazyPblistRequestStore *request_info = g_new0(LazyPblistRequestStore, 1);
 	
-	request_array = pblite_encode(request_message);
-	request_data = json_encode_array(request_array, &request_len);
+	request_len = protobuf_c_message_get_packed_size(request_message);
+	request_data = g_new0(gchar, request_len);
+	protobuf_c_message_pack(request_message, (guchar *)request_data);
 	
 	request = purple_http_request_new(NULL);
-	purple_http_request_set_url_printf(request, "https://clients6.google.com/chat/v1/%s", endpoint);
+	purple_http_request_set_url_printf(request, "https://clients6.google.com/chat/v1/%s?alt=proto", endpoint);
 	purple_http_request_set_cookie_jar(request, ha->cookie_jar);
 	purple_http_request_set_method(request, "POST");
-	purple_http_request_header_set(request, "Content-Type", "application/json+protobuf");
+	purple_http_request_header_set(request, "Content-Type", "application/x-protobuf");
+	purple_http_request_header_set(request, "X-Goog-Encode-Response-If-Executable", "base64");
 	purple_http_request_set_contents(request, request_data, request_len);
 	
 	request_info->ha = ha;
@@ -514,15 +525,32 @@ hangouts_pblite_request(HangoutsAccount *ha, const gchar *endpoint, ProtobufCMes
 	purple_http_request(ha->pc, request, hangouts_pblite_request_cb, request_info);
 	
 	g_free(request_data);
-	json_array_unref(request_array);
 }
 
 
 void
 hangouts_pblite_send_chat_message(HangoutsAccount *ha, SendChatMessageRequest *request, HangoutsPbliteChatMessageResponseFunc callback, gpointer user_data)
 {
-	SendChatMessageResponse response;
+	SendChatMessageResponse *response = g_new0(SendChatMessageResponse, 1);
 	
-	send_chat_message_response__init(&response);
-	hangouts_pblite_request(ha, "conversations/sendchatmessage", (ProtobufCMessage *)request, (HangoutsPbliteResponseFunc)callback, (ProtobufCMessage *)&response, user_data);
+	send_chat_message_response__init(response);
+	hangouts_pblite_request(ha, "conversations/sendchatmessage", (ProtobufCMessage *)request, (HangoutsPbliteResponseFunc)callback, (ProtobufCMessage *)response, user_data);
+}
+
+void
+hangouts_pblite_get_self_info(HangoutsAccount *ha, GetSelfInfoRequest *request, HangoutsPbliteSelfInfoResponseFunc callback, gpointer user_data)
+{
+	GetSelfInfoResponse *response = g_new0(GetSelfInfoResponse, 1);
+	
+	get_self_info_response__init(response);
+	hangouts_pblite_request(ha, "contacts/getselfinfo", (ProtobufCMessage *)request, (HangoutsPbliteResponseFunc)callback, (ProtobufCMessage *)response, user_data);
+}
+
+void
+hangouts_pblite_get_recent_conversations(HangoutsAccount *ha, SyncRecentConversationsRequest *request, HangoutsPbliteRecentConversationsResponseFunc callback, gpointer user_data)
+{
+	SyncRecentConversationsResponse *response = g_new0(SyncRecentConversationsResponse, 1);
+	
+	sync_recent_conversations_response__init(response);
+	hangouts_pblite_request(ha, "conversations/syncrecentconversations", (ProtobufCMessage *)request, (HangoutsPbliteResponseFunc)callback, (ProtobufCMessage *)response, user_data);
 }

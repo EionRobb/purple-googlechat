@@ -18,6 +18,7 @@
 #include "hangouts_json.h"
 #include "hangouts.pb-c.h"
 #include "hangouts_events.h"
+#include "hangouts_conversation.h"
 
 
 /*****************************************************************************/
@@ -49,9 +50,13 @@ hangouts_login(PurpleAccount *account)
 	PurpleConnection *pc;
 	HangoutsAccount *ha; //hahaha
 	const gchar *password;
+	PurpleConnectionFlags pc_flags;
 
 	pc = purple_account_get_connection(account);
 	password = purple_connection_get_password(pc);
+	
+	pc_flags = purple_connection_get_flags(pc);
+	purple_connection_set_flags(pc, pc_flags | PURPLE_CONNECTION_FLAG_HTML | PURPLE_CONNECTION_FLAG_NO_FONTSIZE | PURPLE_CONNECTION_FLAG_NO_BGCOLOR);
 	
 	ha = g_new0(HangoutsAccount, 1);
 	ha->account = account;
@@ -88,6 +93,7 @@ hangouts_close(PurpleConnection *pc)
 	purple_http_conn_cancel_all(pc);
 	
 	purple_http_keepalive_pool_unref(ha->channel_keepalive_pool);
+	g_free(ha->self_gaia_id);
 	g_free(ha->refresh_token);
 	g_free(ha->access_token);
 	g_free(ha->gsessionid_param);
@@ -95,6 +101,12 @@ hangouts_close(PurpleConnection *pc)
 	g_free(ha->client_id);
 	purple_http_cookie_jar_unref(ha->cookie_jar);
 	purple_circular_buffer_destroy(ha->channel_buffer);
+	
+	g_hash_table_remove_all(ha->one_to_ones);
+	g_hash_table_unref(ha->one_to_ones);
+	g_hash_table_remove_all(ha->group_chats);
+	g_hash_table_unref(ha->group_chats);
+	
 	g_free(ha);
 }
 
@@ -189,9 +201,20 @@ hangouts_protocol_class_init(PurpleProtocolClass *prpl_info)
 	prpl_info->list_icon = hangouts_list_icon;
 }
 
+static void 
+hangouts_protocol_im_iface_init(PurpleProtocolIMIface *prpl_info)
+{
+	prpl_info->send = hangouts_send_im;
+}
+
 static PurpleProtocol *hangouts_protocol;
 
-PURPLE_DEFINE_TYPE(HangoutsProtocol, hangouts_protocol, PURPLE_TYPE_PROTOCOL);
+PURPLE_DEFINE_TYPE_EXTENDED(
+	HangoutsProtocol, hangouts_protocol, PURPLE_TYPE_PROTOCOL, 0,
+
+	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_IM_IFACE,
+	                                  hangouts_protocol_im_iface_init)
+);
 
 static gboolean
 libpurple3_plugin_load(PurplePlugin *plugin, GError **error)
@@ -315,6 +338,8 @@ init_plugin(PurplePlugin *plugin)
 	prpl_info->close = hangouts_close;
 	prpl_info->status_types = hangouts_status_types;
 	prpl_info->list_icon = hangouts_list_icon;
+	
+	prpl_info->send_im = hangouts_send_im;
 	
 	info->extra_info = prpl_info;
 	#if PURPLE_MINOR_VERSION >= 5

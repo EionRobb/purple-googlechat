@@ -206,6 +206,7 @@ hangouts_received_event_notification(PurpleConnection *pc, StateUpdate *state_up
 {
 	HangoutsAccount *ha;
 	EventNotification *event_notification = state_update->event_notification;
+	Conversation *conversation = state_update->conversation;
 	Event *event;
 	const gchar *gaia_id;
 	const gchar *conv_id;
@@ -219,6 +220,23 @@ hangouts_received_event_notification(PurpleConnection *pc, StateUpdate *state_up
 	}
 	
 	ha = purple_connection_get_protocol_data(pc);
+	
+	if (conversation && !g_hash_table_lookup(ha->one_to_ones, conversation->conversation_id->id) && !g_hash_table_lookup(ha->group_chats, conversation->conversation_id->id)) {
+		// New conversation we ain't seen before
+		// (see also hangouts_got_conversation_list in hangouts_conversation.c)
+		if (conversation->type == CONVERSATION_TYPE__CONVERSATION_TYPE_ONE_TO_ONE) {
+			const gchar *other_person = conversation->current_participant[0]->gaia_id;
+			if (g_strcmp0(other_person, conversation->self_conversation_state->self_read_state->participant_id->gaia_id) == 0) {
+				other_person = conversation->current_participant[1]->gaia_id;
+			}
+			
+			g_hash_table_replace(ha->one_to_ones, g_strdup(conversation->conversation_id->id), g_strdup(other_person));
+			g_hash_table_replace(ha->one_to_ones_rev, g_strdup(other_person), g_strdup(conversation->conversation_id->id));
+		} else {
+			g_hash_table_replace(ha->group_chats, g_strdup(conversation->conversation_id->id), NULL);
+		}
+	}
+	
 	event = event_notification->event;
 	gaia_id = event->sender_id->gaia_id;
 	conv_id = event->conversation_id->id;

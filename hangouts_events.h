@@ -5,6 +5,7 @@
 #include "libhangouts.h"
 #include "hangouts.pb-c.h"
 
+void hangouts_register_events(gpointer plugin);
 
 void hangouts_received_other_notification(PurpleConnection *pc, StateUpdate *state_update);
 void hangouts_received_event_notification(PurpleConnection *pc, StateUpdate *state_update);

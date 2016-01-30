@@ -336,11 +336,14 @@ hangouts_received_event_notification(PurpleConnection *pc, StateUpdate *state_up
 				gaia_id = g_hash_table_lookup(ha->one_to_ones, conv_id);
 				if (gaia_id) {
 					PurpleIMConversation *imconv = purple_conversations_find_im_with_account(gaia_id, ha->account);
+					PurpleMessage *message = purple_message_new_outgoing(gaia_id, msg, msg_flags);
 					if (imconv == NULL)
 					{
 						imconv = purple_im_conversation_new(ha->account, gaia_id);
 					}
-					purple_conversation_write(PURPLE_CONVERSATION(imconv), gaia_id, msg, msg_flags, message_timestamp);
+					purple_message_set_time(message, message_timestamp);
+					purple_conversation_write_message(PURPLE_CONVERSATION(imconv), message);
+					purple_message_destroy(message);
 				}
 			}
 			

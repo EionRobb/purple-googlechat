@@ -7,8 +7,9 @@
 #if PURPLE_VERSION_CHECK(3, 0, 0)
 #include <glib-object.h>
 
-#define purple_circular_buffer_destroy		g_object_unref
-#define purple_hash_destroy			g_object_unref
+#define purple_circular_buffer_destroy  g_object_unref
+#define purple_hash_destroy             g_object_unref
+#define purple_message_destroy          g_object_unref
 
 #else
 
@@ -33,6 +34,7 @@
 #define PurpleIMConversation    PurpleConvIm
 #define purple_conversations_find_chat_with_account(id, account) \
 		((PurpleConvChat *)purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT, id, account))
+#define purple_conversations_find_chat(pc, id)  PURPLE_CONV_CHAT(purple_find_chat(pc, id))
 #define purple_chat_conversation_get_id  purple_conv_chat_get_id
 #define purple_conversations_find_im_with_account(name, account)  \
 		PURPLE_CONV_IM(purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM, name, account))
@@ -40,6 +42,29 @@
 #define PURPLE_CONVERSATION(chatorim) (chatorim == NULL ? NULL : chatorim->conv)
 #define purple_chat_conversation_add_user   purple_conv_chat_add_user
 #define purple_chat_conversation_find_user  purple_conv_chat_cb_find
+
+#define PurpleMessage  PurpleConvMessage
+#define purple_message_set_time(msg, time)  ((msg)->when = (time))
+#define purple_conversation_write_message(conv, msg)  purple_conversation_write(conv, msg->who, msg->what, msg->flags, msg->when)
+static inline PurpleMessage *
+purple_message_new_outgoing(const gchar *who, const gchar *contents, PurpleMessageFlags flags)
+{
+	PurpleMessage *message = g_new0(PurpleMessage, 1);
+	
+	message->who = g_strdup(who);
+	message->what = g_strdup(contents);
+	message->flags = flags;
+	message->when = time(NULL);
+	
+	return message;
+}
+static inline void
+purple_message_destroy(PurpleMessage *message)
+{
+	g_free(message->who);
+	g_free(message->what);
+	g_free(message);
+}
 
 #define PurpleChatUserFlags  PurpleConvChatBuddyFlags
 #define PURPLE_CHAT_USER_NONE     PURPLE_CBFLAGS_NONE

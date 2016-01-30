@@ -4,6 +4,7 @@
 #include "hangouts_connection.h"
 
 #include "debug.h"
+#include "glibcompat.h"
 
 // From hangouts_pblite
 gchar *pblite_dump_json(ProtobufCMessage *message);
@@ -229,6 +230,63 @@ Cache-Control: no-cache
 */
 }
 
+static Segment *
+hangouts_convert_html_to_segments(HangoutsAccount *ha, const gchar *html_message, guint *segments_count)
+{
+	guint n_segments = 1;
+	Segment *segments = g_new0(Segment, n_segments + 1);
+	
+	segment__init(segments + 0);
+	segments[0].text = g_strdup(html_message);
+	
+	if (segments_count != NULL) {
+		*segments_count = n_segments;
+	}
+	
+	return segments;
+}
+
+static void
+hangouts_free_segments(Segment *segments)
+{
+	guint i;
+	for (i = 0; segments[i].base.descriptor; i++) {
+		g_free(segments[i].text);
+	}
+	
+	g_free(segments);
+}
+
+static gint
+hangouts_conversation_send_message(HangoutsAccount *ha, const gchar *conv_id, const gchar *message)
+{
+	SendChatMessageRequest request;
+	MessageContent message_content;
+	Segment *segments;
+	guint n_segments;
+	
+	send_chat_message_request__init(&request);
+	message_content__init(&message_content);
+	
+	segments = hangouts_convert_html_to_segments(ha, message, &n_segments);
+	message_content.segment = &segments;
+	message_content.n_segment = n_segments;
+	
+	request.request_header = hangouts_get_request_header(ha);
+	request.event_request_header = hangouts_get_event_request_header(ha, conv_id);
+	request.message_content = &message_content;
+	
+	purple_debug_info("hangouts", "%s\n", pblite_dump_json((ProtobufCMessage *)&request)); //leaky
+	
+	//TODO listen to response
+	hangouts_pblite_send_chat_message(ha, &request, NULL, NULL);
+	
+	hangouts_free_segments(segments);
+	hangouts_request_header_free(request.request_header);
+	
+	return 1;
+}
+
 
 gint
 hangouts_send_im(PurpleConnection *pc, 
@@ -242,36 +300,85 @@ PurpleMessage *msg)
 const gchar *who, const gchar *message, PurpleMessageFlags flags)
 {
 #endif
-
+	
 	HangoutsAccount *ha;
-	SendChatMessageRequest request;
-	MessageContent message_content;
-	Segment segment;
-	Segment *segments;
 	const gchar *conv_id;
 	
 	ha = purple_connection_get_protocol_data(pc);
 	conv_id = g_hash_table_lookup(ha->one_to_ones_rev, who);
 	g_return_val_if_fail(conv_id, -1); //TODO create new conversation for this new person
 	
-	send_chat_message_request__init(&request);
-	message_content__init(&message_content);
+	return hangouts_conversation_send_message(ha, conv_id, message);
+}
+
+gint
+hangouts_chat_send(PurpleConnection *pc, gint id, 
+#if PURPLE_VERSION_CHECK(3, 0, 0)
+PurpleMessage *msg)
+{
+	const gchar *message = purple_message_get_contents(msg);
+	PurpleMessageFlags flags = purple_message_get_flags(msg);
+#else
+const gchar *message, PurpleMessageFlags flags)
+{
+#endif
 	
-	segment__init(&segment);
-	segment.text = (gchar *) message;
+	HangoutsAccount *ha;
+	const gchar *conv_id;
+	PurpleChatConversation *chatconv;
 	
-	message_content.n_segment = 1;
-	segments = &segment;
-	message_content.segment = &segments;
+	ha = purple_connection_get_protocol_data(pc);
+	chatconv = purple_conversations_find_chat(pc, id);
+	conv_id = purple_conversation_get_data(PURPLE_CONVERSATION(chatconv), "conv_id");
+	if (!conv_id) {
+		// Fix for a race condition around the chat data and serv_got_joined_chat()
+		conv_id = purple_conversation_get_name(PURPLE_CONVERSATION(chatconv));
+		g_return_val_if_fail(conv_id, -1);
+	}
+	g_return_val_if_fail(g_hash_table_contains(ha->group_chats, conv_id), -1);
 	
+	return hangouts_conversation_send_message(ha, conv_id, message);
+}
+
+guint
+hangouts_send_typing(PurpleConnection *pc, const gchar *who, PurpleIMTypingState state)
+{
+	HangoutsAccount *ha;
+	const gchar *conv_id;
+	SetTypingRequest request;
+	ConversationId conversation_id;
+	
+	ha = purple_connection_get_protocol_data(pc);
+	conv_id = g_hash_table_lookup(ha->one_to_ones_rev, who);
+	g_return_val_if_fail(conv_id, -1); //TODO create new conversation for this new person
+	
+	set_typing_request__init(&request);
 	request.request_header = hangouts_get_request_header(ha);
-	request.event_request_header = hangouts_get_event_request_header(ha, conv_id);
-	request.message_content = &message_content;
 	
-	purple_debug_info("hangouts", "%s\n", pblite_dump_json((ProtobufCMessage *)&request)); //leaky
+	conversation_id__init(&conversation_id);
+	conversation_id.id = (gchar *) conv_id;
+	request.conversation_id = &conversation_id;
+	
+	request.has_type = TRUE;
+	switch(state) {
+		case PURPLE_IM_TYPING:
+			request.type = TYPING_TYPE__TYPING_TYPE_STARTED;
+			break;
+		
+		case PURPLE_IM_TYPED:
+			request.type = TYPING_TYPE__TYPING_TYPE_PAUSED;
+			break;
+		
+		case PURPLE_IM_NOT_TYPING:
+		default:
+			request.type = TYPING_TYPE__TYPING_TYPE_STOPPED;
+			break;
+	}
 	
 	//TODO listen to response
-	hangouts_pblite_send_chat_message(ha, &request, NULL, NULL);
+	hangouts_pblite_set_typing(ha, &request, NULL, NULL);
 	
-	return 1;
+	hangouts_request_header_free(request.request_header);
+	
+	return 20;
 }

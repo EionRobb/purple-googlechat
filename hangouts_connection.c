@@ -559,6 +559,15 @@ hangouts_pblite_send_chat_message(HangoutsAccount *ha, SendChatMessageRequest *r
 }
 
 void
+hangouts_pblite_set_typing(HangoutsAccount *ha, SetTypingRequest *request, HangoutsPbliteSetTypingResponseFunc callback, gpointer user_data)
+{
+	SetTypingResponse *response = g_new0(SetTypingResponse, 1);
+	
+	set_typing_response__init(response);
+	hangouts_pblite_request(ha, "conversations/settyping", (ProtobufCMessage *)request, (HangoutsPbliteResponseFunc)callback, (ProtobufCMessage *)response, user_data);
+}
+
+void
 hangouts_pblite_get_self_info(HangoutsAccount *ha, GetSelfInfoRequest *request, HangoutsPbliteSelfInfoResponseFunc callback, gpointer user_data)
 {
 	GetSelfInfoResponse *response = g_new0(GetSelfInfoResponse, 1);
@@ -574,4 +583,13 @@ hangouts_pblite_get_recent_conversations(HangoutsAccount *ha, SyncRecentConversa
 	
 	sync_recent_conversations_response__init(response);
 	hangouts_pblite_request(ha, "conversations/syncrecentconversations", (ProtobufCMessage *)request, (HangoutsPbliteResponseFunc)callback, (ProtobufCMessage *)response, user_data);
+}
+
+void
+hangouts_pblite_query_presence(HangoutsAccount *ha, QueryPresenceRequest *request, HangoutsPbliteQueryPresenceResponseFunc callback, gpointer user_data)
+{
+	QueryPresenceResponse *response = g_new0(QueryPresenceResponse, 1);
+	
+	query_presence_response__init(response);
+	hangouts_pblite_request(ha, "presence/querypresence", (ProtobufCMessage *)request, (HangoutsPbliteResponseFunc)callback, (ProtobufCMessage *)response, user_data);
 }

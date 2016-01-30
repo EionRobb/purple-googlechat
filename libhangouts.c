@@ -209,6 +209,13 @@ static void
 hangouts_protocol_im_iface_init(PurpleProtocolIMIface *prpl_info)
 {
 	prpl_info->send = hangouts_send_im;
+	prpl_info->send_typing = skypeweb_send_typing;
+}
+
+static void 
+hangouts_protocol_chat_iface_init(PurpleProtocolIMIface *prpl_info)
+{
+	prpl_info->send = hangouts_chat_send;
 }
 
 static PurpleProtocol *hangouts_protocol;
@@ -218,6 +225,9 @@ PURPLE_DEFINE_TYPE_EXTENDED(
 
 	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_IM_IFACE,
 	                                  hangouts_protocol_im_iface_init)
+
+	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CHAT_IFACE,
+	                                  hangouts_protocol_chat_iface_init)
 );
 
 static gboolean
@@ -342,6 +352,8 @@ init_plugin(PurplePlugin *plugin)
 	prpl_info->list_icon = hangouts_list_icon;
 	
 	prpl_info->send_im = hangouts_send_im;
+	prpl_info->send_typing = hangouts_send_typing;
+	prpl_info->chat_send = hangouts_chat_send;
 	
 	info->extra_info = prpl_info;
 	#if PURPLE_MINOR_VERSION >= 5

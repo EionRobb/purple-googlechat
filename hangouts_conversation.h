@@ -18,4 +18,14 @@ gint hangouts_send_im(PurpleConnection *pc,
 #endif
 );
 
+gint hangouts_chat_send(PurpleConnection *pc, gint id, 
+#if PURPLE_VERSION_CHECK(3, 0, 0)
+PurpleMessage *msg
+#else
+const gchar *message, PurpleMessageFlags flags
+#endif
+);
+
+guint hangouts_send_typing(PurpleConnection *pc, const gchar *name, PurpleIMTypingState state);
+
 #endif /*_HANGOUTS_CONVERSATION_H_*/

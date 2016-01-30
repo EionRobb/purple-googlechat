@@ -38,6 +38,21 @@
 		PURPLE_CONV_IM(purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM, name, account))
 #define purple_im_conversation_new(account, from) PURPLE_CONV_IM(purple_conversation_new(PURPLE_CONV_TYPE_IM, account, from))
 #define PURPLE_CONVERSATION(chatorim) (chatorim == NULL ? NULL : chatorim->conv)
+#define purple_chat_conversation_add_user   purple_conv_chat_add_user
+#define purple_chat_conversation_find_user  purple_conv_chat_cb_find
+
+#define PurpleChatUserFlags  PurpleConvChatBuddyFlags
+#define PURPLE_CHAT_USER_NONE     PURPLE_CBFLAGS_NONE
+#define PURPLE_CHAT_USER_OP       PURPLE_CBFLAGS_OP
+#define PURPLE_CHAT_USER_FOUNDER  PURPLE_CBFLAGS_FOUNDER
+#define PURPLE_CHAT_USER_TYPING   PURPLE_CBFLAGS_TYPING
+#define PURPLE_CHAT_USER_AWAY     PURPLE_CBFLAGS_AWAY
+#define PURPLE_CHAT_USER_HALFOP   PURPLE_CBFLAGS_HALFOP
+#define PURPLE_CHAT_USER_VOICE    PURPLE_CBFLAGS_VOICE
+#define PURPLE_CHAT_USER_TYPING   PURPLE_CBFLAGS_TYPING
+#define PurpleChatUser  PurpleConvChatBuddy
+#define purple_chat_user_get_flags(cb)     ((cb) == NULL ? PURPLE_CBFLAGS_NONE : (cb)->flags)
+#define purple_chat_user_set_flags(cb, f)  ((cb)->flags = (f))
 
 #define PurpleIMTypingState	PurpleTypingState
 #define PURPLE_IM_NOT_TYPING	PURPLE_NOT_TYPING
@@ -51,10 +66,11 @@
 
 #define purple_proxy_info_get_proxy_type        purple_proxy_info_get_type
 
-#define purple_serv_got_im      serv_got_im
-#define purple_serv_got_typing  serv_got_typing
-#define purple_serv_got_alias   serv_got_alias
-#define purple_serv_got_chat_in serv_got_chat_in
+#define purple_serv_got_im                         serv_got_im
+#define purple_serv_got_typing                     serv_got_typing
+#define purple_serv_got_alias                      serv_got_alias
+#define purple_serv_got_chat_in                    serv_got_chat_in
+#define purple_serv_got_joined_chat(pc, id, name)  PURPLE_CONV_CHAT(serv_got_joined_chat(pc, id, name))
 
 #define PurpleXmlNode                xmlnode
 #define purple_xmlnode_new           xmlnode_new

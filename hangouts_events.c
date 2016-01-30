@@ -1,6 +1,7 @@
 #include "hangouts_events.h"
 
 #include "debug.h"
+#include "glibcompat.h"
 
 #include "hangouts.pb-c.h"
 
@@ -213,7 +214,7 @@ hangouts_received_event_notification(PurpleConnection *pc, StateUpdate *state_up
 	gint64 current_server_time = state_update->state_update_header->current_server_time;
 	gint64 timestamp;
 	ChatMessage *chat_message;
-	PurpleChatConversation *chatconv;
+	PurpleMessageFlags msg_flags;
 	
 	if (event_notification == NULL) {
 		return;
@@ -221,7 +222,9 @@ hangouts_received_event_notification(PurpleConnection *pc, StateUpdate *state_up
 	
 	ha = purple_connection_get_protocol_data(pc);
 	
-	if (conversation && !g_hash_table_lookup(ha->one_to_ones, conversation->conversation_id->id) && !g_hash_table_lookup(ha->group_chats, conversation->conversation_id->id)) {
+	if (conversation && (conv_id = conversation->conversation_id->id) &&
+			!g_hash_table_contains(ha->one_to_ones, conv_id) && 
+			!g_hash_table_contains(ha->group_chats, conv_id)) {
 		// New conversation we ain't seen before
 		// (see also hangouts_got_conversation_list in hangouts_conversation.c)
 		if (conversation->type == CONVERSATION_TYPE__CONVERSATION_TYPE_ONE_TO_ONE) {
@@ -230,10 +233,24 @@ hangouts_received_event_notification(PurpleConnection *pc, StateUpdate *state_up
 				other_person = conversation->current_participant[1]->gaia_id;
 			}
 			
-			g_hash_table_replace(ha->one_to_ones, g_strdup(conversation->conversation_id->id), g_strdup(other_person));
-			g_hash_table_replace(ha->one_to_ones_rev, g_strdup(other_person), g_strdup(conversation->conversation_id->id));
+			g_hash_table_replace(ha->one_to_ones, g_strdup(conv_id), g_strdup(other_person));
+			g_hash_table_replace(ha->one_to_ones_rev, g_strdup(other_person), g_strdup(conv_id));
 		} else {
-			g_hash_table_replace(ha->group_chats, g_strdup(conversation->conversation_id->id), NULL);
+			PurpleChatConversation *chatconv;
+			g_hash_table_replace(ha->group_chats, g_strdup(conv_id), NULL);
+			
+			chatconv = purple_conversations_find_chat_with_account(conv_id, ha->account);
+			if (!chatconv) {
+				guint i;
+				
+				chatconv = purple_serv_got_joined_chat(ha->pc, g_str_hash(conv_id), conv_id);
+				purple_conversation_set_data(PURPLE_CONVERSATION(chatconv), "conv_id", g_strdup(conv_id));
+
+				for (i = 0; i < conversation->n_current_participant; i++) {
+					PurpleChatUserFlags cbflags = PURPLE_CHAT_USER_NONE;
+					purple_chat_conversation_add_user(chatconv, conversation->current_participant[i]->gaia_id, NULL, cbflags, FALSE);
+				}
+			}
 		}
 	}
 	
@@ -294,13 +311,27 @@ hangouts_received_event_notification(PurpleConnection *pc, StateUpdate *state_up
 		
 		msg = purple_xmlnode_to_str(html, NULL);
 		message_timestamp = time(NULL) - ((current_server_time - timestamp) / 1000000);
+		msg_flags = (g_strcmp0(gaia_id, ha->self_gaia_id) ? PURPLE_MESSAGE_RECV : PURPLE_MESSAGE_SEND);
 		
-		chatconv = purple_conversations_find_chat_with_account(conv_id, ha->account);
-		if (chatconv) {
-			purple_serv_got_chat_in(pc, purple_chat_conversation_get_id(chatconv), gaia_id, PURPLE_MESSAGE_RECV, msg, message_timestamp);
+		if (g_hash_table_contains(ha->group_chats, conv_id)) {
+			PurpleChatConversation *chatconv = purple_conversations_find_chat_with_account(conv_id, ha->account);
+			if (chatconv == NULL) {
+				chatconv = purple_serv_got_joined_chat(ha->pc, g_str_hash(conv_id), conv_id);
+				purple_conversation_set_data(PURPLE_CONVERSATION(chatconv), "conv_id", g_strdup(conv_id));
+				if (conversation) {
+					guint i;
+					for (i = 0; i < conversation->n_current_participant; i++) {
+						PurpleChatUserFlags cbflags = PURPLE_CHAT_USER_NONE;
+						purple_chat_conversation_add_user(chatconv, conversation->current_participant[i]->gaia_id, NULL, cbflags, FALSE);
+					}
+				}
+			}
+			purple_serv_got_chat_in(pc, g_str_hash(conv_id), gaia_id, msg_flags, msg, message_timestamp);
+			
 		} else {
-			if (g_strcmp0(gaia_id, ha->self_gaia_id)) {
-				purple_serv_got_im(pc, gaia_id, msg, PURPLE_MESSAGE_RECV, message_timestamp);
+			// It's most likely a one-to-one message
+			if (msg_flags & PURPLE_MESSAGE_RECV) {
+				purple_serv_got_im(pc, gaia_id, msg, msg_flags, message_timestamp);
 			} else {
 				gaia_id = g_hash_table_lookup(ha->one_to_ones, conv_id);
 				if (gaia_id) {
@@ -309,7 +340,7 @@ hangouts_received_event_notification(PurpleConnection *pc, StateUpdate *state_up
 					{
 						imconv = purple_im_conversation_new(ha->account, gaia_id);
 					}
-					purple_conversation_write(PURPLE_CONVERSATION(imconv), gaia_id, msg, PURPLE_MESSAGE_SEND, message_timestamp);
+					purple_conversation_write(PURPLE_CONVERSATION(imconv), gaia_id, msg, msg_flags, message_timestamp);
 				}
 			}
 			
@@ -414,7 +445,6 @@ hangouts_received_typing_notification(PurpleConnection *pc, StateUpdate *state_u
 	const gchar *gaia_id;
 	const gchar *conv_id;
 	PurpleIMTypingState typing_state;
-	PurpleChatConversation *conv;
 	
 	if (typing_notification == NULL) {
 		return;
@@ -464,8 +494,23 @@ hangouts_received_typing_notification(PurpleConnection *pc, StateUpdate *state_u
 	
 	conv_id = typing_notification->conversation_id->id;
 	
-	conv = purple_conversations_find_chat_with_account(conv_id, ha->account);
-	if (conv) return;
+	if (g_hash_table_contains(ha->group_chats, conv_id)) {
+		// This is a group conversation
+		PurpleChatConversation *chatconv = purple_conversations_find_chat_with_account(conv_id, ha->account);
+		if (FALSE && chatconv != NULL) {
+			//TODO make this next line not crash!
+			PurpleChatUser *cb = purple_chat_conversation_find_user(chatconv, gaia_id);
+			PurpleChatUserFlags cbflags = purple_chat_user_get_flags(cb);
+			
+			if (typing_notification->type == TYPING_TYPE__TYPING_TYPE_STARTED)
+				cbflags |= PURPLE_CHAT_USER_TYPING;
+			else
+				cbflags &= ~PURPLE_CHAT_USER_TYPING;
+			
+			purple_chat_user_set_flags(cb, cbflags);
+		}
+		return;
+	}
 	
 	switch(typing_notification->type) {
 		case TYPING_TYPE__TYPING_TYPE_STARTED:

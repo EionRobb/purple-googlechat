@@ -274,25 +274,22 @@ hangouts_received_event_notification(PurpleConnection *pc, StateUpdate *state_up
 				continue;
 			}
 			
-			purple_xmlnode_insert_data(node, segment->text, -1);
-			
 			if (formatting) {
-				GString *style = g_string_new(NULL);
 				if (formatting->bold) {
-					g_string_append(style, "font-weight: bold; ");
+					node = purple_xmlnode_new_child(node, "b");
 				}
 				if (formatting->italic) {
-					g_string_append(style, "font-style: italic; ");
+					node = purple_xmlnode_new_child(node, "i");
 				}
 				if (formatting->strikethrough) {
-					g_string_append(style, "text-decoration: line-through; ");
+					node = purple_xmlnode_new_child(node, "s");
 				}
 				if (formatting->underline) {
-					g_string_append(style, "text-decoration: underline; ");
+					node = purple_xmlnode_new_child(node, "u");
 				}
-				purple_xmlnode_set_attrib(node, "style", style->str);
-				g_string_free(style, TRUE);
 			}
+			
+			purple_xmlnode_insert_data(node, segment->text, -1);
 		}
 		
 		msg = purple_xmlnode_to_str(html, NULL);

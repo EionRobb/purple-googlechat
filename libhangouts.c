@@ -9,9 +9,6 @@
 #include "plugins.h"
 #include "request.h"
 #include "version.h"
-#ifdef _WIN32
-#include "win32/win32dep.h"
-#endif
 
 #include "hangouts_auth.h"
 #include "hangouts_pblite.h"

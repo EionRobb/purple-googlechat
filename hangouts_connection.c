@@ -6,12 +6,10 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include "ciphers/sha1hash.h"
 #include "debug.h"
-#ifdef _WIN32
-#include "win32/win32dep.h"
-#endif
 
 #include "hangouts_pblite.h"
 #include "hangouts_json.h"
@@ -222,7 +220,7 @@ hangouts_process_channel_buffer(HangoutsAccount *ha)
 			chunk_pos += bufsize;
 		}
 		
-		purple_debug_info("hangouts", "Got chunk %.*s\n", (int) len, chunk);
+		//purple_debug_info("hangouts", "Got chunk %.*s\n", (int) len, chunk);
 		
 		hangouts_process_data_chunks(ha, chunk, len);
 		

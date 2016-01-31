@@ -281,6 +281,8 @@ hangouts_conversation_send_message(HangoutsAccount *ha, const gchar *conv_id, co
 	//TODO listen to response
 	hangouts_pblite_send_chat_message(ha, &request, NULL, NULL);
 	
+	g_hash_table_insert(ha->sent_message_ids, g_strdup_printf("%" G_GUINT64_FORMAT, request.event_request_header->client_generated_id), NULL);
+	
 	hangouts_free_segments(segments);
 	hangouts_request_header_free(request.request_header);
 	
@@ -324,6 +326,7 @@ const gchar *message, PurpleMessageFlags flags)
 	HangoutsAccount *ha;
 	const gchar *conv_id;
 	PurpleChatConversation *chatconv;
+	gint ret;
 	
 	ha = purple_connection_get_protocol_data(pc);
 	chatconv = purple_conversations_find_chat(pc, id);
@@ -335,7 +338,11 @@ const gchar *message, PurpleMessageFlags flags)
 	}
 	g_return_val_if_fail(g_hash_table_contains(ha->group_chats, conv_id), -1);
 	
-	return hangouts_conversation_send_message(ha, conv_id, message);
+	ret = hangouts_conversation_send_message(ha, conv_id, message);
+	if (ret > 0) {
+		purple_serv_got_chat_in(pc, g_str_hash(conv_id), ha->self_gaia_id, PURPLE_MESSAGE_SEND, message, time(NULL));
+	}
+	return ret;
 }
 
 guint

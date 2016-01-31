@@ -45,7 +45,9 @@ struct  _StateUpdate
 void
 hangouts_received_other_notification(PurpleConnection *pc, StateUpdate *state_update)
 {
-	if (state_update->typing_notification != NULL) {
+	if (state_update->typing_notification != NULL ||
+		state_update->presence_notification != NULL ||
+		state_update->event_notification != NULL) {
 		return;
 	}
 	
@@ -454,7 +456,7 @@ hangouts_received_typing_notification(PurpleConnection *pc, StateUpdate *state_u
 	
 	ha = purple_connection_get_protocol_data(pc);
 	
-	purple_debug_info("hangouts", "Received new typing event %p\n", typing_notification);
+	//purple_debug_info("hangouts", "Received new typing event %p\n", typing_notification);
 	//purple_debug_info("hangouts", "%s\n", pblite_dump_json((ProtobufCMessage *)typing_notification)); //leaky
 	/* {
         "state_update_header" : {

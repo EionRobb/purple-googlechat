@@ -203,6 +203,7 @@ hangouts_received_event_notification(PurpleConnection *pc, StateUpdate *state_up
 	Event *event;
 	const gchar *gaia_id;
 	const gchar *conv_id;
+	const gchar *client_generated_id;
 	gint64 current_server_time = state_update->state_update_header->current_server_time;
 	gint64 timestamp;
 	ChatMessage *chat_message;
@@ -251,12 +252,13 @@ hangouts_received_event_notification(PurpleConnection *pc, StateUpdate *state_up
 	conv_id = event->conversation_id->id;
 	timestamp = event->timestamp;
 	chat_message = event->chat_message;
+	client_generated_id = event->self_event_state->client_generated_id;
 	
 	if (ha->self_gaia_id == NULL) {
 		ha->self_gaia_id = g_strdup(event->self_event_state->user_id->gaia_id);
 	}
 	
-	if (g_hash_table_remove(ha->sent_message_ids, event->self_event_state->client_generated_id)) {
+	if (client_generated_id && g_hash_table_remove(ha->sent_message_ids, client_generated_id)) {
 		// This probably came from us
 		return;
 	}

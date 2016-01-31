@@ -295,7 +295,6 @@ PurpleMessage *msg)
 {
 	const gchar *who = purple_message_get_recipient(msg);
 	const gchar *message = purple_message_get_contents(msg);
-	PurpleMessageFlags flags = purple_message_get_flags(msg);
 #else
 const gchar *who, const gchar *message, PurpleMessageFlags flags)
 {
@@ -317,7 +316,6 @@ hangouts_chat_send(PurpleConnection *pc, gint id,
 PurpleMessage *msg)
 {
 	const gchar *message = purple_message_get_contents(msg);
-	PurpleMessageFlags flags = purple_message_get_flags(msg);
 #else
 const gchar *message, PurpleMessageFlags flags)
 {

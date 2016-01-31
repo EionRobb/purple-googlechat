@@ -7,6 +7,9 @@
 #if PURPLE_VERSION_CHECK(3, 0, 0)
 #include <glib-object.h>
 
+#define purple_conversation_set_data(conv, key, value)  g_object_set_data(G_OBJECT(conv), key, value)
+#define purple_conversation_get_data(conv, key)         g_object_get_data(G_OBJECT(conv), key)
+
 #define purple_circular_buffer_destroy  g_object_unref
 #define purple_hash_destroy             g_object_unref
 #define purple_message_destroy          g_object_unref

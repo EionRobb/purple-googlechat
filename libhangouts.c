@@ -209,11 +209,11 @@ static void
 hangouts_protocol_im_iface_init(PurpleProtocolIMIface *prpl_info)
 {
 	prpl_info->send = hangouts_send_im;
-	prpl_info->send_typing = skypeweb_send_typing;
+	prpl_info->send_typing = hangouts_send_typing;
 }
 
 static void 
-hangouts_protocol_chat_iface_init(PurpleProtocolIMIface *prpl_info)
+hangouts_protocol_chat_iface_init(PurpleProtocolChatIface *prpl_info)
 {
 	prpl_info->send = hangouts_chat_send;
 }

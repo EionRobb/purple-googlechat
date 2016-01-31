@@ -61,6 +61,7 @@ typedef struct {
 	GHashTable *one_to_ones;     // A store of known conv_id's->gaia_id's
 	GHashTable *one_to_ones_rev; // A store of known gaia_id's->conv_id's
 	GHashTable *group_chats;     // A store of known conv_id's
+	GHashTable *sent_message_ids;// A store of message id's that we generated from this instance
 } HangoutsAccount;
 
 

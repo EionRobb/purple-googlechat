@@ -264,6 +264,11 @@ hangouts_received_event_notification(PurpleConnection *pc, StateUpdate *state_up
 		ha->self_gaia_id = g_strdup(event->self_event_state->user_id->gaia_id);
 	}
 	
+	if (g_hash_table_remove(ha->sent_message_ids, event->self_event_state->client_generated_id)) {
+		// This probably came from us
+		return;
+	}
+	
 	if (chat_message != NULL) {
 		size_t n_segments = chat_message->message_content->n_segment;
 		Segment **segments = chat_message->message_content->segment;

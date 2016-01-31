@@ -64,6 +64,7 @@ hangouts_login(PurpleAccount *account)
 	ha->cookie_jar = purple_http_cookie_jar_new();
 	ha->channel_buffer = purple_circular_buffer_new(0);
 	ha->channel_keepalive_pool = purple_http_keepalive_pool_new();
+	ha->sent_message_ids = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 	
 	purple_connection_set_protocol_data(pc, ha);
 	
@@ -102,6 +103,8 @@ hangouts_close(PurpleConnection *pc)
 	purple_http_cookie_jar_unref(ha->cookie_jar);
 	purple_circular_buffer_destroy(ha->channel_buffer);
 	
+	g_hash_table_remove_all(ha->sent_message_ids);
+	g_hash_table_unref(ha->sent_message_ids);
 	g_hash_table_remove_all(ha->one_to_ones);
 	g_hash_table_unref(ha->one_to_ones);
 	g_hash_table_remove_all(ha->one_to_ones_rev);
@@ -209,11 +212,11 @@ static void
 hangouts_protocol_im_iface_init(PurpleProtocolIMIface *prpl_info)
 {
 	prpl_info->send = hangouts_send_im;
-	prpl_info->send_typing = skypeweb_send_typing;
+	prpl_info->send_typing = hangouts_send_typing;
 }
 
 static void 
-hangouts_protocol_chat_iface_init(PurpleProtocolIMIface *prpl_info)
+hangouts_protocol_chat_iface_init(PurpleProtocolChatIface *prpl_info)
 {
 	prpl_info->send = hangouts_chat_send;
 }

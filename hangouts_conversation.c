@@ -98,27 +98,29 @@ hangouts_got_users_presence(HangoutsAccount *ha, QueryPresenceResponse *response
 }
 
 void
-hangouts_get_users_presence(HangoutsAccount *ha, GSList *user_ids)
+hangouts_get_users_presence(HangoutsAccount *ha, GList *user_ids)
 {
 	QueryPresenceRequest request;
-	ParticipantId *participant_id;
+	ParticipantId **participant_id;
 	guint n_participant_id;
-	GSList *cur;
+	GList *cur;
 	guint i;
 	
 	query_presence_request__init(&request);
 	request.request_header = hangouts_get_request_header(ha);
 	
-	n_participant_id = g_slist_length(user_ids);
-	participant_id = g_new0(ParticipantId, n_participant_id + 1);
+	n_participant_id = g_list_length(user_ids);
+	participant_id = g_new0(ParticipantId *, n_participant_id);
 	
 	for (i = 0, cur = user_ids; cur && cur->data && i < n_participant_id; (cur = cur->next), i++) {
-		participant_id__init(&participant_id[i]);
-		participant_id[i].gaia_id = cur->data;
-		//participant_id[i].chat_id = cur->data; //XX do we need this?
+		participant_id[i] = g_new0(ParticipantId, 1);
+		participant_id__init(participant_id[i]);
+		
+		participant_id[i]->gaia_id = (gchar *) cur->data;
+		participant_id[i]->chat_id = (gchar *) cur->data; //XX do we need this?
 	}
 	
-	request.participant_id = &participant_id;
+	request.participant_id = participant_id;
 	request.n_participant_id = n_participant_id;
 	
 	request.n_field_mask = 2;
@@ -129,6 +131,9 @@ hangouts_get_users_presence(HangoutsAccount *ha, GSList *user_ids)
 	hangouts_pblite_query_presence(ha, &request, hangouts_got_users_presence, NULL);
 	
 	hangouts_request_header_free(request.request_header);
+	for (i = 0; i < n_participant_id; i++) {
+		g_free(participant_id[i]);
+	}
 	g_free(participant_id);
 	g_free(request.field_mask);
 }
@@ -155,7 +160,7 @@ hangouts_got_conversation_list(HangoutsAccount *ha, SyncRecentConversationsRespo
 	GHashTable *one_to_ones = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
 	GHashTable *one_to_ones_rev = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
 	GHashTable *group_chats = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
-	GSList *user_ids = NULL;
+	GHashTable *unique_user_ids = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, NULL);
 	/*
 struct  _ConversationState
 {
@@ -173,11 +178,11 @@ struct  _ConversationState
 		purple_debug_info("hangouts", "got conversation state %s\n", pblite_dump_json((ProtobufCMessage *)conversation_state));
 		
 		if (conversation->type == CONVERSATION_TYPE__CONVERSATION_TYPE_ONE_TO_ONE) {
-			gchar *other_person = conversation->current_participant[0]->gaia_id;
+			gchar *other_person = conversation->participant_data[0]->id->gaia_id;
 			guint participant_num = 0;
 			
 			if (!g_strcmp0(other_person, conversation->self_conversation_state->self_read_state->participant_id->gaia_id)) {
-				other_person = conversation->current_participant[1]->gaia_id;
+				other_person = conversation->participant_data[1]->id->gaia_id;
 				participant_num = 1;
 			}
 			
@@ -199,7 +204,7 @@ struct  _ConversationState
 				purple_serv_got_alias(ha->pc, other_person, conversation->participant_data[participant_num]->fallback_name);
 			}
 			
-			user_ids = g_slist_prepend(user_ids, other_person);
+			g_hash_table_replace(unique_user_ids, other_person, conversation->current_participant[participant_num]);
 		} else {
 			gchar *conv_id = g_strdup(conversation->conversation_id->id);
 			g_hash_table_replace(group_chats, conv_id, NULL);
@@ -223,8 +228,10 @@ struct  _ConversationState
 		for (j = 0; j < conversation->n_participant_data; j++) {
 			ConversationParticipantData *participant_data = conversation->participant_data[j];
 			
-			purple_serv_got_alias(ha->pc, participant_data->id->gaia_id, participant_data->fallback_name);
-			user_ids = g_slist_prepend(user_ids, participant_data->id->gaia_id);
+			if (participant_data->participant_type == PARTICIPANT_TYPE__PARTICIPANT_TYPE_GAIA) {
+				purple_serv_got_alias(ha->pc, participant_data->id->gaia_id, participant_data->fallback_name);
+				g_hash_table_replace(unique_user_ids, participant_data->id->gaia_id, participant_data->id);
+			}
 		}
 	}
 	
@@ -245,8 +252,8 @@ struct  _ConversationState
 	ha->group_chats = group_chats;
 	//todo mark the account as connected
 	
-	hangouts_get_users_presence(ha, user_ids);
-	g_slist_free(user_ids);
+	hangouts_get_users_presence(ha, g_hash_table_get_keys(unique_user_ids));
+	g_hash_table_unref(unique_user_ids);
 }
 
 void
@@ -476,6 +483,7 @@ hangouts_send_typing(PurpleConnection *pc, const gchar *who, PurpleIMTypingState
 	}
 	
 	//TODO listen to response
+	//TODO dont send STOPPED if we just sent a message
 	hangouts_pblite_set_typing(ha, &request, NULL, NULL);
 	
 	hangouts_request_header_free(request.request_header);

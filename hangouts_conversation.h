@@ -31,6 +31,6 @@ const gchar *message, PurpleMessageFlags flags
 guint hangouts_send_typing(PurpleConnection *pc, const gchar *name, PurpleIMTypingState state);
 
 
-void hangouts_get_users_presence(HangoutsAccount *ha, GSList *user_ids);
+void hangouts_get_users_presence(HangoutsAccount *ha, GList *user_ids);
 
 #endif /*_HANGOUTS_CONVERSATION_H_*/

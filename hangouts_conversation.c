@@ -329,14 +329,180 @@ Cache-Control: no-cache
 */
 }
 
-static Segment *
+static Segment **
 hangouts_convert_html_to_segments(HangoutsAccount *ha, const gchar *html_message, guint *segments_count)
 {
-	guint n_segments = 1;
-	Segment *segments = g_new0(Segment, n_segments + 1);
+	guint n_segments;
+	Segment **segments;
+	const gchar *c = html_message;
+	GString *text_content;
+	Segment *segment;
+	guint i;
+	GList *segment_list = NULL;
+	gboolean is_bold = FALSE, is_italic = FALSE, is_strikethrough = FALSE, is_underline = FALSE;
+	gboolean is_link = FALSE;
+	gchar *last_link = NULL;
 	
-	segment__init(segments + 0);
-	segments[0].text = g_strdup(html_message);
+	g_return_val_if_fail(c && *c, NULL);
+	
+	text_content = g_string_new("");
+	segment = g_new0(Segment, 1);
+	segment__init(segment);
+	
+	while (c && *c) {
+		if(*c == '<') {
+			gboolean opening = TRUE;
+			GString *tag = g_string_new("");
+			c++;
+			if(*(c+1) == '/') { // closing tag
+				opening = FALSE;
+				c++;
+			}
+			while (*c != ' ' && *c != '>') {
+				g_string_append_c(tag, *c);
+				c++;
+			}
+			if (text_content->len) {
+				segment->text = g_string_free(text_content, FALSE);
+				text_content = g_string_new("");
+				
+				segment->formatting = g_new0(Formatting, 1);
+				formatting__init(segment->formatting);
+				segment->formatting->has_bold = segment->formatting->bold = is_bold;
+				segment->formatting->has_italic = segment->formatting->italic = is_italic;
+				segment->formatting->has_strikethrough = segment->formatting->strikethrough = is_strikethrough;
+				segment->formatting->has_underline = segment->formatting->underline = is_underline;
+				
+				if (is_link) {
+					segment->type = SEGMENT_TYPE__SEGMENT_TYPE_LINK;
+					if (last_link) {
+						segment->link_data = g_new0(LinkData, 1);
+						link_data__init(segment->link_data);
+						segment->link_data->link_target = last_link;
+					}
+				}
+				
+				segment_list = g_list_append(segment_list, segment);
+				segment = g_new0(Segment, 1);
+				segment__init(segment);
+			}
+			if (!g_ascii_strcasecmp(tag->str, "BR") ||
+					!g_ascii_strcasecmp(tag->str, "BR/")) {
+				//Line break, push directly onto the stack
+				segment->type = SEGMENT_TYPE__SEGMENT_TYPE_LINE_BREAK;
+				segment_list = g_list_append(segment_list, segment);
+				segment = g_new0(Segment, 1);
+				segment__init(segment);
+			} else if (!g_ascii_strcasecmp(tag->str, "B") ||
+					!g_ascii_strcasecmp(tag->str, "BOLD") ||
+					!g_ascii_strcasecmp(tag->str, "STRONG")) {
+				is_bold = opening;
+			} else if (!g_ascii_strcasecmp(tag->str, "I") ||
+					!g_ascii_strcasecmp(tag->str, "ITALIC") ||
+					!g_ascii_strcasecmp(tag->str, "EM")) {
+				is_italic = opening;
+			} else if (!g_ascii_strcasecmp(tag->str, "S") ||
+					!g_ascii_strcasecmp(tag->str, "STRIKE")) {
+				is_strikethrough = opening;
+			} else if (!g_ascii_strcasecmp(tag->str, "U") ||
+					!g_ascii_strcasecmp(tag->str, "UNDERLINE")) {
+				is_underline = opening;
+			} else if (!g_ascii_strcasecmp(tag->str, "A")) {
+				is_link = opening;
+				if (opening) {
+					while (*c != '>') {
+						//Grab HREF for the A
+/*
+    Maiku R: I've seen -1 with pointer math, but not in square brackets
+    Eion Robb: should it stay?
+    Eion Robb: I'm thinking it should stay for the cute-factor
+    Maiku R: I feel like since neither of us has seen it before, there's probably a reason we haven't  :-P
+    Eion Robb: that's the perfect reason to keep it
+*/
+						if (c[-1]==' '&&c[0]=='h'&&c[1]=='r'&&c[2]=='e'&&c[3]=='f'&&c[4]=='=') {
+							gchar *href_end;
+							c += 5;
+							if (*c == '"' || *c == '\'') {
+								href_end = strchr(c + 1, *c);
+								c++;
+							} else {
+								//Wow this should not happen, but what the hell
+								href_end = MIN(strchr(c, ' '), strchr(c, '>'));
+								if (!href_end)
+									href_end = strchr(c, '>');
+							}
+							g_free(last_link);
+							
+							if (href_end > c) {
+								last_link = g_strndup(c, href_end - c);
+								c = href_end;
+								break;
+							}
+							
+							// Shouldn't be here :s
+							g_warn_if_reached();
+							last_link = NULL;
+						}
+						c++;
+					}
+				} else {
+					g_free(last_link);
+					last_link = NULL;
+				}
+			}
+			while (*c != '>') {
+				c++;
+			}
+			
+			c++;
+			g_string_free(tag, TRUE);
+		} else if(*c == '&') {
+			const gchar *plain;
+			gint len;
+			
+			if ((plain = purple_markup_unescape_entity(c, &len)) == NULL) {
+				g_string_append_c(text_content, *c);
+				len = 1;
+			} else {
+				g_string_append(text_content, plain);
+			}
+			c += len;
+		} else {
+			g_string_append_c(text_content, *c);
+			c++;
+		}
+	}
+	
+	if (text_content->len) {
+		segment->text = g_string_free(text_content, FALSE);
+		
+		segment->formatting = g_new0(Formatting, 1);
+		formatting__init(segment->formatting);
+		segment->formatting->has_bold = segment->formatting->bold = is_bold;
+		segment->formatting->has_italic = segment->formatting->italic = is_italic;
+		segment->formatting->has_strikethrough = segment->formatting->strikethrough = is_strikethrough;
+		segment->formatting->has_underline = segment->formatting->underline = is_underline;
+				
+		if (is_link) {
+			segment->type = SEGMENT_TYPE__SEGMENT_TYPE_LINK;
+			if (last_link) {
+				segment->link_data = g_new0(LinkData, 1);
+				link_data__init(segment->link_data);
+				segment->link_data->link_target = last_link;
+			}
+		}
+		
+		segment_list = g_list_append(segment_list, segment);
+	}
+	
+	n_segments = g_list_length(segment_list);
+	segments = g_new0(Segment *, n_segments + 1);
+	
+	for (i = 0; segment_list && segment_list->data; i++) {
+		segments[i] = segment_list->data;
+		
+		segment_list = g_list_delete_link(segment_list, segment_list);
+	}
 	
 	if (segments_count != NULL) {
 		*segments_count = n_segments;
@@ -346,11 +512,14 @@ hangouts_convert_html_to_segments(HangoutsAccount *ha, const gchar *html_message
 }
 
 static void
-hangouts_free_segments(Segment *segments)
+hangouts_free_segments(Segment **segments)
 {
 	guint i;
-	for (i = 0; segments[i].base.descriptor; i++) {
-		g_free(segments[i].text);
+	for (i = 0; segments[i]; i++) {
+		g_free(segments[i]->text);
+		g_free(segments[i]->formatting);
+		g_free(segments[i]->link_data);
+		g_free(segments[i]);
 	}
 	
 	g_free(segments);
@@ -361,14 +530,14 @@ hangouts_conversation_send_message(HangoutsAccount *ha, const gchar *conv_id, co
 {
 	SendChatMessageRequest request;
 	MessageContent message_content;
-	Segment *segments;
+	Segment **segments;
 	guint n_segments;
 	
 	send_chat_message_request__init(&request);
 	message_content__init(&message_content);
 	
 	segments = hangouts_convert_html_to_segments(ha, message, &n_segments);
-	message_content.segment = &segments;
+	message_content.segment = segments;
 	message_content.n_segment = n_segments;
 	
 	request.request_header = hangouts_get_request_header(ha);

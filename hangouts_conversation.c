@@ -175,7 +175,7 @@ struct  _ConversationState
 		ConversationState *conversation_state = response->conversation_state[i];
 		Conversation *conversation = conversation_state->conversation;
 		
-		purple_debug_info("hangouts", "got conversation state %s\n", pblite_dump_json((ProtobufCMessage *)conversation_state));
+		//purple_debug_info("hangouts", "got conversation state %s\n", pblite_dump_json((ProtobufCMessage *)conversation_state));
 		
 		if (conversation->type == CONVERSATION_TYPE__CONVERSATION_TYPE_ONE_TO_ONE) {
 			gchar *other_person = conversation->participant_data[0]->id->gaia_id;
@@ -375,7 +375,7 @@ hangouts_conversation_send_message(HangoutsAccount *ha, const gchar *conv_id, co
 	request.event_request_header = hangouts_get_event_request_header(ha, conv_id);
 	request.message_content = &message_content;
 	
-	purple_debug_info("hangouts", "%s\n", pblite_dump_json((ProtobufCMessage *)&request)); //leaky
+	//purple_debug_info("hangouts", "%s\n", pblite_dump_json((ProtobufCMessage *)&request)); //leaky
 	
 	//TODO listen to response
 	hangouts_pblite_send_chat_message(ha, &request, NULL, NULL);

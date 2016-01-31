@@ -11,6 +11,24 @@ CC ?= gcc
 PROTOC-C ?= protoc-c
 PKG_CONFIG ?= pkg-config
 
+# Do some nasty OS and purple version detection
+ifeq ($(OS),Windows_NT)
+  HANGOUTS_TARGET = libhangouts.dll
+  HANGOUTS_DEST = "$(PROGRAMFILES)/Pidgin/plugins"
+else
+  ifeq ($(shell pkg-config --exists purple-3 2>/dev/null),)
+    ifeq ($(shell pkg-config --exists purple 2>/dev/null),)
+      HANGOUTS_TARGET = FAILNOPURPLE
+      HANGOUTS_DEST = 
+    else
+      HANGOUTS_TARGET = libhangouts.so
+      HANGOUTS_DEST = $(DESTDIR)`$(PKG_CONFIG) --variable=plugindir purple-3`
+    endif
+  else
+    HANGOUTS_TARGET = libhangouts3.so
+    HANGOUTS_DEST = $(DESTDIR)`$(PKG_CONFIG) --variable=plugindir purple`
+  endif
+endif
 
 WIN32_CFLAGS = -I$(WIN32_DEV_TOP)/glib-2.28.8/include -I$(WIN32_DEV_TOP)/glib-2.28.8/include/glib-2.0 -I$(WIN32_DEV_TOP)/glib-2.28.8/lib/glib-2.0/include -I$(WIN32_DEV_TOP)/json-glib-0.14/include/json-glib-1.0 -I$(WIN32_DEV_TOP)/protobuf-c-Release-2.6/include -DENABLE_NLS -DPACKAGE_VERSION='"$(PLUGIN_VERSION)"' -Wall -Wextra -Werror -Wno-deprecated-declarations -Wno-unused-parameter -I. -fno-strict-aliasing
 WIN32_LDFLAGS = -L$(WIN32_DEV_TOP)/glib-2.28.8/lib -L$(PROTOBUF_C_DIR)/bin -L$(WIN32_DEV_TOP)/json-glib-0.14/lib -lpurple -lintl -lglib-2.0 -lgobject-2.0 -ljson-glib-1.0 -lprotobuf-c-1 -ggdb -static-libgcc -lz
@@ -24,7 +42,9 @@ PURPLE_COMPAT_FILES := purple2compat/http.c purple2compat/purple-socket.c
 PURPLE_C_FILES := libhangouts.c $(C_FILES)
 TEST_C_FILES := hangouts_test.c $(C_FILES)
 
-all: libhangouts.so
+.PHONY:	all install install-windows FAILNOPURPLE
+
+all: $(HANGOUTS_TARGET)
 
 hangouts.pb-c.c: hangouts.proto
 	$(PROTOC-C) --c_out=. hangouts.proto
@@ -44,9 +64,12 @@ libhangouts3.dll: $(PURPLE_C_FILES) $(PURPLE_COMPAT_FILES)
 libhangouts.exe: $(TEST_C_FILES)
 	$(WIN32_CC) -o $@ -DDEBUG $^ $(WIN32_PIDGIN2_CFLAGS) $(WIN32_PIDGIN2_LDFLAGS) -Ipurple2compat
 
-install: libhangouts.so
-	cp $^ $(DESTDIR)`$(PKG_CONFIG) --variable=plugindir purple`
+install: $(HANGOUTS_TARGET)
+	cp $^ $(HANGOUTS_DEST)
 
 install-windows: libhangouts.dll
 	cp $^ "$(PROGRAMFILES)/Pidgin/plugins"
+
+FAILNOPURPLE:
+	echo "You need libpurple development headers installed to be able to compile this plugin"
 

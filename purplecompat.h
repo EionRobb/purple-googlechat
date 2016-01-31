@@ -18,6 +18,10 @@
 
 #include "connection.h"
 
+
+#define purple_blist_find_buddy  purple_find_buddy
+#define purple_blist_find_group  purple_find_group
+
 #define PURPLE_TYPE_CONNECTION	purple_value_new(PURPLE_TYPE_SUBTYPE, PURPLE_SUBTYPE_CONNECTION)
 #define PURPLE_IS_CONNECTION	PURPLE_CONNECTION_IS_VALID
 

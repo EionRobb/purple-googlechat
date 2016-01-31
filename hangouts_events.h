@@ -13,4 +13,6 @@ void hangouts_received_presence_notification(PurpleConnection *pc, StateUpdate *
 void hangouts_received_typing_notification(PurpleConnection *pc, StateUpdate *state_update);
 
 
+void hangouts_process_presence_result(HangoutsAccount *ha, PresenceResult *presence);
+
 #endif /*_HANGOUTS_EVENTS_H_*/

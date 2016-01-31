@@ -147,10 +147,39 @@ hangouts_received_other_notification(PurpleConnection *pc, StateUpdate *state_up
                 ],
                 "force_history_state" : null
         },*/
-		
+
+void
+hangouts_process_presence_result(HangoutsAccount *ha, PresenceResult *presence)
+{
+	const gchar *gaia_id = presence->user_id->gaia_id;
+	const gchar *status_id;
+	gboolean reachable = FALSE;
+	gboolean available = FALSE;
+	
+	if (presence->presence->reachable) {
+		reachable = TRUE;
+	}
+	if (presence->presence->available) {
+		available = TRUE;
+	}
+	
+	if (reachable && available) {
+		status_id = purple_primitive_get_id_from_type(PURPLE_STATUS_AVAILABLE);
+	} else if (reachable) {
+		status_id = purple_primitive_get_id_from_type(PURPLE_STATUS_AWAY);
+	} else if (available) {
+		status_id = purple_primitive_get_id_from_type(PURPLE_STATUS_EXTENDED_AWAY);
+	} else {
+		status_id = purple_primitive_get_id_from_type(PURPLE_STATUS_OFFLINE);
+	}
+	
+	purple_protocol_got_user_status(ha->account, gaia_id, status_id, NULL);
+}
+
 void
 hangouts_received_presence_notification(PurpleConnection *pc, StateUpdate *state_update)
 {
+	HangoutsAccount *ha;
 	PresenceNotification *presence_notification = state_update->presence_notification;
 	guint i;
 	
@@ -158,48 +187,11 @@ hangouts_received_presence_notification(PurpleConnection *pc, StateUpdate *state
 		return;
 	}
 	
+	ha = purple_connection_get_protocol_data(pc);
+	
 	for (i = 0; i < presence_notification->n_presence; i++) {
-		PresenceResult *presence = presence_notification->presence[i];
-		const gchar *gaia_id = presence->user_id->gaia_id;
-		const gchar *status_id;
-		gboolean reachable = FALSE;
-		gboolean available = FALSE;
-		
-		if (presence->presence->reachable) {
-			reachable = TRUE;
-		}
-		if (presence->presence->available) {
-			available = TRUE;
-		}
-		
-		if (reachable && available) {
-			status_id = purple_primitive_get_id_from_type(PURPLE_STATUS_AVAILABLE);
-		} else if (reachable) {
-			status_id = purple_primitive_get_id_from_type(PURPLE_STATUS_AWAY);
-		} else if (available) {
-			status_id = purple_primitive_get_id_from_type(PURPLE_STATUS_EXTENDED_AWAY);
-		} else {
-			status_id = purple_primitive_get_id_from_type(PURPLE_STATUS_OFFLINE);
-		}
-		
-		purple_protocol_got_user_status(purple_connection_get_account(pc), gaia_id, status_id, NULL);
+		hangouts_process_presence_result(ha, presence_notification->presence[i]);
 	}
-		/*        "presence_notification" : {
-                "presence" : [
-                        {
-                                "user_id" : {
-                                        "gaia_id" : "109246128927349863180",
-                                        "chat_id" : "109246128927349863180"
-                                },
-                                "presence" : {
-                                        "reachable" : 1,
-                                        "available" : 1,
-                                        "device_status" : null,
-                                        "mood_setting" : null
-                                }
-                        }
-                ]
-        },*/
 }
 
 void

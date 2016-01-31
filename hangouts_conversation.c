@@ -2,6 +2,7 @@
 
 #include "hangouts.pb-c.h"
 #include "hangouts_connection.h"
+#include "hangouts_events.h"
 
 #include "debug.h"
 #include "glibcompat.h"
@@ -87,13 +88,74 @@ hangouts_get_self_info(HangoutsAccount *ha)
 }
 
 static void
+hangouts_got_users_presence(HangoutsAccount *ha, QueryPresenceResponse *response, gpointer user_data)
+{
+	guint i;
+	
+	for (i = 0; i < response->n_presence_result; i++) {
+		hangouts_process_presence_result(ha, response->presence_result[i]);
+	}
+}
+
+void
+hangouts_get_users_presence(HangoutsAccount *ha, GSList *user_ids)
+{
+	QueryPresenceRequest request;
+	ParticipantId *participant_id;
+	guint n_participant_id;
+	GSList *cur;
+	guint i;
+	
+	query_presence_request__init(&request);
+	request.request_header = hangouts_get_request_header(ha);
+	
+	n_participant_id = g_slist_length(user_ids);
+	participant_id = g_new0(ParticipantId, n_participant_id + 1);
+	
+	for (i = 0, cur = user_ids; cur && cur->data && i < n_participant_id; (cur = cur->next), i++) {
+		participant_id__init(&participant_id[i]);
+		participant_id[i].gaia_id = cur->data;
+		//participant_id[i].chat_id = cur->data; //XX do we need this?
+	}
+	
+	request.participant_id = &participant_id;
+	request.n_participant_id = n_participant_id;
+	
+	request.n_field_mask = 2;
+	request.field_mask = g_new0(FieldMask, request.n_field_mask);
+	request.field_mask[0] = FIELD_MASK__FIELD_MASK_AVAILABLE;
+	request.field_mask[1] = FIELD_MASK__FIELD_MASK_REACHABLE;
+
+	hangouts_pblite_query_presence(ha, &request, hangouts_got_users_presence, NULL);
+	
+	hangouts_request_header_free(request.request_header);
+	g_free(participant_id);
+	g_free(request.field_mask);
+}
+
+
+GHashTable *
+hangouts_chat_info_defaults(PurpleConnection *pc, const char *chatname)
+{
+	GHashTable *defaults = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, g_free);
+	
+	if (chatname != NULL)
+	{
+		g_hash_table_insert(defaults, "conv_id", g_strdup(chatname));
+	}
+	
+	return defaults;
+}
+
+static void
 hangouts_got_conversation_list(HangoutsAccount *ha, SyncRecentConversationsResponse *response, gpointer user_data)
 {
+	PurpleGroup *hangouts_group = NULL;
 	guint i, j;
 	GHashTable *one_to_ones = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
 	GHashTable *one_to_ones_rev = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
 	GHashTable *group_chats = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
-	//TODO GSList *user_ids;
+	GSList *user_ids = NULL;
 	/*
 struct  _ConversationState
 {
@@ -111,20 +173,50 @@ struct  _ConversationState
 		purple_debug_info("hangouts", "got conversation state %s\n", pblite_dump_json((ProtobufCMessage *)conversation_state));
 		
 		if (conversation->type == CONVERSATION_TYPE__CONVERSATION_TYPE_ONE_TO_ONE) {
-			const gchar *first_person = conversation->current_participant[0]->gaia_id;
-			const gchar *second_person = conversation->current_participant[1]->gaia_id;
-			const gchar *other_person;
+			gchar *other_person = conversation->current_participant[0]->gaia_id;
+			guint participant_num = 0;
 			
-			if (g_strcmp0(first_person, conversation->self_conversation_state->self_read_state->participant_id->gaia_id)) {
-				other_person = first_person;
-			} else {
-				other_person = second_person;
+			if (!g_strcmp0(other_person, conversation->self_conversation_state->self_read_state->participant_id->gaia_id)) {
+				other_person = conversation->current_participant[1]->gaia_id;
+				participant_num = 1;
 			}
 			
 			g_hash_table_replace(one_to_ones, g_strdup(conversation->conversation_id->id), g_strdup(other_person));
 			g_hash_table_replace(one_to_ones_rev, g_strdup(other_person), g_strdup(conversation->conversation_id->id));
+			
+			if (!purple_blist_find_buddy(ha->account, other_person)) {
+				if (hangouts_group == NULL) {
+					hangouts_group = purple_blist_find_group("Hangouts");
+					if (!hangouts_group)
+					{
+						hangouts_group = purple_group_new("Hangouts");
+						purple_blist_add_group(hangouts_group, NULL);
+					}
+					purple_blist_add_group(hangouts_group, NULL);
+				}
+				purple_blist_add_buddy(purple_buddy_new(ha->account, other_person, conversation->participant_data[participant_num]->fallback_name), NULL, hangouts_group, NULL);
+			} else {
+				purple_serv_got_alias(ha->pc, other_person, conversation->participant_data[participant_num]->fallback_name);
+			}
+			
+			user_ids = g_slist_prepend(user_ids, other_person);
 		} else {
-			g_hash_table_replace(group_chats, g_strdup(conversation->conversation_id->id), NULL);
+			gchar *conv_id = g_strdup(conversation->conversation_id->id);
+			g_hash_table_replace(group_chats, conv_id, NULL);
+			
+			// TODO work out how to make purple_blist_find_chat not crash
+			if (FALSE && !purple_blist_find_chat(ha->account, conv_id)) {
+				if (hangouts_group == NULL) {
+					hangouts_group = purple_blist_find_group("Hangouts");
+					if (!hangouts_group)
+					{
+						hangouts_group = purple_group_new("Hangouts");
+						purple_blist_add_group(hangouts_group, NULL);
+					}
+					purple_blist_add_group(hangouts_group, NULL);
+				}
+				purple_blist_add_chat(purple_chat_new(ha->account, conversation->name, hangouts_chat_info_defaults(ha->pc, conv_id)), hangouts_group, NULL);
+			}
 		}
 		
 		
@@ -132,7 +224,7 @@ struct  _ConversationState
 			ConversationParticipantData *participant_data = conversation->participant_data[j];
 			
 			purple_serv_got_alias(ha->pc, participant_data->id->gaia_id, participant_data->fallback_name);
-			//TODO user_ids = g_slist_append(user_ids, participant_data->id->gaia_id);
+			user_ids = g_slist_prepend(user_ids, participant_data->id->gaia_id);
 		}
 	}
 	
@@ -152,6 +244,9 @@ struct  _ConversationState
 	ha->one_to_ones_rev = one_to_ones_rev;
 	ha->group_chats = group_chats;
 	//todo mark the account as connected
+	
+	hangouts_get_users_presence(ha, user_ids);
+	g_slist_free(user_ids);
 }
 
 void

@@ -6,6 +6,8 @@
 #include "conversation.h"
 #include "connection.h"
 
+GHashTable *hangouts_chat_info_defaults(PurpleConnection *pc, const char *chatname);
+
 void hangouts_get_self_info(HangoutsAccount *ha);
 void hangouts_get_conversation_list(HangoutsAccount *ha);
 void hangouts_get_buddy_list(HangoutsAccount *ha);
@@ -27,5 +29,8 @@ const gchar *message, PurpleMessageFlags flags
 );
 
 guint hangouts_send_typing(PurpleConnection *pc, const gchar *name, PurpleIMTypingState state);
+
+
+void hangouts_get_users_presence(HangoutsAccount *ha, GSList *user_ids);
 
 #endif /*_HANGOUTS_CONVERSATION_H_*/

@@ -200,11 +200,8 @@ struct  _ConversationState
 					purple_blist_add_group(hangouts_group, NULL);
 				}
 				purple_blist_add_buddy(purple_buddy_new(ha->account, other_person, conversation->participant_data[participant_num]->fallback_name), NULL, hangouts_group, NULL);
-			} else {
-				purple_serv_got_alias(ha->pc, other_person, conversation->participant_data[participant_num]->fallback_name);
 			}
 			
-			g_hash_table_replace(unique_user_ids, other_person, conversation->current_participant[participant_num]);
 		} else {
 			gchar *conv_id = g_strdup(conversation->conversation_id->id);
 			g_hash_table_replace(group_chats, conv_id, NULL);

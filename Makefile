@@ -16,8 +16,8 @@ ifeq ($(OS),Windows_NT)
   HANGOUTS_TARGET = libhangouts.dll
   HANGOUTS_DEST = "$(PROGRAMFILES)/Pidgin/plugins"
 else
-  ifeq ($(shell pkg-config --exists purple-3 2>/dev/null),)
-    ifeq ($(shell pkg-config --exists purple 2>/dev/null),)
+  ifeq ($(shell pkg-config --exists purple-3 2>/dev/null && echo "true"),)
+    ifeq ($(shell pkg-config --exists purple 2>/dev/null && echo "true"),)
       HANGOUTS_TARGET = FAILNOPURPLE
       HANGOUTS_DEST = 
     else

@@ -345,6 +345,11 @@ hangouts_send_maps_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse *respo
 	size_t res_len;
 	gchar *gsid;
 	gchar *sid;
+	
+	if (purple_http_response_get_error(response) != NULL) {
+		purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, purple_http_response_get_error(response));
+		return;
+	}
 
 	res_raw = purple_http_response_get_data(response, &res_len);
 	res_raw = g_strstr_len(res_raw, res_len, "\n");

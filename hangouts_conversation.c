@@ -422,7 +422,7 @@ hangouts_get_conversation_list(HangoutsAccount *ha)
 	request.sync_filter = sync_filter;
 	request.n_sync_filter = 1;  // Back streets back, alright!
 	
-	hangouts_pblite_get_recent_conversations(ha, &request, hangouts_got_conversation_list, NULL);
+	hangouts_pblite_sync_recent_conversations(ha, &request, hangouts_got_conversation_list, NULL);
 	
 	hangouts_request_header_free(request.request_header);
 }

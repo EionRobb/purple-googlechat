@@ -29,23 +29,22 @@ typedef void(* HangoutsPbliteResponseFunc)(HangoutsAccount *ha, ProtobufCMessage
 void hangouts_pblite_request(HangoutsAccount *ha, const gchar *endpoint, ProtobufCMessage *request, HangoutsPbliteResponseFunc callback, ProtobufCMessage *response_message, gpointer user_data);
 
 
-typedef void(* HangoutsPbliteChatMessageResponseFunc)(HangoutsAccount *ha, SendChatMessageResponse *response, gpointer user_data);
-void hangouts_pblite_send_chat_message(HangoutsAccount *ha, SendChatMessageRequest *request, HangoutsPbliteChatMessageResponseFunc callback, gpointer user_data);
+#define HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(name, type, url) \
+typedef void(* HangoutsPblite##type##ResponseFunc)(HangoutsAccount *ha, type##Response *response, gpointer user_data);\
+static inline void \
+hangouts_pblite_##name(HangoutsAccount *ha, type##Request *request, HangoutsPblite##type##ResponseFunc callback, gpointer user_data)\
+{\
+	type##Response *response = g_new0(type##Response, 1);\
+	\
+	name##_response__init(response);\
+	hangouts_pblite_request(ha, (url), (ProtobufCMessage *)request, (HangoutsPbliteResponseFunc)callback, (ProtobufCMessage *)response, user_data);\
+}
 
-typedef void(* HangoutsPbliteSetTypingResponseFunc)(HangoutsAccount *ha, SetTypingResponse *response, gpointer user_data);
-void hangouts_pblite_set_typing(HangoutsAccount *ha, SetTypingRequest *request, HangoutsPbliteSetTypingResponseFunc callback, gpointer user_data);
-
-typedef void(* HangoutsPbliteSelfInfoResponseFunc)(HangoutsAccount *ha, GetSelfInfoResponse *response, gpointer user_data);
-void hangouts_pblite_get_self_info(HangoutsAccount *ha, GetSelfInfoRequest *request, HangoutsPbliteSelfInfoResponseFunc callback, gpointer user_data);
-
-typedef void(* HangoutsPbliteRecentConversationsResponseFunc)(HangoutsAccount *ha, SyncRecentConversationsResponse *response, gpointer user_data);
-void hangouts_pblite_get_recent_conversations(HangoutsAccount *ha, SyncRecentConversationsRequest *request, HangoutsPbliteRecentConversationsResponseFunc callback, gpointer user_data);
-
-typedef void(* HangoutsPbliteQueryPresenceResponseFunc)(HangoutsAccount *ha, QueryPresenceResponse *response, gpointer user_data);
-void hangouts_pblite_query_presence(HangoutsAccount *ha, QueryPresenceRequest *request, HangoutsPbliteQueryPresenceResponseFunc callback, gpointer user_data);
-
-typedef void(* HangoutsPbliteGetConversationResponseFunc)(HangoutsAccount *ha, GetConversationResponse *response, gpointer user_data);
-void hangouts_pblite_get_conversation(HangoutsAccount *ha, GetConversationRequest *request, HangoutsPbliteGetConversationResponseFunc callback, gpointer user_data);
-
+HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(send_chat_message, SendChatMessage, "conversations/sendchatmessage");
+HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(set_typing, SetTyping, "conversations/settyping");
+HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(get_self_info, GetSelfInfo, "contacts/getselfinfo");
+HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(sync_recent_conversations, SyncRecentConversations, "conversations/syncrecentconversations");
+HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(query_presence, QueryPresence, "presence/querypresence");
+HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(get_conversation, GetConversation, "conversations/getconversation");
 
 #endif /*_HANGOUTS_CONNECTION_H_*/

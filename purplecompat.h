@@ -40,7 +40,7 @@
 #define PurpleChatConversation  PurpleConvChat
 #define PurpleIMConversation    PurpleConvIm
 #define purple_conversations_find_chat_with_account(id, account) \
-		((PurpleConvChat *)purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT, id, account))
+		PURPLE_CONV_CHAT(purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT, id, account))
 #define purple_conversations_find_chat(pc, id)  PURPLE_CONV_CHAT(purple_find_chat(pc, id))
 #define purple_chat_conversation_get_id  purple_conv_chat_get_id
 #define purple_conversations_find_im_with_account(name, account)  \
@@ -49,6 +49,7 @@
 #define PURPLE_CONVERSATION(chatorim) (chatorim == NULL ? NULL : chatorim->conv)
 #define purple_chat_conversation_add_user   purple_conv_chat_add_user
 #define purple_chat_conversation_find_user  purple_conv_chat_cb_find
+#define purple_chat_conversation_has_left   purple_conv_chat_has_left
 
 #define PurpleMessage  PurpleConvMessage
 #define purple_message_set_time(msg, time)  ((msg)->when = (time))
@@ -73,6 +74,7 @@ purple_message_destroy(PurpleMessage *message)
 	g_free(message);
 }
 
+#define PurpleProtocolChatEntry  struct proto_chat_entry
 #define PurpleChatUserFlags  PurpleConvChatBuddyFlags
 #define PURPLE_CHAT_USER_NONE     PURPLE_CBFLAGS_NONE
 #define PURPLE_CHAT_USER_OP       PURPLE_CBFLAGS_OP

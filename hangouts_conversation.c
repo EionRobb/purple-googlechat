@@ -138,6 +138,95 @@ hangouts_get_users_presence(HangoutsAccount *ha, GList *user_ids)
 	g_free(request.field_mask);
 }
 
+static void
+hangouts_got_conversation_events(HangoutsAccount *ha, GetConversationResponse *response, gpointer user_data)
+{
+	Conversation *conversation = response->conversation_state->conversation;
+	const gchar *conv_id = conversation->conversation_id->id;
+	PurpleChatConversation *chatconv;
+	guint i;
+	
+	//purple_debug_info("hangouts", "got conversation events %s\n", pblite_dump_json((ProtobufCMessage *)response));
+	
+	chatconv = purple_conversations_find_chat_with_account(conv_id, ha->account);
+	if (!chatconv) {
+		chatconv = purple_serv_got_joined_chat(ha->pc, g_str_hash(conv_id), conv_id);
+		purple_conversation_set_data(PURPLE_CONVERSATION(chatconv), "conv_id", g_strdup(conv_id));
+	}
+	
+	for (i = 0; i < conversation->n_participant_data; i++) {
+		ConversationParticipantData *participant_data = conversation->participant_data[i];
+		PurpleChatUserFlags cbflags = PURPLE_CHAT_USER_NONE;
+		purple_chat_conversation_add_user(chatconv, participant_data->id->gaia_id, NULL, cbflags, FALSE);
+		
+		//TODO alias with participant_data->fallback_name
+		//TODO alternatively: add to buddy list as a transient buddy
+	}
+
+#if 0
+	for (i = 0; i < conversation->n_event; i++) {
+		Event *event = conversation->event[i];
+		//TODO send event to the hangouts_events.c slaughterhouse
+		(void) event;
+	}
+#endif
+}
+
+void
+hangouts_get_conversation_events(HangoutsAccount *ha, const gchar *conv_id, gint64 since_timestamp)
+{
+	//since_timestamp is in microseconds
+	GetConversationRequest request;
+	ConversationId conversation_id;
+	ConversationSpec conversation_spec;
+	
+	get_conversation_request__init(&request);
+	request.request_header = hangouts_get_request_header(ha);
+	
+	conversation_spec__init(&conversation_spec);
+	request.conversation_spec = &conversation_spec;
+	
+	conversation_id__init(&conversation_id);
+	conversation_id.id = (gchar *) conv_id;
+	conversation_spec.conversation_id = &conversation_id;
+	
+	if (since_timestamp > 0) {
+		EventContinuationToken event_continuation_token;
+		
+		request.include_event = TRUE;
+		request.max_events_per_conversation = 50;
+		
+		event_continuation_token__init(&event_continuation_token);
+		event_continuation_token.event_timestamp = since_timestamp;
+		request.event_continuation_token = &event_continuation_token;
+	}
+	
+	hangouts_pblite_get_conversation(ha, &request, hangouts_got_conversation_events, NULL);
+	
+	hangouts_request_header_free(request.request_header);
+	
+}
+
+GList *
+hangouts_chat_info(PurpleConnection *pc)
+{
+	GList *m = NULL;
+	PurpleProtocolChatEntry *pce;
+
+	pce = g_new0(PurpleProtocolChatEntry, 1);
+	pce->label = _("Conversation ID");
+	pce->identifier = "conv_id";
+	pce->required = TRUE;
+	m = g_list_append(m, pce);
+	
+	pce = g_new0(PurpleProtocolChatEntry, 1);
+	pce->label = _("Alias");
+	pce->identifier = "alias";
+	pce->required = FALSE;
+	m = g_list_append(m, pce);
+	
+	return m;
+}
 
 GHashTable *
 hangouts_chat_info_defaults(PurpleConnection *pc, const char *chatname)
@@ -151,6 +240,52 @@ hangouts_chat_info_defaults(PurpleConnection *pc, const char *chatname)
 	
 	return defaults;
 }
+
+void
+hangouts_join_chat(PurpleConnection *pc, GHashTable *data)
+{
+	HangoutsAccount *ha = purple_connection_get_protocol_data(pc);
+	gchar *conv_id;
+	PurpleChatConversation *chatconv;
+	
+	conv_id = (gchar *)g_hash_table_lookup(data, "conv_id");
+	if (conv_id == NULL)
+	{
+		return;
+	}
+	
+	chatconv = purple_conversations_find_chat_with_account(conv_id, ha->account);
+	if (chatconv != NULL && !purple_chat_conversation_has_left(chatconv)) {
+		purple_conversation_present(PURPLE_CONVERSATION(chatconv));
+		return;
+	}
+	
+	chatconv = purple_serv_got_joined_chat(pc, g_str_hash(conv_id), conv_id);
+	purple_conversation_set_data(PURPLE_CONVERSATION(chatconv), "conv_id", g_strdup(conv_id));
+	
+	purple_conversation_present(PURPLE_CONVERSATION(chatconv));
+	
+	//TODO store and use timestamp of last event
+	hangouts_get_conversation_events(ha, conv_id, 0);
+}
+
+
+gchar *
+hangouts_get_chat_name(GHashTable *data)
+{
+	gchar *temp;
+
+	if (data == NULL)
+		return NULL;
+	
+	temp = g_hash_table_lookup(data, "conv_id");
+
+	if (temp == NULL)
+		return NULL;
+
+	return g_strdup(temp);
+}
+
 
 static void
 hangouts_got_conversation_list(HangoutsAccount *ha, SyncRecentConversationsResponse *response, gpointer user_data)
@@ -203,11 +338,13 @@ struct  _ConversationState
 			}
 			
 		} else {
-			gchar *conv_id = g_strdup(conversation->conversation_id->id);
+			gchar *conv_id = conversation->conversation_id->id;
 			g_hash_table_replace(group_chats, conv_id, NULL);
 			
-			// TODO work out how to make purple_blist_find_chat not crash
-			if (FALSE && !purple_blist_find_chat(ha->account, conv_id)) {
+			if (!purple_blist_find_chat(ha->account, conv_id)) {
+				gchar *name = conversation->name;
+				gboolean has_name = name ? TRUE : FALSE;
+				
 				if (hangouts_group == NULL) {
 					hangouts_group = purple_blist_find_group("Hangouts");
 					if (!hangouts_group)
@@ -217,7 +354,22 @@ struct  _ConversationState
 					}
 					purple_blist_add_group(hangouts_group, NULL);
 				}
-				purple_blist_add_chat(purple_chat_new(ha->account, conversation->name, hangouts_chat_info_defaults(ha->pc, conv_id)), hangouts_group, NULL);
+				if (!has_name) {
+					gchar **name_set = g_new0(gchar *, conversation->n_participant_data + 1);
+					for (j = 0; j < conversation->n_participant_data; j++) {
+						gchar *p_name = conversation->participant_data[j]->fallback_name;
+						if (p_name != NULL) {
+							name_set[j] = p_name;
+						} else {
+							name_set[j] = _("Unknown");
+						}
+					}
+					name = g_strjoinv(", ", name_set);
+					g_free(name_set);
+				}
+				purple_blist_add_chat(purple_chat_new(ha->account, name, hangouts_chat_info_defaults(ha->pc, conv_id)), hangouts_group, NULL);
+				if (!has_name)
+					g_free(name);
 			}
 		}
 		

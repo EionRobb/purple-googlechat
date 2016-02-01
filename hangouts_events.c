@@ -501,10 +501,16 @@ hangouts_received_typing_notification(PurpleConnection *pc, StateUpdate *state_u
 	if (g_hash_table_contains(ha->group_chats, conv_id)) {
 		// This is a group conversation
 		PurpleChatConversation *chatconv = purple_conversations_find_chat_with_account(conv_id, ha->account);
-		if (FALSE && chatconv != NULL) {
-			//TODO make this next line not crash!
+		if (chatconv != NULL) {
 			PurpleChatUser *cb = purple_chat_conversation_find_user(chatconv, gaia_id);
-			PurpleChatUserFlags cbflags = purple_chat_user_get_flags(cb);
+			PurpleChatUserFlags cbflags;
+
+			if (cb == NULL) {
+				// Getting notified about a buddy we dont know about yet
+				//TODO add buddy
+				return;
+			}
+			cbflags = purple_chat_user_get_flags(cb);
 			
 			if (typing_notification->type == TYPING_TYPE__TYPING_TYPE_STARTED)
 				cbflags |= PURPLE_CHAT_USER_TYPING;

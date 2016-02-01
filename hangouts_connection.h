@@ -45,5 +45,8 @@ void hangouts_pblite_get_recent_conversations(HangoutsAccount *ha, SyncRecentCon
 typedef void(* HangoutsPbliteQueryPresenceResponseFunc)(HangoutsAccount *ha, QueryPresenceResponse *response, gpointer user_data);
 void hangouts_pblite_query_presence(HangoutsAccount *ha, QueryPresenceRequest *request, HangoutsPbliteQueryPresenceResponseFunc callback, gpointer user_data);
 
+typedef void(* HangoutsPbliteGetConversationResponseFunc)(HangoutsAccount *ha, GetConversationResponse *response, gpointer user_data);
+void hangouts_pblite_get_conversation(HangoutsAccount *ha, GetConversationRequest *request, HangoutsPbliteGetConversationResponseFunc callback, gpointer user_data);
+
 
 #endif /*_HANGOUTS_CONNECTION_H_*/

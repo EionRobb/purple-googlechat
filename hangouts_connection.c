@@ -596,3 +596,12 @@ hangouts_pblite_query_presence(HangoutsAccount *ha, QueryPresenceRequest *reques
 	query_presence_response__init(response);
 	hangouts_pblite_request(ha, "presence/querypresence", (ProtobufCMessage *)request, (HangoutsPbliteResponseFunc)callback, (ProtobufCMessage *)response, user_data);
 }
+
+void
+hangouts_pblite_get_conversation(HangoutsAccount *ha, GetConversationRequest *request, HangoutsPbliteGetConversationResponseFunc callback, gpointer user_data)
+{
+	GetConversationResponse *response = g_new0(GetConversationResponse, 1);
+	
+	get_conversation_response__init(response);
+	hangouts_pblite_request(ha, "conversations/getconversation", (ProtobufCMessage *)request, (HangoutsPbliteResponseFunc)callback, (ProtobufCMessage *)response, user_data);
+}

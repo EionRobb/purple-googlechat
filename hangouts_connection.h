@@ -11,7 +11,6 @@
 #include "hangouts_pblite.h"
 #include "hangouts.pb-c.h"
 
-
 #define HANGOUTS_PBLITE_XORIGIN_URL "https://talkgadget.google.com"
 #define HANGOUTS_CHANNEL_URL_PREFIX "https://0.client-channel.google.com/client-channel/"
 

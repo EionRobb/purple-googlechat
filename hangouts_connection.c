@@ -170,8 +170,7 @@ void
 hangouts_process_channel_buffer(HangoutsAccount *ha)
 {
 	const gchar *bufdata;
-	gchar *chunk, *chunk_pos;
-	gsize remaining, bufsize;
+	gsize bufsize;
 	gchar *len_end;
 	gchar *len_str;
 	guint len_len; //len len len len len len len len len
@@ -180,10 +179,9 @@ hangouts_process_channel_buffer(HangoutsAccount *ha)
 	g_return_if_fail(ha);
 	g_return_if_fail(ha->channel_buffer);
 	
-	do {
-		bufdata = purple_circular_buffer_get_output(ha->channel_buffer);
-		bufsize = purple_circular_buffer_get_max_read(ha->channel_buffer);
-		remaining = purple_circular_buffer_get_used(ha->channel_buffer);
+	while (ha->channel_buffer->len) {
+		bufdata = (gchar *) ha->channel_buffer->data;
+		bufsize = ha->channel_buffer->len;
 		
 		len_end = g_strstr_len(bufdata, bufsize, "\n");
 		if (len_end == NULL) {
@@ -199,34 +197,19 @@ hangouts_process_channel_buffer(HangoutsAccount *ha)
 		// Len was 0 ?  Must have been a bad read :(
 		g_return_if_fail(len);
 		
-		remaining = remaining - len_len - 1;
+		bufsize = bufsize - len_len - 1;
 		
-		if (len > remaining) {
+		if (len > bufsize) {
 			// Not enough data to read
-			purple_debug_info("hangouts", "Couldn't read %d bytes when we have %d\n", len, remaining);
+			purple_debug_info("hangouts", "Couldn't read %d bytes when we only have %d\n", len, bufsize);
 			return;
 		}
-		purple_circular_buffer_mark_read(ha->channel_buffer, len_len + 1);
 		
-		chunk_pos = chunk = g_new0(gchar, len + 1);
-		while (remaining > 0) {
-			bufsize = MIN(remaining, purple_circular_buffer_get_max_read(ha->channel_buffer));
-			bufdata = purple_circular_buffer_get_output(ha->channel_buffer);
-			
-			g_memmove(chunk_pos, bufdata, bufsize);
-			purple_circular_buffer_mark_read(ha->channel_buffer, bufsize);
-			
-			remaining -= bufsize;
-			chunk_pos += bufsize;
-		}
+		hangouts_process_data_chunks(ha, bufdata + len_len + 1, len);
 		
-		//purple_debug_info("hangouts", "Got chunk %.*s\n", (int) len, chunk);
+		g_byte_array_remove_range(ha->channel_buffer, 0, len + len_len + 1);
 		
-		hangouts_process_data_chunks(ha, chunk, len);
-		
-		remaining = purple_circular_buffer_get_used(ha->channel_buffer);
-		
-	} while (remaining);
+	}
 }
 
 static void
@@ -270,7 +253,7 @@ hangouts_longpoll_request_content(PurpleHttpConnection *http_conn, PurpleHttpRes
 		return FALSE;
 	}
 	
-	purple_circular_buffer_append(ha->channel_buffer, buffer, length);
+	g_byte_array_append(ha->channel_buffer, (guint8 *) buffer, length);
 	
 	hangouts_process_channel_buffer(ha);
 	
@@ -286,8 +269,9 @@ hangouts_longpoll_request_closed(PurpleHttpConnection *http_conn, PurpleHttpResp
 		return;
 	}
 	
-	purple_circular_buffer_destroy(ha->channel_buffer);
-	ha->channel_buffer = purple_circular_buffer_new(0);
+	// remaining data 'should' have been dealt with in hangouts_longpoll_request_content
+	g_byte_array_free(ha->channel_buffer, TRUE);
+	ha->channel_buffer = g_byte_array_sized_new(HANGOUTS_BUFFER_DEFAULT_SIZE);
 	
 	if (purple_http_response_get_error(response) != NULL) {
 		//TODO error checking

@@ -14,12 +14,13 @@
 
 #include "account.h"
 #include "connection.h"
-#include "circularbuffer.h"
 #include "ciphers/sha1hash.h"
 #include "http.h"
 
 #define HANGOUTS_PLUGIN_ID "prpl-hangouts"
 #define HANGOUTS_PLUGIN_VERSION "0.1"
+
+#define HANGOUTS_BUFFER_DEFAULT_SIZE 4096
 
 #ifndef N_
 #	define N_(a) (a)
@@ -55,7 +56,7 @@ typedef struct {
 	gchar *client_id;
 	gchar *self_gaia_id;
 	
-	PurpleCircularBuffer *channel_buffer;
+	GByteArray *channel_buffer;
 	PurpleHttpKeepalivePool *channel_keepalive_pool;
 	
 	GHashTable *one_to_ones;     // A store of known conv_id's->gaia_id's

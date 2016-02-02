@@ -506,7 +506,7 @@ hangouts_convert_html_to_segments(HangoutsAccount *ha, const gchar *html_message
 			gboolean opening = TRUE;
 			GString *tag = g_string_new("");
 			c++;
-			if(*(c+1) == '/') { // closing tag
+			if(*c == '/') { // closing tag
 				opening = FALSE;
 				c++;
 			}
@@ -520,10 +520,14 @@ hangouts_convert_html_to_segments(HangoutsAccount *ha, const gchar *html_message
 				
 				segment->formatting = g_new0(Formatting, 1);
 				formatting__init(segment->formatting);
-				segment->formatting->has_bold = segment->formatting->bold = is_bold;
-				segment->formatting->has_italic = segment->formatting->italic = is_italic;
-				segment->formatting->has_strikethrough = segment->formatting->strikethrough = is_strikethrough;
-				segment->formatting->has_underline = segment->formatting->underline = is_underline;
+				segment->formatting->has_bold = TRUE;
+				segment->formatting->bold = is_bold;
+				segment->formatting->has_italic = TRUE;
+				segment->formatting->italic = is_italic;
+				segment->formatting->has_strikethrough = TRUE;
+				segment->formatting->strikethrough = is_strikethrough;
+				segment->formatting->has_underline = TRUE;
+				segment->formatting->underline = is_underline;
 				
 				if (is_link) {
 					segment->type = SEGMENT_TYPE__SEGMENT_TYPE_LINK;
@@ -630,10 +634,14 @@ hangouts_convert_html_to_segments(HangoutsAccount *ha, const gchar *html_message
 		
 		segment->formatting = g_new0(Formatting, 1);
 		formatting__init(segment->formatting);
-		segment->formatting->has_bold = segment->formatting->bold = is_bold;
-		segment->formatting->has_italic = segment->formatting->italic = is_italic;
-		segment->formatting->has_strikethrough = segment->formatting->strikethrough = is_strikethrough;
-		segment->formatting->has_underline = segment->formatting->underline = is_underline;
+		segment->formatting->has_bold = TRUE;
+		segment->formatting->bold = is_bold;
+		segment->formatting->has_italic = TRUE;
+		segment->formatting->italic = is_italic;
+		segment->formatting->has_strikethrough = TRUE;
+		segment->formatting->strikethrough = is_strikethrough;
+		segment->formatting->has_underline = TRUE;
+		segment->formatting->underline = is_underline;
 				
 		if (is_link) {
 			segment->type = SEGMENT_TYPE__SEGMENT_TYPE_LINK;

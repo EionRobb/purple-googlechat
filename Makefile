@@ -22,11 +22,11 @@ else
       HANGOUTS_DEST = 
     else
       HANGOUTS_TARGET = libhangouts.so
-      HANGOUTS_DEST = $(DESTDIR)`$(PKG_CONFIG) --variable=plugindir purple-3`
+      HANGOUTS_DEST = $(DESTDIR)`$(PKG_CONFIG) --variable=plugindir purple`
     endif
   else
     HANGOUTS_TARGET = libhangouts3.so
-    HANGOUTS_DEST = $(DESTDIR)`$(PKG_CONFIG) --variable=plugindir purple`
+    HANGOUTS_DEST = $(DESTDIR)`$(PKG_CONFIG) --variable=plugindir purple-3`
   endif
 endif
 

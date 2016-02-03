@@ -181,7 +181,7 @@ hangouts_json_tidy_blank_arrays(const gchar *json)
 	static GRegex *tidy_regex = NULL;
 	
 	if (tidy_regex == NULL) {
-		tidy_regex = g_regex_new("\".*?\"(*SKIP)(*FAIL)|\\[\\](*SKIP)(*FAIL)|(?<=,|\\[)\\s*(?=,|\\])", G_REGEX_OPTIMIZE, 0, NULL);
+		tidy_regex = g_regex_new("\"(\\\\\"|.)*?\"(*SKIP)(*FAIL)|\\[\\](*SKIP)(*FAIL)|(?<=,|\\[)\\s*(?=,|\\])", G_REGEX_OPTIMIZE, 0, NULL);
 	}
 	
 	return g_regex_replace_literal(tidy_regex, json, -1, 0, "null", 0, NULL);

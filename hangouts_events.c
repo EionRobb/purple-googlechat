@@ -2,6 +2,8 @@
 
 #include "debug.h"
 #include "glibcompat.h"
+#include "image.h"
+#include "image-store.h"
 
 #include "hangouts.pb-c.h"
 
@@ -196,6 +198,62 @@ hangouts_received_presence_notification(PurpleConnection *pc, StateUpdate *state
 	}
 }
 
+static void
+hangouts_got_http_image_for_conv(PurpleHttpConnection *connection, PurpleHttpResponse *response, gpointer user_data)
+{
+	HangoutsAccount *ha = user_data;
+	const gchar *url;
+	const gchar *gaia_id;
+	const gchar *conv_id;
+	PurpleMessageFlags msg_flags;
+	time_t message_timestamp;
+	PurpleImage *image;
+	const gchar *response_data;
+	size_t response_size;
+	guint image_id;
+	gchar *msg;
+	
+	if (purple_http_response_get_error(response) != NULL) {
+		g_dataset_destroy(connection);
+		return;
+	}
+	
+	url = g_dataset_get_data(connection, "url");
+	gaia_id = g_dataset_get_data(connection, "gaia_id");
+	conv_id = g_dataset_get_data(connection, "conv_id");
+	msg_flags = GPOINTER_TO_INT(g_dataset_get_data(connection, "msg_flags"));
+	message_timestamp = GPOINTER_TO_INT(g_dataset_get_data(connection, "message_timestamp"));
+	
+	response_data = purple_http_response_get_data(response, &response_size);
+	image = purple_image_new_from_data(g_memdup(response_data, response_size), response_size);
+	image_id = purple_image_store_add(image);
+	msg = g_strdup_printf("<a href='%s'><img id='%d' /></a>", url, image_id);
+	msg_flags |= PURPLE_MESSAGE_IMAGES;
+		
+	if (g_hash_table_contains(ha->group_chats, conv_id)) {
+		purple_serv_got_chat_in(ha->pc, g_str_hash(conv_id), gaia_id, msg_flags, msg, message_timestamp);
+	} else {
+		if (msg_flags & PURPLE_MESSAGE_RECV) {
+			purple_serv_got_im(ha->pc, gaia_id, msg, msg_flags, message_timestamp);
+		} else {
+			gaia_id = g_hash_table_lookup(ha->one_to_ones, conv_id);
+			if (gaia_id) {
+				PurpleIMConversation *imconv = purple_conversations_find_im_with_account(gaia_id, ha->account);
+				PurpleMessage *message = purple_message_new_outgoing(gaia_id, msg, msg_flags);
+				if (imconv == NULL) {
+					imconv = purple_im_conversation_new(ha->account, gaia_id);
+				}
+				purple_message_set_time(message, message_timestamp);
+				purple_conversation_write_message(PURPLE_CONVERSATION(imconv), message);
+				purple_message_destroy(message);
+			}
+		}
+	}
+	
+	g_free(msg);
+	g_dataset_destroy(connection);
+}
+
 void
 hangouts_received_event_notification(PurpleConnection *pc, StateUpdate *state_update)
 {
@@ -352,6 +410,30 @@ hangouts_received_event_notification(PurpleConnection *pc, StateUpdate *state_up
 		
 		g_free(msg);
 		purple_xmlnode_free(html);
+	
+		if (chat_message->message_content->n_attachment) {
+			size_t n_attachment = chat_message->message_content->n_attachment;
+			Attachment **attachments = chat_message->message_content->attachment;
+			guint i;
+			
+			for (i = 0; i < n_attachment; i++) {
+				Attachment *attachment = attachments[i];
+				EmbedItem *embed_item = attachment->embed_item;
+				if (embed_item->plus_photo) {
+					PlusPhoto *plus_photo = embed_item->plus_photo;
+					const gchar *image_url = plus_photo->thumbnail->image_url;
+					const gchar *url = plus_photo->original_content_url;
+					PurpleHttpConnection *connection;
+					
+					connection = purple_http_get(ha->pc, hangouts_got_http_image_for_conv, ha, image_url);
+					g_dataset_set_data_full(connection, "url", g_strdup(url), g_free);
+					g_dataset_set_data_full(connection, "gaia_id", g_strdup(gaia_id), g_free);
+					g_dataset_set_data_full(connection, "conv_id", g_strdup(conv_id), g_free);
+					g_dataset_set_data(connection, "msg_flags", GINT_TO_POINTER(msg_flags));
+					g_dataset_set_data(connection, "message_timestamp", GINT_TO_POINTER(message_timestamp));
+				}
+			}
+		}
 	}
 	
 		/*

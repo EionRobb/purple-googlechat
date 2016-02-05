@@ -250,7 +250,7 @@ pblite_decode_element(ProtobufCMessage *message, guint index, JsonNode *value)
 #ifdef DEBUG
 	printf("pblite_decode_element field %d ", index);
 #endif
-	field = protobuf_c_message_descriptor_get_field(message->descriptor, index + 1);
+	field = protobuf_c_message_descriptor_get_field(message->descriptor, index);
 	if (!field) {
 #ifdef DEBUG
 	printf("skipped\n");
@@ -301,6 +301,9 @@ pblite_decode_element(ProtobufCMessage *message, guint index, JsonNode *value)
 		g_return_val_if_fail(success, FALSE);
 	}
 	
+#ifdef DEBUG
+	printf("end\n");
+#endif
 	return TRUE;
 }
 
@@ -317,19 +320,20 @@ pblite_decode(ProtobufCMessage *message, JsonArray *pblite_array, gboolean ignor
 	len = json_array_get_length(pblite_array);
 #ifdef DEBUG
 	printf("pblite_decode of %s with length %d\n", descriptor->name, len);
+#endif
 	
 	if (JSON_NODE_HOLDS_OBJECT(json_array_get_element(pblite_array, len - 1))) {
+#ifdef DEBUG
 		printf("ZOMG the last element is an object\n");
+#endif
 		last_element_is_object = TRUE;
 		len = len - 1;
-		//exit(-1);
 	}
-#endif
 	
 	for (i = offset; i < len; i++) {
 		//stuff
 		JsonNode *value = json_array_get_element(pblite_array, i);
-		gboolean success = pblite_decode_element(message, i - offset, value);
+		gboolean success = pblite_decode_element(message, i - offset + 1, value);
 		
 		g_return_val_if_fail(success, FALSE);
 	}

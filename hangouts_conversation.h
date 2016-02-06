@@ -6,10 +6,15 @@
 #include "conversation.h"
 #include "connection.h"
 
+#include "hangouts.pb-c.h"
+
 GList *hangouts_chat_info(PurpleConnection *pc);
 GHashTable *hangouts_chat_info_defaults(PurpleConnection *pc, const char *chatname);
 void hangouts_join_chat(PurpleConnection *pc, GHashTable *data);
 gchar *hangouts_get_chat_name(GHashTable *data);
+
+
+void hangouts_add_conversation_to_blist(HangoutsAccount *ha, Conversation *conversation, GHashTable *unique_user_ids);
 
 void hangouts_get_self_info(HangoutsAccount *ha);
 void hangouts_get_conversation_list(HangoutsAccount *ha);

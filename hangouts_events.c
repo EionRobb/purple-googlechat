@@ -5,6 +5,7 @@
 #include "image.h"
 #include "image-store.h"
 
+#include "hangouts_conversation.h"
 #include "hangouts.pb-c.h"
 
 // From hangouts_pblite
@@ -285,32 +286,8 @@ hangouts_received_event_notification(PurpleConnection *pc, StateUpdate *state_up
 			!g_hash_table_contains(ha->one_to_ones, conv_id) && 
 			!g_hash_table_contains(ha->group_chats, conv_id)) {
 		// New conversation we ain't seen before
-		// (see also hangouts_got_conversation_list in hangouts_conversation.c)
-		if (conversation->type == CONVERSATION_TYPE__CONVERSATION_TYPE_ONE_TO_ONE) {
-			const gchar *other_person = conversation->current_participant[0]->gaia_id;
-			if (g_strcmp0(other_person, conversation->self_conversation_state->self_read_state->participant_id->gaia_id) == 0) {
-				other_person = conversation->current_participant[1]->gaia_id;
-			}
-			
-			g_hash_table_replace(ha->one_to_ones, g_strdup(conv_id), g_strdup(other_person));
-			g_hash_table_replace(ha->one_to_ones_rev, g_strdup(other_person), g_strdup(conv_id));
-		} else {
-			PurpleChatConversation *chatconv;
-			g_hash_table_replace(ha->group_chats, g_strdup(conv_id), NULL);
-			
-			chatconv = purple_conversations_find_chat_with_account(conv_id, ha->account);
-			if (!chatconv) {
-				guint i;
-				
-				chatconv = purple_serv_got_joined_chat(ha->pc, g_str_hash(conv_id), conv_id);
-				purple_conversation_set_data(PURPLE_CONVERSATION(chatconv), "conv_id", g_strdup(conv_id));
-
-				for (i = 0; i < conversation->n_current_participant; i++) {
-					PurpleChatUserFlags cbflags = PURPLE_CHAT_USER_NONE;
-					purple_chat_conversation_add_user(chatconv, conversation->current_participant[i]->gaia_id, NULL, cbflags, FALSE);
-				}
-			}
-		}
+		
+		hangouts_add_conversation_to_blist(ha, conversation, NULL);
 	}
 	
 	gaia_id = event->sender_id->gaia_id;
@@ -325,23 +302,26 @@ hangouts_received_event_notification(PurpleConnection *pc, StateUpdate *state_up
 	}
 	
 	if (event->membership_change != NULL) {
-		//event->event_type == EVENT_TYPE__EVENT_TYPE_REMOVE_USER
+		//event->event_type == EVENT_TYPE__EVENT_TYPE_REMOVE_USER || EVENT_TYPE__EVENT_TYPE_ADD_USER
 		MembershipChange *membership_change = event->membership_change;
 		guint i;
 		PurpleChatConversation *chatconv = purple_conversations_find_chat_with_account(conv_id, ha->account);
 		
-		for (i = 0; i < membership_change->n_participant_ids; i++) {
-			ParticipantId *participant_id = membership_change->participant_ids[i];
-			
-			if (membership_change->type == MEMBERSHIP_CHANGE_TYPE__MEMBERSHIP_CHANGE_TYPE_LEAVE) {
-				purple_chat_conversation_remove_user(chatconv, participant_id->gaia_id, NULL);
-				if (g_strcmp0(participant_id->gaia_id, ha->self_gaia_id) == 0) {
-					purple_serv_got_chat_left(ha->pc, g_str_hash(conv_id));
-					g_hash_table_remove(ha->group_chats, conv_id);
+		if (chatconv != NULL) {
+			for (i = 0; i < membership_change->n_participant_ids; i++) {
+				ParticipantId *participant_id = membership_change->participant_ids[i];
+				
+				if (membership_change->type == MEMBERSHIP_CHANGE_TYPE__MEMBERSHIP_CHANGE_TYPE_LEAVE) {
+					purple_chat_conversation_remove_user(chatconv, participant_id->gaia_id, NULL);
+					if (g_strcmp0(participant_id->gaia_id, ha->self_gaia_id) == 0) {
+						purple_serv_got_chat_left(ha->pc, g_str_hash(conv_id));
+						g_hash_table_remove(ha->group_chats, conv_id);
+						purple_blist_remove_chat(purple_blist_find_chat(ha->account, conv_id));
+					}
+				} else {
+					PurpleChatUserFlags cbflags = PURPLE_CHAT_USER_NONE;
+					purple_chat_conversation_add_user(chatconv, participant_id->gaia_id, NULL, cbflags, TRUE);
 				}
-			} else {
-				PurpleChatUserFlags cbflags = PURPLE_CHAT_USER_NONE;
-				purple_chat_conversation_add_user(chatconv, participant_id->gaia_id, NULL, cbflags, TRUE);
 			}
 		}
 	}

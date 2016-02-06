@@ -81,6 +81,7 @@ hangouts_got_self_info(HangoutsAccount *ha, GetSelfInfoResponse *response, gpoin
 	
 	g_free(ha->self_gaia_id);
 	ha->self_gaia_id = g_strdup(self_entity->id->gaia_id);
+	purple_connection_set_display_name(ha->pc, ha->self_gaia_id);
 	
 	hangouts_get_buddy_list(ha);
 }
@@ -297,16 +298,11 @@ hangouts_get_chat_name(GHashTable *data)
 	return g_strdup(temp);
 }
 
-
-static void
-hangouts_got_conversation_list(HangoutsAccount *ha, SyncRecentConversationsResponse *response, gpointer user_data)
+void
+hangouts_add_conversation_to_blist(HangoutsAccount *ha, Conversation *conversation, GHashTable *unique_user_ids)
 {
 	PurpleGroup *hangouts_group = NULL;
-	guint i, j;
-	GHashTable *one_to_ones = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
-	GHashTable *one_to_ones_rev = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
-	GHashTable *group_chats = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
-	GHashTable *unique_user_ids = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, NULL);
+	guint i;
 	/*
 struct  _ConversationState
 {
@@ -317,83 +313,89 @@ struct  _ConversationState
   Event **event;
   EventContinuationToken *event_continuation_token;
 }; */
-	for (i = 0; i < response->n_conversation_state; i++) {
-		ConversationState *conversation_state = response->conversation_state[i];
-		Conversation *conversation = conversation_state->conversation;
+	
+	if (conversation->type == CONVERSATION_TYPE__CONVERSATION_TYPE_ONE_TO_ONE) {
+		gchar *other_person = conversation->participant_data[0]->id->gaia_id;
+		guint participant_num = 0;
 		
-		//purple_debug_info("hangouts", "got conversation state %s\n", pblite_dump_json((ProtobufCMessage *)conversation_state));
-		
-		if (conversation->type == CONVERSATION_TYPE__CONVERSATION_TYPE_ONE_TO_ONE) {
-			gchar *other_person = conversation->participant_data[0]->id->gaia_id;
-			guint participant_num = 0;
-			
-			if (!g_strcmp0(other_person, conversation->self_conversation_state->self_read_state->participant_id->gaia_id)) {
-				other_person = conversation->participant_data[1]->id->gaia_id;
-				participant_num = 1;
-			}
-			
-			g_hash_table_replace(one_to_ones, g_strdup(conversation->conversation_id->id), g_strdup(other_person));
-			g_hash_table_replace(one_to_ones_rev, g_strdup(other_person), g_strdup(conversation->conversation_id->id));
-			
-			if (!purple_blist_find_buddy(ha->account, other_person)) {
-				if (hangouts_group == NULL) {
-					hangouts_group = purple_blist_find_group("Hangouts");
-					if (!hangouts_group)
-					{
-						hangouts_group = purple_group_new("Hangouts");
-						purple_blist_add_group(hangouts_group, NULL);
-					}
-					purple_blist_add_group(hangouts_group, NULL);
-				}
-				purple_blist_add_buddy(purple_buddy_new(ha->account, other_person, conversation->participant_data[participant_num]->fallback_name), NULL, hangouts_group, NULL);
-			}
-			
-		} else {
-			gchar *conv_id = conversation->conversation_id->id;
-			g_hash_table_replace(group_chats, conv_id, NULL);
-			
-			if (!purple_blist_find_chat(ha->account, conv_id)) {
-				gchar *name = conversation->name;
-				gboolean has_name = name ? TRUE : FALSE;
-				
-				if (hangouts_group == NULL) {
-					hangouts_group = purple_blist_find_group("Hangouts");
-					if (!hangouts_group)
-					{
-						hangouts_group = purple_group_new("Hangouts");
-						purple_blist_add_group(hangouts_group, NULL);
-					}
-					purple_blist_add_group(hangouts_group, NULL);
-				}
-				if (!has_name) {
-					gchar **name_set = g_new0(gchar *, conversation->n_participant_data + 1);
-					for (j = 0; j < conversation->n_participant_data; j++) {
-						gchar *p_name = conversation->participant_data[j]->fallback_name;
-						if (p_name != NULL) {
-							name_set[j] = p_name;
-						} else {
-							name_set[j] = _("Unknown");
-						}
-					}
-					name = g_strjoinv(", ", name_set);
-					g_free(name_set);
-				}
-				purple_blist_add_chat(purple_chat_new(ha->account, name, hangouts_chat_info_defaults(ha->pc, conv_id)), hangouts_group, NULL);
-				if (!has_name)
-					g_free(name);
-			}
+		if (!g_strcmp0(other_person, conversation->self_conversation_state->self_read_state->participant_id->gaia_id)) {
+			other_person = conversation->participant_data[1]->id->gaia_id;
+			participant_num = 1;
 		}
 		
+		g_hash_table_replace(ha->one_to_ones, g_strdup(conversation->conversation_id->id), g_strdup(other_person));
+		g_hash_table_replace(ha->one_to_ones_rev, g_strdup(other_person), g_strdup(conversation->conversation_id->id));
 		
-		for (j = 0; j < conversation->n_participant_data; j++) {
-			ConversationParticipantData *participant_data = conversation->participant_data[j];
+		if (!purple_blist_find_buddy(ha->account, other_person)) {
+			if (hangouts_group == NULL) {
+				hangouts_group = purple_blist_find_group("Hangouts");
+				if (!hangouts_group)
+				{
+					hangouts_group = purple_group_new("Hangouts");
+					purple_blist_add_group(hangouts_group, NULL);
+				}
+				purple_blist_add_group(hangouts_group, NULL);
+			}
+			purple_blist_add_buddy(purple_buddy_new(ha->account, other_person, conversation->participant_data[participant_num]->fallback_name), NULL, hangouts_group, NULL);
+		}
+		
+	} else {
+		gchar *conv_id = conversation->conversation_id->id;
+		g_hash_table_replace(ha->group_chats, conv_id, NULL);
+		
+		if (!purple_blist_find_chat(ha->account, conv_id)) {
+			gchar *name = conversation->name;
+			gboolean has_name = name ? TRUE : FALSE;
 			
-			if (participant_data->participant_type == PARTICIPANT_TYPE__PARTICIPANT_TYPE_GAIA) {
-				purple_serv_got_alias(ha->pc, participant_data->id->gaia_id, participant_data->fallback_name);
+			if (hangouts_group == NULL) {
+				hangouts_group = purple_blist_find_group("Hangouts");
+				if (!hangouts_group)
+				{
+					hangouts_group = purple_group_new("Hangouts");
+					purple_blist_add_group(hangouts_group, NULL);
+				}
+				purple_blist_add_group(hangouts_group, NULL);
+			}
+			if (!has_name) {
+				gchar **name_set = g_new0(gchar *, conversation->n_participant_data + 1);
+				for (i = 0; i < conversation->n_participant_data; i++) {
+					gchar *p_name = conversation->participant_data[i]->fallback_name;
+					if (p_name != NULL) {
+						name_set[i] = p_name;
+					} else {
+						name_set[i] = _("Unknown");
+					}
+				}
+				name = g_strjoinv(", ", name_set);
+				g_free(name_set);
+			}
+			purple_blist_add_chat(purple_chat_new(ha->account, name, hangouts_chat_info_defaults(ha->pc, conv_id)), hangouts_group, NULL);
+			if (!has_name)
+				g_free(name);
+		}
+	}
+	
+	
+	for (i = 0; i < conversation->n_participant_data; i++) {
+		ConversationParticipantData *participant_data = conversation->participant_data[i];
+		
+		if (participant_data->participant_type == PARTICIPANT_TYPE__PARTICIPANT_TYPE_GAIA) {
+			purple_serv_got_alias(ha->pc, participant_data->id->gaia_id, participant_data->fallback_name);
+			if (unique_user_ids != NULL) {
 				g_hash_table_replace(unique_user_ids, participant_data->id->gaia_id, participant_data->id);
 			}
 		}
 	}
+}
+
+static void
+hangouts_got_conversation_list(HangoutsAccount *ha, SyncRecentConversationsResponse *response, gpointer user_data)
+{
+	guint i;
+	GHashTable *one_to_ones = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
+	GHashTable *one_to_ones_rev = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
+	GHashTable *group_chats = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+	GHashTable *unique_user_ids = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, NULL);
 	
 	if (ha->one_to_ones) {
 		g_hash_table_remove_all(ha->one_to_ones);
@@ -410,6 +412,14 @@ struct  _ConversationState
 	ha->one_to_ones = one_to_ones;
 	ha->one_to_ones_rev = one_to_ones_rev;
 	ha->group_chats = group_chats;
+	
+	for (i = 0; i < response->n_conversation_state; i++) {
+		ConversationState *conversation_state = response->conversation_state[i];
+		Conversation *conversation = conversation_state->conversation;
+		
+		//purple_debug_info("hangouts", "got conversation state %s\n", pblite_dump_json((ProtobufCMessage *)conversation_state));
+		hangouts_add_conversation_to_blist(ha, conversation, unique_user_ids);
+	}
 	//todo mark the account as connected
 	
 	hangouts_get_users_presence(ha, g_hash_table_get_keys(unique_user_ids));

@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <glib.h>
 
+#include "cmds.h"
 #include "debug.h"
 #include "plugins.h"
 #include "request.h"
@@ -45,6 +46,48 @@ hangouts_blist_node_removed(PurpleBlistNode *node)
 	}
 	
 	hangouts_chat_leave_by_conv_id(purple_account_get_connection(account), conv_id);
+}
+
+static PurpleCmdRet
+hangouts_cmd_leave(PurpleConversation *conv, const gchar *cmd, gchar **args, gchar **error, void *data)
+{
+	PurpleConnection *pc = NULL;
+	int id = -1;
+	
+	pc = purple_conversation_get_connection(conv);
+	id = purple_chat_conversation_get_id(PURPLE_CHAT_CONVERSATION(conv));
+	
+	if (pc == NULL || id == -1)
+		return PURPLE_CMD_RET_FAILED;
+	
+	hangouts_chat_leave(pc, id);
+	
+	return PURPLE_CMD_RET_OK;
+}
+
+static GList *
+hangouts_node_menu(PurpleBlistNode *node)
+{
+	GList *m = NULL;
+	PurpleMenuAction *act;
+	
+	if(PURPLE_IS_BUDDY(node))
+	{
+		//TODO
+		// PurpleBuddy *buddy = PURPLE_BUDDY(node);
+		
+		// act = purple_menu_action_new(_("Initiate _Chat"),
+					// PURPLE_CALLBACK(hangouts_initiate_chat_from_node),
+					// ha, NULL);
+		// m = g_list_append(m, act);
+	} else if (PURPLE_IS_CHAT(node)) {
+		act = purple_menu_action_new(_("_Leave Chat"),
+					PURPLE_CALLBACK(hangouts_blist_node_removed), // A strange coinkidink
+					NULL, NULL);
+		m = g_list_append(m, act);
+	}
+	
+	return m;
 }
 
 static void
@@ -177,6 +220,12 @@ plugin_load(PurplePlugin *plugin, GError **error)
 	
 	hangouts_register_events(plugin);
 	
+	
+	purple_cmd_register("leave", "", PURPLE_CMD_P_PLUGIN, PURPLE_CMD_FLAG_CHAT |
+						PURPLE_CMD_FLAG_PROTOCOL_ONLY | PURPLE_CMD_FLAG_ALLOW_WRONG_ARGS,
+						HANGOUTS_PLUGIN_ID, hangouts_cmd_leave,
+						_("leave:  Leave the group chat"), NULL);
+	
 	return TRUE;
 }
 
@@ -236,6 +285,12 @@ hangouts_protocol_class_init(PurpleProtocolClass *prpl_info)
 	prpl_info->list_icon = hangouts_list_icon;
 }
 
+static void
+hangouts_protocol_client_iface_init(PurpleProtocolClientIface *prpl_info)
+{
+	prpl_info->blist_node_menu = hangouts_node_menu;
+}
+
 static void 
 hangouts_protocol_im_iface_init(PurpleProtocolIMIface *prpl_info)
 {
@@ -263,6 +318,9 @@ PURPLE_DEFINE_TYPE_EXTENDED(
 
 	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CHAT_IFACE,
 	                                  hangouts_protocol_chat_iface_init)
+
+	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CLIENT_IFACE,
+	                                  hangouts_protocol_client_iface_init)
 );
 
 static gboolean
@@ -383,6 +441,8 @@ init_plugin(PurplePlugin *plugin)
 	prpl_info->close = hangouts_close;
 	prpl_info->status_types = hangouts_status_types;
 	prpl_info->list_icon = hangouts_list_icon;
+	
+	prpl_info->blist_node_menu = hangouts_node_menu;
 	
 	prpl_info->send_im = hangouts_send_im;
 	prpl_info->send_typing = hangouts_send_typing;

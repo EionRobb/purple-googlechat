@@ -42,8 +42,11 @@
 #define purple_connection_set_flags(pc, f)      ((pc)->flags = (f))
 #define purple_connection_get_flags(pc)         ((pc)->flags)
 
-#define PurpleChatConversation  PurpleConvChat
-#define PurpleIMConversation    PurpleConvIm
+#define PurpleConversationUpdateType       PurpleConvUpdateType
+#define PURPLE_CONVERSATION_UPDATE_TOPIC   PURPLE_CONV_UPDATE_TOPIC
+#define PURPLE_CONVERSATION_UPDATE_UNSEEN  PURPLE_CONV_UPDATE_UNSEEN
+#define PurpleChatConversation             PurpleConvChat
+#define PurpleIMConversation               PurpleConvIm
 #define purple_conversations_find_chat_with_account(id, account) \
 		PURPLE_CONV_CHAT(purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT, id, account))
 #define purple_conversations_find_chat(pc, id)  PURPLE_CONV_CHAT(purple_find_chat(pc, id))

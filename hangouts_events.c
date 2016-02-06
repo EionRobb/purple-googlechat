@@ -390,14 +390,18 @@ hangouts_received_event_notification(PurpleConnection *pc, StateUpdate *state_up
 			}
 			purple_serv_got_chat_in(pc, g_str_hash(conv_id), gaia_id, msg_flags, msg, message_timestamp);
 			
+			if (purple_conversation_has_focus(PURPLE_CONVERSATION(chatconv))) {
+				hangouts_mark_conversation_seen(PURPLE_CONVERSATION(chatconv), PURPLE_CONVERSATION_UPDATE_UNSEEN);
+			}
 		} else {
+			PurpleIMConversation *imconv = NULL;
 			// It's most likely a one-to-one message
 			if (msg_flags & PURPLE_MESSAGE_RECV) {
 				purple_serv_got_im(pc, gaia_id, msg, msg_flags, message_timestamp);
 			} else {
 				gaia_id = g_hash_table_lookup(ha->one_to_ones, conv_id);
 				if (gaia_id) {
-					PurpleIMConversation *imconv = purple_conversations_find_im_with_account(gaia_id, ha->account);
+					imconv = purple_conversations_find_im_with_account(gaia_id, ha->account);
 					PurpleMessage *message = purple_message_new_outgoing(gaia_id, msg, msg_flags);
 					if (imconv == NULL)
 					{
@@ -409,6 +413,12 @@ hangouts_received_event_notification(PurpleConnection *pc, StateUpdate *state_up
 				}
 			}
 			
+			if (imconv == NULL) {
+				imconv = purple_conversations_find_im_with_account(gaia_id, ha->account);
+			}
+			if (purple_conversation_has_focus(PURPLE_CONVERSATION(imconv))) {
+				hangouts_mark_conversation_seen(PURPLE_CONVERSATION(imconv), PURPLE_CONVERSATION_UPDATE_UNSEEN);
+			}
 		}
 		
 		g_free(msg);

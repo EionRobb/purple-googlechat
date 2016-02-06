@@ -876,3 +876,39 @@ hangouts_chat_leave(PurpleConnection *pc, int id)
 	
 	return hangouts_chat_leave_by_conv_id(pc, conv_id);
 }
+
+void
+hangouts_mark_conversation_seen(PurpleConversation *conv, PurpleConversationUpdateType type)
+{
+	HangoutsAccount *ha;
+	PurpleConnection *pc = purple_conversation_get_connection(conv);
+	UpdateWatermarkRequest request;
+	ConversationId conversation_id;
+	const gchar *conv_id = NULL;
+	
+	if (!PURPLE_CONNECTION_IS_CONNECTED(pc))
+		return;
+	
+	ha = purple_connection_get_protocol_data(pc);
+	
+	if (type == PURPLE_CONVERSATION_UPDATE_UNSEEN) {
+		update_watermark_request__init(&request);
+		request.request_header = hangouts_get_request_header(ha);
+		
+		conv_id = purple_conversation_get_data(conv, "conv_id");
+		if (conv_id == NULL) {
+			conv_id = purple_conversation_get_name(conv);
+		}
+		conversation_id__init(&conversation_id);
+		conversation_id.id = (gchar *) conv_id;
+		request.conversation_id = &conversation_id;
+		
+		//TODO use timestamp from last message
+		request.last_read_timestamp = g_get_real_time();
+		
+		hangouts_pblite_update_watermark(ha, &request, NULL, NULL);
+		
+		hangouts_request_header_free(request.request_header);
+	}
+}
+

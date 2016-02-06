@@ -48,5 +48,6 @@ HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(query_presence, QueryPresence, "presence/que
 HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(get_conversation, GetConversation, "conversations/getconversation");
 HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(delete_conversation, DeleteConversation, "conversations/deleteconversation");
 HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(remove_user, RemoveUser, "conversations/removeuser");
+HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(update_watermark, UpdateWatermark, "conversations/updatewatermark");
 
 #endif /*_HANGOUTS_CONNECTION_H_*/

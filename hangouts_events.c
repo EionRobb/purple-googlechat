@@ -275,6 +275,12 @@ hangouts_received_event_notification(PurpleConnection *pc, StateUpdate *state_up
 	
 	ha = purple_connection_get_protocol_data(pc);
 	
+	event = event_notification->event;
+	if (ha->self_gaia_id == NULL) {
+		ha->self_gaia_id = g_strdup(event->self_event_state->user_id->gaia_id);
+		purple_connection_set_display_name(pc, ha->self_gaia_id);
+	}
+	
 	if (conversation && (conv_id = conversation->conversation_id->id) &&
 			!g_hash_table_contains(ha->one_to_ones, conv_id) && 
 			!g_hash_table_contains(ha->group_chats, conv_id)) {
@@ -307,20 +313,37 @@ hangouts_received_event_notification(PurpleConnection *pc, StateUpdate *state_up
 		}
 	}
 	
-	event = event_notification->event;
 	gaia_id = event->sender_id->gaia_id;
 	conv_id = event->conversation_id->id;
 	timestamp = event->timestamp;
 	chat_message = event->chat_message;
 	client_generated_id = event->self_event_state->client_generated_id;
 	
-	if (ha->self_gaia_id == NULL) {
-		ha->self_gaia_id = g_strdup(event->self_event_state->user_id->gaia_id);
-	}
-	
 	if (client_generated_id && g_hash_table_remove(ha->sent_message_ids, client_generated_id)) {
 		// This probably came from us
 		return;
+	}
+	
+	if (event->membership_change != NULL) {
+		//event->event_type == EVENT_TYPE__EVENT_TYPE_REMOVE_USER
+		MembershipChange *membership_change = event->membership_change;
+		guint i;
+		PurpleChatConversation *chatconv = purple_conversations_find_chat_with_account(conv_id, ha->account);
+		
+		for (i = 0; i < membership_change->n_participant_ids; i++) {
+			ParticipantId *participant_id = membership_change->participant_ids[i];
+			
+			if (membership_change->type == MEMBERSHIP_CHANGE_TYPE__MEMBERSHIP_CHANGE_TYPE_LEAVE) {
+				purple_chat_conversation_remove_user(chatconv, participant_id->gaia_id, NULL);
+				if (g_strcmp0(participant_id->gaia_id, ha->self_gaia_id) == 0) {
+					purple_serv_got_chat_left(ha->pc, g_str_hash(conv_id));
+					g_hash_table_remove(ha->group_chats, conv_id);
+				}
+			} else {
+				PurpleChatUserFlags cbflags = PURPLE_CHAT_USER_NONE;
+				purple_chat_conversation_add_user(chatconv, participant_id->gaia_id, NULL, cbflags, TRUE);
+			}
+		}
 	}
 	
 	if (chat_message != NULL) {

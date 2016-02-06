@@ -27,6 +27,17 @@ hangouts_get_request_header(HangoutsAccount *ha)
 	return header;
 }
 
+void
+hangouts_request_header_free(RequestHeader *header)
+{
+	if (header->client_identifier) {
+		g_free(header->client_identifier->resource);
+		g_free(header->client_identifier);
+	}
+	
+	g_free(header);
+}
+
 EventRequestHeader *
 hangouts_get_event_request_header(HangoutsAccount *ha, const gchar *conv_id)
 {
@@ -51,11 +62,11 @@ hangouts_get_event_request_header(HangoutsAccount *ha, const gchar *conv_id)
 }
 
 void
-hangouts_request_header_free(RequestHeader *header)
+hangouts_event_request_header_free(EventRequestHeader *header)
 {
-	if (header->client_identifier) {
-		g_free(header->client_identifier->resource);
-		g_free(header->client_identifier);
+	if (header->conversation_id) {
+		g_free(header->conversation_id->id);
+		g_free(header->conversation_id);
 	}
 	
 	g_free(header);
@@ -713,6 +724,7 @@ hangouts_conversation_send_message(HangoutsAccount *ha, const gchar *conv_id, co
 	
 	hangouts_free_segments(segments);
 	hangouts_request_header_free(request.request_header);
+	hangouts_event_request_header_free(request.event_request_header);
 	
 	return 1;
 }
@@ -815,4 +827,42 @@ hangouts_send_typing(PurpleConnection *pc, const gchar *who, PurpleIMTypingState
 	hangouts_request_header_free(request.request_header);
 	
 	return 20;
+}
+
+void
+hangouts_chat_leave_by_conv_id(PurpleConnection *pc, const gchar *conv_id)
+{
+	HangoutsAccount *ha;
+	RemoveUserRequest request;
+	
+	g_return_if_fail(conv_id);
+	ha = purple_connection_get_protocol_data(pc);
+	g_return_if_fail(g_hash_table_contains(ha->group_chats, conv_id));
+	
+	remove_user_request__init(&request);
+	
+	request.request_header = hangouts_get_request_header(ha);
+	request.event_request_header = hangouts_get_event_request_header(ha, conv_id);
+	
+	//XX do we need to see if this was successful, or does it just come through as a new event?
+	hangouts_pblite_remove_user(ha, &request, NULL, NULL);
+	
+	hangouts_request_header_free(request.request_header);
+	hangouts_event_request_header_free(request.event_request_header);
+}
+
+void 
+hangouts_chat_leave(PurpleConnection *pc, int id)
+{
+	const gchar *conv_id;
+	PurpleChatConversation *chatconv;
+	
+	chatconv = purple_conversations_find_chat(pc, id);
+	conv_id = purple_conversation_get_data(PURPLE_CONVERSATION(chatconv), "conv_id");
+	if (conv_id == NULL) {
+		// Fix for a race condition around the chat data and serv_got_joined_chat()
+		conv_id = purple_conversation_get_name(PURPLE_CONVERSATION(chatconv));
+	}
+	
+	return hangouts_chat_leave_by_conv_id(pc, conv_id);
 }

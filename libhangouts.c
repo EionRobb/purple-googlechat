@@ -21,7 +21,31 @@
 /*****************************************************************************/
 //TODO move to nicer place
 
-
+static void
+hangouts_blist_node_removed(PurpleBlistNode *node)
+{
+	PurpleChat *chat;
+	PurpleAccount *account;
+	const gchar *conv_id;
+	
+	if (!PURPLE_IS_CHAT(node)) {
+		return;
+	}
+	chat = PURPLE_CHAT(node);
+	account = purple_chat_get_account(chat);
+	
+	if (g_strcmp0(purple_account_get_protocol_id(account), HANGOUTS_PLUGIN_ID)) {
+		return;
+	}
+	
+    GHashTable *components = purple_chat_get_components(chat);
+	conv_id = g_hash_table_lookup(components, "conv_id");
+	if (conv_id == NULL) {
+		conv_id = purple_chat_get_name_only(chat);
+	}
+	
+	hangouts_chat_leave_by_conv_id(purple_account_get_connection(account), conv_id);
+}
 
 static void
 hangouts_authcode_input_cb(gpointer user_data, const gchar *auth_code)
@@ -79,6 +103,8 @@ hangouts_login(PurpleAccount *account)
 			_("Cancel"), G_CALLBACK(hangouts_authcode_input_cancel_cb), 
 			purple_request_cpar_from_connection(pc), ha);
 	}
+	
+	purple_signal_connect(purple_blist_get_handle(), "blist-node-removed", account, PURPLE_CALLBACK(hangouts_blist_node_removed), NULL);
 }
 
 static void
@@ -87,6 +113,7 @@ hangouts_close(PurpleConnection *pc)
 	HangoutsAccount *ha; //not so funny anymore
 	
 	ha = purple_connection_get_protocol_data(pc);
+	purple_signals_disconnect_by_handle(ha->account);
 	
 	purple_http_conn_cancel_all(pc);
 	
@@ -147,6 +174,9 @@ static gboolean
 plugin_load(PurplePlugin *plugin, GError **error)
 {
 	purple_http_init();
+	
+	hangouts_register_events(plugin);
+	
 	return TRUE;
 }
 
@@ -154,6 +184,9 @@ static gboolean
 plugin_unload(PurplePlugin *plugin, GError **error)
 {
 	purple_http_uninit();
+	
+	purple_signals_disconnect_by_handle(plugin);
+	
 	return TRUE;
 }
 
@@ -192,8 +225,6 @@ hangouts_protocol_init(PurpleProtocol *prpl_info)
 			purple_marshal_VOID__POINTER_POINTER, G_TYPE_NONE, 2,
 			PURPLE_TYPE_CONNECTION,
 			G_TYPE_OBJECT);
-
-	hangouts_register_events(plugin);
 }
 
 static void
@@ -347,8 +378,6 @@ init_plugin(PurplePlugin *plugin)
 			purple_marshal_VOID__POINTER_POINTER, NULL, 2,
 			PURPLE_TYPE_CONNECTION,
 			purple_value_new_outgoing(PURPLE_TYPE_OBJECT));
-	
-	hangouts_register_events(plugin);
 
 	prpl_info->login = hangouts_login;
 	prpl_info->close = hangouts_close;

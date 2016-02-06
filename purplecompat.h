@@ -19,8 +19,10 @@
 #include "connection.h"
 
 
-#define purple_blist_find_buddy  purple_find_buddy
-#define purple_blist_find_group  purple_find_group
+#define purple_blist_find_buddy    purple_find_buddy
+#define purple_blist_find_group    purple_find_group
+#define PURPLE_IS_CHAT             PURPLE_BLIST_NODE_IS_CHAT
+#define purple_chat_get_name_only  purple_chat_get_name
 
 #define PURPLE_TYPE_CONNECTION	purple_value_new(PURPLE_TYPE_SUBTYPE, PURPLE_SUBTYPE_CONNECTION)
 #define PURPLE_IS_CONNECTION	PURPLE_CONNECTION_IS_VALID
@@ -31,7 +33,7 @@
 #define PURPLE_CONNECTION_FLAG_NO_FONTSIZE PURPLE_CONNECTION_NO_FONTSIZE
 
 #define purple_request_cpar_from_connection(a)  purple_connection_get_account(a), NULL, NULL
-#define purple_connection_get_protocol		purple_connection_get_prpl
+#define purple_connection_get_protocol          purple_connection_get_prpl
 #define purple_connection_error                 purple_connection_error_reason
 #define purple_connection_is_disconnecting(c)   FALSE
 #define purple_connection_set_flags(pc, f)      ((pc)->flags = (f))
@@ -42,14 +44,15 @@
 #define purple_conversations_find_chat_with_account(id, account) \
 		PURPLE_CONV_CHAT(purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT, id, account))
 #define purple_conversations_find_chat(pc, id)  PURPLE_CONV_CHAT(purple_find_chat(pc, id))
-#define purple_chat_conversation_get_id  purple_conv_chat_get_id
+#define purple_chat_conversation_get_id         purple_conv_chat_get_id
 #define purple_conversations_find_im_with_account(name, account)  \
 		PURPLE_CONV_IM(purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM, name, account))
 #define purple_im_conversation_new(account, from) PURPLE_CONV_IM(purple_conversation_new(PURPLE_CONV_TYPE_IM, account, from))
 #define PURPLE_CONVERSATION(chatorim) (chatorim == NULL ? NULL : chatorim->conv)
-#define purple_chat_conversation_add_user   purple_conv_chat_add_user
-#define purple_chat_conversation_find_user  purple_conv_chat_cb_find
-#define purple_chat_conversation_has_left   purple_conv_chat_has_left
+#define purple_chat_conversation_add_user     purple_conv_chat_add_user
+#define purple_chat_conversation_find_user    purple_conv_chat_cb_find
+#define purple_chat_conversation_has_left     purple_conv_chat_has_left
+#define purple_chat_conversation_remove_user  purple_conv_chat_remove_user
 
 #define PurpleMessage  PurpleConvMessage
 #define purple_message_set_time(msg, time)  ((msg)->when = (time))
@@ -104,6 +107,7 @@ purple_message_destroy(PurpleMessage *message)
 #define purple_serv_got_typing                     serv_got_typing
 #define purple_serv_got_alias                      serv_got_alias
 #define purple_serv_got_chat_in                    serv_got_chat_in
+#define purple_serv_got_chat_left                  serv_got_chat_left
 #define purple_serv_got_joined_chat(pc, id, name)  PURPLE_CONV_CHAT(serv_got_joined_chat(pc, id, name))
 
 #define PurpleXmlNode                xmlnode

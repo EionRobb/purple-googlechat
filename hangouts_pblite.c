@@ -299,6 +299,10 @@ pblite_decode_element(ProtobufCMessage *message, guint index, JsonNode *value)
 	} else {
 		success = pblite_decode_field(field, value, STRUCT_MEMBER_P(message, field->offset));
 		g_return_val_if_fail(success, FALSE);
+		
+		if (field->label == PROTOBUF_C_LABEL_OPTIONAL) {
+			STRUCT_MEMBER(protobuf_c_boolean, message, field->quantifier_offset) = TRUE;
+		}
 	}
 	
 #ifdef DEBUG

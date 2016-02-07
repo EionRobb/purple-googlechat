@@ -50,10 +50,10 @@ hangouts.pb-c.c: hangouts.proto
 	$(PROTOC-C) --c_out=. hangouts.proto
 
 libhangouts.so: $(PURPLE_C_FILES) $(PURPLE_COMPAT_FILES)
-	$(CC) -fPIC -shared -o $@ $^ `$(PKG_CONFIG) purple glib-2.0 json-glib-1.0 libprotobuf-c --libs --cflags` -I/usr/include/protobuf-c -Ipurple2compat
+	$(CC) -fPIC -shared -o $@ $^ `$(PKG_CONFIG) purple glib-2.0 json-glib-1.0 libprotobuf-c --libs --cflags` -I/usr/include/protobuf-c -Ipurple2compat -g -ggdb
 
 libhangouts3.so: $(PURPLE_C_FILES)
-	$(CC) -fPIC -shared -o $@ $^ `$(PKG_CONFIG) purple-3 glib-2.0 json-glib-1.0 libprotobuf-c --libs --cflags` -I/usr/include/protobuf-c
+	$(CC) -fPIC -shared -o $@ $^ `$(PKG_CONFIG) purple-3 glib-2.0 json-glib-1.0 libprotobuf-c --libs --cflags` -I/usr/include/protobuf-c -g -ggdb
 
 libhangouts.dll: $(PURPLE_C_FILES) $(PURPLE_COMPAT_FILES)
 	$(WIN32_CC) -shared -o $@ $^ $(WIN32_PIDGIN2_CFLAGS) $(WIN32_PIDGIN2_LDFLAGS) -Ipurple2compat

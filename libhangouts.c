@@ -219,9 +219,6 @@ plugin_load(PurplePlugin *plugin, GError **error)
 {
 	purple_http_init();
 	
-	hangouts_register_events(plugin);
-	
-	
 	purple_cmd_register("leave", "", PURPLE_CMD_P_PLUGIN, PURPLE_CMD_FLAG_CHAT |
 						PURPLE_CMD_FLAG_PROTOCOL_ONLY | PURPLE_CMD_FLAG_ALLOW_WRONG_ARGS,
 						HANGOUTS_PLUGIN_ID, hangouts_cmd_leave,
@@ -275,6 +272,8 @@ hangouts_protocol_init(PurpleProtocol *prpl_info)
 			purple_marshal_VOID__POINTER_POINTER, G_TYPE_NONE, 2,
 			PURPLE_TYPE_CONNECTION,
 			G_TYPE_OBJECT);
+
+	hangouts_register_events(plugin);
 }
 
 static void
@@ -437,6 +436,8 @@ init_plugin(PurplePlugin *plugin)
 			purple_marshal_VOID__POINTER_POINTER, NULL, 2,
 			PURPLE_TYPE_CONNECTION,
 			purple_value_new_outgoing(PURPLE_TYPE_OBJECT));
+
+	hangouts_register_events(plugin);
 
 	prpl_info->login = hangouts_login;
 	prpl_info->close = hangouts_close;

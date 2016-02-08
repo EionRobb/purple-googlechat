@@ -14,13 +14,26 @@
 #include "hangouts_auth.h"
 #include "hangouts_pblite.h"
 #include "hangouts_json.h"
-#include "hangouts.pb-c.h"
 #include "hangouts_events.h"
+#include "hangouts_connection.h"
 #include "hangouts_conversation.h"
 
 
 /*****************************************************************************/
 //TODO move to nicer place
+
+void
+hangouts_set_idle(PurpleConnection *pc, int time)
+{
+	HangoutsAccount *ha;
+	
+	ha = purple_connection_get_protocol_data(pc);
+	
+	if (time < HANGOUTS_ACTIVE_CLIENT_TIMEOUT) {
+		hangouts_set_active_client(pc);
+	}
+	ha->idle_time = time;
+}
 
 static void
 hangouts_blist_node_removed(PurpleBlistNode *node)
@@ -149,6 +162,8 @@ hangouts_login(PurpleAccount *account)
 	
 	purple_signal_connect(purple_blist_get_handle(), "blist-node-removed", account, PURPLE_CALLBACK(hangouts_blist_node_removed), NULL);
 	purple_signal_connect(purple_conversations_get_handle(), "conversation-updated", account, PURPLE_CALLBACK(hangouts_mark_conversation_seen), NULL);
+	
+	purple_timeout_add_seconds(HANGOUTS_ACTIVE_CLIENT_TIMEOUT, ((GSourceFunc) hangouts_set_active_client), pc);
 }
 
 static void
@@ -291,6 +306,12 @@ hangouts_protocol_client_iface_init(PurpleProtocolClientIface *prpl_info)
 	prpl_info->blist_node_menu = hangouts_node_menu;
 }
 
+static void
+hangouts_protocol_server_iface_init(PurpleProtocolServerIface *prpl_info)
+{
+	prpl_info->set_idle = hangouts_set_idle;
+}
+
 static void 
 hangouts_protocol_im_iface_init(PurpleProtocolIMIface *prpl_info)
 {
@@ -321,6 +342,9 @@ PURPLE_DEFINE_TYPE_EXTENDED(
 
 	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CLIENT_IFACE,
 	                                  hangouts_protocol_client_iface_init)
+
+	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_SERVER_IFACE,
+	                                  hangouts_protocol_server_iface_init)
 );
 
 static gboolean
@@ -443,6 +467,8 @@ init_plugin(PurplePlugin *plugin)
 	prpl_info->close = hangouts_close;
 	prpl_info->status_types = hangouts_status_types;
 	prpl_info->list_icon = hangouts_list_icon;
+	
+	prpl_info->set_idle = hangouts_set_idle;
 	
 	prpl_info->blist_node_menu = hangouts_node_menu;
 	

@@ -885,6 +885,8 @@ hangouts_mark_conversation_seen(PurpleConversation *conv, PurpleConversationUpda
 	UpdateWatermarkRequest request;
 	ConversationId conversation_id;
 	const gchar *conv_id = NULL;
+	gint64 *last_read_timestamp_ptr, last_read_timestamp = 0;
+	gint64 *last_event_timestamp_ptr, last_event_timestamp = 0;
 	
 	if (!PURPLE_CONNECTION_IS_CONNECTED(pc))
 		return;
@@ -892,23 +894,46 @@ hangouts_mark_conversation_seen(PurpleConversation *conv, PurpleConversationUpda
 	ha = purple_connection_get_protocol_data(pc);
 	
 	if (type == PURPLE_CONVERSATION_UPDATE_UNSEEN) {
+		last_read_timestamp_ptr = (gint64 *)purple_conversation_get_data(conv, "last_read_timestamp");
+		if (last_read_timestamp_ptr != NULL) {
+			last_read_timestamp = *last_read_timestamp_ptr;
+		}
+		last_event_timestamp_ptr = (gint64 *)purple_conversation_get_data(conv, "last_event_timestamp");
+		if (last_event_timestamp_ptr != NULL) {
+			last_event_timestamp = *last_event_timestamp_ptr;
+		}
+		
+		if (last_event_timestamp <= last_read_timestamp) {
+			return;
+		}
+		
 		update_watermark_request__init(&request);
 		request.request_header = hangouts_get_request_header(ha);
 		
 		conv_id = purple_conversation_get_data(conv, "conv_id");
 		if (conv_id == NULL) {
-			conv_id = purple_conversation_get_name(conv);
+			if (PURPLE_IS_IM_CONVERSATION(conv)) {
+				conv_id = g_hash_table_lookup(ha->one_to_ones_rev, purple_conversation_get_name(conv));
+			} else {
+				conv_id = purple_conversation_get_name(conv);
+			}
 		}
 		conversation_id__init(&conversation_id);
 		conversation_id.id = (gchar *) conv_id;
 		request.conversation_id = &conversation_id;
 		
-		//TODO use timestamp from last message
-		request.last_read_timestamp = g_get_real_time();
+		request.has_last_read_timestamp = TRUE;
+		request.last_read_timestamp = last_event_timestamp;
 		
-		hangouts_pblite_update_watermark(ha, &request, NULL, NULL);
+		hangouts_pblite_update_watermark(ha, &request, (HangoutsPbliteUpdateWatermarkResponseFunc)hangouts_default_response_dump, NULL);
 		
 		hangouts_request_header_free(request.request_header);
+		
+		if (last_read_timestamp_ptr == NULL) {
+			last_read_timestamp_ptr = g_new0(gint64, 1);
+		}
+		*last_read_timestamp_ptr = last_event_timestamp;
+		purple_conversation_set_data(conv, "last_read_timestamp", last_read_timestamp_ptr);
 	}
 }
 

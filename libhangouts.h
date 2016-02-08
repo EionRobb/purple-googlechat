@@ -17,6 +17,8 @@
 #include "ciphers/sha1hash.h"
 #include "http.h"
 
+#include "hangouts.pb-c.h"
+
 #define HANGOUTS_PLUGIN_ID "prpl-hangouts"
 #define HANGOUTS_PLUGIN_VERSION "0.1"
 
@@ -43,6 +45,7 @@
 
 #define HANGOUTS_API_OAUTH2_AUTHORIZATION_CODE_URL "https://accounts.google.com/o/oauth2/auth?client_id=" GOOGLE_CLIENT_ID "&scope=https://www.google.com/accounts/OAuthLogin&redirect_uri=urn:ietf:wg:oauth:2.0:oob&response_type=code"
 
+#define HANGOUTS_ACTIVE_CLIENT_TIMEOUT 120
 
 typedef struct {
 	PurpleAccount *account;
@@ -55,9 +58,11 @@ typedef struct {
 	gchar *sid_param;
 	gchar *client_id;
 	gchar *self_gaia_id;
+	ActiveClientState active_client_state;
 	
 	GByteArray *channel_buffer;
 	PurpleHttpKeepalivePool *channel_keepalive_pool;
+	gint idle_time;
 	
 	GHashTable *one_to_ones;     // A store of known conv_id's->gaia_id's
 	GHashTable *one_to_ones_rev; // A store of known gaia_id's->conv_id's

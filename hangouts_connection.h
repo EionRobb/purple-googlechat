@@ -24,6 +24,9 @@ void hangouts_fetch_channel_sid(HangoutsAccount *ha);
 void hangouts_send_maps(HangoutsAccount *ha, JsonArray *map_list, PurpleHttpCallback send_maps_callback);
 void hangouts_add_channel_services(HangoutsAccount *ha);
 
+void hangouts_default_response_dump(HangoutsAccount *ha, ProtobufCMessage *response, gpointer user_data);
+gboolean hangouts_set_active_client(PurpleConnection *pc);
+
 
 typedef void(* HangoutsPbliteResponseFunc)(HangoutsAccount *ha, ProtobufCMessage *response, gpointer user_data);
 void hangouts_pblite_request(HangoutsAccount *ha, const gchar *endpoint, ProtobufCMessage *request, HangoutsPbliteResponseFunc callback, ProtobufCMessage *response_message, gpointer user_data);
@@ -49,5 +52,6 @@ HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(get_conversation, GetConversation, "conversa
 HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(delete_conversation, DeleteConversation, "conversations/deleteconversation");
 HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(remove_user, RemoveUser, "conversations/removeuser");
 HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(update_watermark, UpdateWatermark, "conversations/updatewatermark");
+HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(set_active_client, SetActiveClient, "clients/setactiveclient");
 
 #endif /*_HANGOUTS_CONNECTION_H_*/

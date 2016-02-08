@@ -13,13 +13,14 @@ gchar *pblite_dump_json(ProtobufCMessage *message);
 
 //purple_signal_emit(purple_connection_get_protocol(ha->pc), "hangouts-received-stateupdate", ha->pc, batch_update.state_update[j]);
 
-
 void
 hangouts_register_events(gpointer plugin)
 {
 	purple_signal_connect(plugin, "hangouts-received-stateupdate", plugin, PURPLE_CALLBACK(hangouts_received_typing_notification), NULL);
 	purple_signal_connect(plugin, "hangouts-received-stateupdate", plugin, PURPLE_CALLBACK(hangouts_received_event_notification), NULL);
 	purple_signal_connect(plugin, "hangouts-received-stateupdate", plugin, PURPLE_CALLBACK(hangouts_received_presence_notification), NULL);
+	purple_signal_connect(plugin, "hangouts-received-stateupdate", plugin, PURPLE_CALLBACK(hangouts_received_watermark_notification), NULL);
+	purple_signal_connect(plugin, "hangouts-received-stateupdate", plugin, PURPLE_CALLBACK(hangouts_received_state_update), NULL);
 	purple_signal_connect(plugin, "hangouts-received-stateupdate", plugin, PURPLE_CALLBACK(hangouts_received_other_notification), NULL);
 }
 
@@ -46,11 +47,22 @@ struct  _StateUpdate
 };*/
 
 void
+hangouts_received_state_update(PurpleConnection *pc, StateUpdate *state_update)
+{
+	HangoutsAccount *ha = purple_connection_get_protocol_data(pc);
+	
+	if (ha != NULL && state_update->state_update_header != NULL) {
+		ha->active_client_state = state_update->state_update_header->active_client_state;
+	}
+}
+
+void
 hangouts_received_other_notification(PurpleConnection *pc, StateUpdate *state_update)
 {
 	if (state_update->typing_notification != NULL ||
 		state_update->presence_notification != NULL ||
-		state_update->event_notification != NULL) {
+		state_update->event_notification != NULL ||
+		state_update->watermark_notification != NULL) {
 		return;
 	}
 	
@@ -153,6 +165,50 @@ hangouts_received_other_notification(PurpleConnection *pc, StateUpdate *state_up
                 "force_history_state" : null
         },*/
 
+
+void
+hangouts_received_watermark_notification(PurpleConnection *pc, StateUpdate *state_update)
+{
+	HangoutsAccount *ha;
+	WatermarkNotification *watermark_notification = state_update->watermark_notification;
+	
+	if (watermark_notification == NULL) {
+		return;
+	}
+	
+	ha = purple_connection_get_protocol_data(pc);
+	
+	if (FALSE && g_strcmp0(watermark_notification->sender_id->gaia_id, ha->self_gaia_id)) {
+		//We marked this message as read ourselves
+		PurpleConversation *conv = NULL;
+		const gchar *conv_id = watermark_notification->conversation_id->id;
+		gint64 *last_read_timestamp_ptr;
+		gint64 latest_read_timestamp;
+		
+		if (g_hash_table_contains(ha->one_to_ones, conv_id)) {
+			conv = PURPLE_CONVERSATION(purple_conversations_find_im_with_account(g_hash_table_lookup(ha->one_to_ones, conv_id), ha->account));
+		} else if (g_hash_table_contains(ha->group_chats, conv_id)) {
+			conv = PURPLE_CONVERSATION(purple_conversations_find_chat_with_account(conv_id, ha->account));
+		} else {
+			// Unknown conversation!
+			return;
+		}
+		if (conv == NULL) {
+			return;
+		}
+		
+		latest_read_timestamp = watermark_notification->latest_read_timestamp;
+		last_read_timestamp_ptr = (gint64 *)purple_conversation_get_data(conv, "last_read_timestamp");
+		if (last_read_timestamp_ptr == NULL) {
+			last_read_timestamp_ptr = g_new0(gint64, 1);
+		}
+		if (latest_read_timestamp > *last_read_timestamp_ptr) {
+			*last_read_timestamp_ptr = watermark_notification->latest_read_timestamp;
+			purple_conversation_set_data(conv, "last_read_timestamp", last_read_timestamp_ptr);
+		}
+	}
+}
+	
 void
 hangouts_process_presence_result(HangoutsAccount *ha, PresenceResult *presence)
 {
@@ -449,6 +505,24 @@ hangouts_received_event_notification(PurpleConnection *pc, StateUpdate *state_up
 		}
 	}
 	
+	if (timestamp && conv_id) {
+		PurpleConversation *conv = NULL;
+		if (g_hash_table_contains(ha->one_to_ones, conv_id)) {
+			conv = PURPLE_CONVERSATION(purple_conversations_find_im_with_account(g_hash_table_lookup(ha->one_to_ones, conv_id), ha->account));
+		} else if (g_hash_table_contains(ha->group_chats, conv_id)) {
+			conv = PURPLE_CONVERSATION(purple_conversations_find_chat_with_account(conv_id, ha->account));
+		}
+		if (conv != NULL) {
+			gint64 *last_event_timestamp_ptr = (gint64 *)purple_conversation_get_data(conv, "last_event_timestamp");
+			if (last_event_timestamp_ptr == NULL) {
+				last_event_timestamp_ptr = g_new0(gint64, 1);
+			}
+			if (timestamp > *last_event_timestamp_ptr) {
+				*last_event_timestamp_ptr = timestamp;
+				purple_conversation_set_data(conv, "last_event_timestamp", last_event_timestamp_ptr);
+			}
+		}
+	}
 		/*
         "event_notification" : {
                 "event" : {

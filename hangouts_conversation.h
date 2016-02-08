@@ -8,6 +8,9 @@
 
 #include "hangouts.pb-c.h"
 
+RequestHeader *hangouts_get_request_header(HangoutsAccount *ha);
+void hangouts_request_header_free(RequestHeader *header);
+
 GList *hangouts_chat_info(PurpleConnection *pc);
 GHashTable *hangouts_chat_info_defaults(PurpleConnection *pc, const char *chatname);
 void hangouts_join_chat(PurpleConnection *pc, GHashTable *data);

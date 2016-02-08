@@ -14,6 +14,7 @@
 #include "hangouts_pblite.h"
 #include "hangouts_json.h"
 #include "hangouts.pb-c.h"
+#include "hangouts_conversation.h"
 
 
 void
@@ -57,6 +58,7 @@ hangouts_process_data_chunks(HangoutsAccount *ha, const gchar *data, gsize len)
 				ha->client_id = g_strdup(new_client_id);
 				
 				hangouts_add_channel_services(ha);
+				hangouts_set_active_client(ha->pc);
 			}
 			if (json_object_has_member(wrapper, "2")) {
 				const gchar *wrapper22 = json_object_get_string_member(json_object_get_object_member(wrapper, "2"), "2");
@@ -536,4 +538,53 @@ hangouts_pblite_request(HangoutsAccount *ha, const gchar *endpoint, ProtobufCMes
 }
 
 
+void
+hangouts_default_response_dump(HangoutsAccount *ha, ProtobufCMessage *response, gpointer user_data)
+{
+	gchar *dump = pblite_dump_json(response);
+	purple_debug_info("hangouts", "%s\n", dump);
+	g_free(dump);
+}
+
+gboolean
+hangouts_set_active_client(PurpleConnection *pc)
+{
+	HangoutsAccount *ha;
+	SetActiveClientRequest request;
+	
+	if (!PURPLE_CONNECTION_IS_CONNECTED(pc))
+		return FALSE;
+	
+	ha = purple_connection_get_protocol_data(pc);
+	
+	if (ha->active_client_state == ACTIVE_CLIENT_STATE__ACTIVE_CLIENT_STATE_IS_ACTIVE) {
+		//We're already the active client
+		return TRUE;
+	}
+	if (ha->idle_time > HANGOUTS_ACTIVE_CLIENT_TIMEOUT) {
+		//We've gone idle
+		return TRUE;
+	}
+	if (!purple_presence_is_status_primitive_active(purple_account_get_presence(ha->account), PURPLE_STATUS_AVAILABLE)) {
+		//We're marked as not available somehow
+		return TRUE;
+	}
+	ha->active_client_state = ACTIVE_CLIENT_STATE__ACTIVE_CLIENT_STATE_IS_ACTIVE;
+	
+	set_active_client_request__init(&request);
+	
+	request.request_header = hangouts_get_request_header(ha);
+	request.has_is_active = TRUE;
+	request.is_active = TRUE;
+	request.full_jid = g_strdup_printf("%s/%s", purple_account_get_username(ha->account), ha->client_id);
+	request.has_timeout_secs = TRUE;
+	request.timeout_secs = HANGOUTS_ACTIVE_CLIENT_TIMEOUT;
+	
+	hangouts_pblite_set_active_client(ha, &request, (HangoutsPbliteSetActiveClientResponseFunc)hangouts_default_response_dump, NULL);
+	
+	hangouts_request_header_free(request.request_header);
+	g_free(request.full_jid);
+	
+	return TRUE;
+}
 

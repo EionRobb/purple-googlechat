@@ -327,6 +327,7 @@ hangouts_protocol_chat_iface_init(PurpleProtocolChatIface *prpl_info)
 	prpl_info->info_defaults = hangouts_chat_info_defaults;
 	prpl_info->join = hangouts_join_chat;
 	prpl_info->get_name = hangouts_get_chat_name;
+	prpl_info->invite = hangouts_chat_invite;
 }
 
 static PurpleProtocol *hangouts_protocol;
@@ -479,6 +480,7 @@ init_plugin(PurplePlugin *plugin)
 	prpl_info->chat_info_defaults = hangouts_chat_info_defaults;
 	prpl_info->join_chat = hangouts_join_chat;
 	prpl_info->get_chat_name = hangouts_get_chat_name;
+	prpl_info->chat_invite = hangouts_chat_invite;
 	
 	info->extra_info = prpl_info;
 	#if PURPLE_MINOR_VERSION >= 5

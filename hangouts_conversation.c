@@ -154,9 +154,12 @@ static void
 hangouts_got_conversation_events(HangoutsAccount *ha, GetConversationResponse *response, gpointer user_data)
 {
 	Conversation *conversation = response->conversation_state->conversation;
-	const gchar *conv_id = conversation->conversation_id->id;
+	const gchar *conv_id;
 	PurpleChatConversation *chatconv;
 	guint i;
+	
+	g_return_if_fail(conversation);
+	conv_id = conversation->conversation_id->id;
 	
 	//purple_debug_info("hangouts", "got conversation events %s\n", pblite_dump_json((ProtobufCMessage *)response));
 	
@@ -875,6 +878,41 @@ hangouts_chat_leave(PurpleConnection *pc, int id)
 	}
 	
 	return hangouts_chat_leave_by_conv_id(pc, conv_id);
+}
+
+void
+hangouts_chat_invite(PurpleConnection *pc, int id, const char *message, const char *who)
+{
+	HangoutsAccount *ha;
+	const gchar *conv_id;
+	PurpleChatConversation *chatconv;
+	AddUserRequest request;
+	
+	ha = purple_connection_get_protocol_data(pc);
+	chatconv = purple_conversations_find_chat(pc, id);
+	conv_id = purple_conversation_get_data(PURPLE_CONVERSATION(chatconv), "conv_id");
+	if (conv_id == NULL) {
+		conv_id = purple_conversation_get_name(PURPLE_CONVERSATION(chatconv));
+	}
+	
+	add_user_request__init(&request);
+	
+	request.request_header = hangouts_get_request_header(ha);
+	request.event_request_header = hangouts_get_event_request_header(ha, conv_id);
+	
+	request.n_invitee_id = 1;
+	request.invitee_id = g_new0(InviteeID *, 1);
+	request.invitee_id[0] = g_new0(InviteeID, 1);
+	invitee_id__init(request.invitee_id[0]);
+	request.invitee_id[0]->gaia_id = g_strdup(who);
+	
+	hangouts_pblite_add_user(ha, &request, NULL, NULL);
+	
+	g_free(request.invitee_id[0]->gaia_id);
+	g_free(request.invitee_id[0]);
+	g_free(request.invitee_id);
+	hangouts_request_header_free(request.request_header);
+	hangouts_event_request_header_free(request.event_request_header);
 }
 
 void

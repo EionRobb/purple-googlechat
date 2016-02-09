@@ -163,19 +163,21 @@ hangouts_got_conversation_events(HangoutsAccount *ha, GetConversationResponse *r
 	
 	//purple_debug_info("hangouts", "got conversation events %s\n", pblite_dump_json((ProtobufCMessage *)response));
 	
-	chatconv = purple_conversations_find_chat_with_account(conv_id, ha->account);
-	if (!chatconv) {
-		chatconv = purple_serv_got_joined_chat(ha->pc, g_str_hash(conv_id), conv_id);
-		purple_conversation_set_data(PURPLE_CONVERSATION(chatconv), "conv_id", g_strdup(conv_id));
-	}
-	
-	for (i = 0; i < conversation->n_participant_data; i++) {
-		ConversationParticipantData *participant_data = conversation->participant_data[i];
-		PurpleChatUserFlags cbflags = PURPLE_CHAT_USER_NONE;
-		purple_chat_conversation_add_user(chatconv, participant_data->id->gaia_id, NULL, cbflags, FALSE);
+	if (conversation->type == CONVERSATION_TYPE__CONVERSATION_TYPE_GROUP) {
+		chatconv = purple_conversations_find_chat_with_account(conv_id, ha->account);
+		if (!chatconv) {
+			chatconv = purple_serv_got_joined_chat(ha->pc, g_str_hash(conv_id), conv_id);
+			purple_conversation_set_data(PURPLE_CONVERSATION(chatconv), "conv_id", g_strdup(conv_id));
+		}
 		
-		//TODO alias with participant_data->fallback_name
-		//TODO alternatively: add to buddy list as a transient buddy
+		for (i = 0; i < conversation->n_participant_data; i++) {
+			ConversationParticipantData *participant_data = conversation->participant_data[i];
+			PurpleChatUserFlags cbflags = PURPLE_CHAT_USER_NONE;
+			purple_chat_conversation_add_user(chatconv, participant_data->id->gaia_id, NULL, cbflags, FALSE);
+			
+			//TODO alias with participant_data->fallback_name
+			//TODO alternatively: add to buddy list as a transient buddy
+		}
 	}
 
 #if 0
@@ -760,7 +762,10 @@ const gchar *who, const gchar *message, PurpleMessageFlags flags)
 	
 	ha = purple_connection_get_protocol_data(pc);
 	conv_id = g_hash_table_lookup(ha->one_to_ones_rev, who);
-	g_return_val_if_fail(conv_id, -1); //TODO create new conversation for this new person
+	if (conv_id == NULL) {
+		//We don't have any known conversations for this person
+		hangouts_create_conversation(ha, TRUE, who, message);
+	}
 	
 	return hangouts_conversation_send_message(ha, conv_id, message);
 }
@@ -878,6 +883,91 @@ hangouts_chat_leave(PurpleConnection *pc, int id)
 	}
 	
 	return hangouts_chat_leave_by_conv_id(pc, conv_id);
+}
+
+
+static void 
+hangouts_created_conversation(HangoutsAccount *ha, CreateConversationResponse *response, gpointer user_data)
+{
+	Conversation *conversation = response->conversation;
+	gchar *message = user_data;
+	const gchar *conv_id;
+	
+	gchar *dump = pblite_dump_json((ProtobufCMessage *) response);
+	purple_debug_info("hangouts", "%s\n", dump);
+	g_free(dump);
+	
+	if (conversation == NULL) {
+		purple_debug_error("hangouts", "Could not create conversation\n");
+		g_free(message);
+		return;
+	}
+	
+	hangouts_add_conversation_to_blist(ha, conversation, NULL);
+	conv_id = conversation->conversation_id->id;
+	hangouts_get_conversation_events(ha, conv_id, 0);
+	
+	if (message != NULL) {
+		hangouts_conversation_send_message(ha, conv_id, message);
+		g_free(message);
+	}
+}
+
+void
+hangouts_create_conversation(HangoutsAccount *ha, gboolean is_one_to_one, const char *who, const gchar *optional_message)
+{
+	CreateConversationRequest request;
+	gchar *message_dup = NULL;
+	
+	create_conversation_request__init(&request);
+	request.request_header = hangouts_get_request_header(ha);
+	
+	request.has_type = TRUE;
+	if (is_one_to_one) {
+		request.type = CONVERSATION_TYPE__CONVERSATION_TYPE_ONE_TO_ONE;
+	} else {
+		request.type = CONVERSATION_TYPE__CONVERSATION_TYPE_GROUP;
+	}
+	
+	request.n_invitee_id = 1;
+	request.invitee_id = g_new0(InviteeID *, 1);
+	request.invitee_id[0] = g_new0(InviteeID, 1);
+	invitee_id__init(request.invitee_id[0]);
+	request.invitee_id[0]->gaia_id = g_strdup(who);
+	
+	request.has_client_generated_id = TRUE;
+	request.client_generated_id = g_random_int();
+	
+	if (optional_message != NULL) {
+		message_dup = g_strdup(optional_message);
+	}
+	
+	hangouts_pblite_create_conversation(ha, &request, hangouts_created_conversation, message_dup);
+	
+	g_free(request.invitee_id[0]->gaia_id);
+	g_free(request.invitee_id[0]);
+	g_free(request.invitee_id);
+	hangouts_request_header_free(request.request_header);
+}
+
+
+void
+hangouts_initiate_chat_from_node(PurpleBlistNode *node, gpointer userdata)
+{
+	if(PURPLE_IS_BUDDY(node))
+	{
+		PurpleBuddy *buddy = (PurpleBuddy *) node;
+		HangoutsAccount *ha;
+		
+		if (userdata) {
+			ha = userdata;
+		} else {
+			PurpleConnection *pc = purple_account_get_connection(purple_buddy_get_account(buddy));
+			ha = purple_connection_get_protocol_data(pc);
+		}
+		
+		hangouts_create_conversation(ha, FALSE, purple_buddy_get_name(buddy), NULL);
+	}
 }
 
 void

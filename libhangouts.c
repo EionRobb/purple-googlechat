@@ -86,13 +86,10 @@ hangouts_node_menu(PurpleBlistNode *node)
 	
 	if(PURPLE_IS_BUDDY(node))
 	{
-		//TODO
-		// PurpleBuddy *buddy = PURPLE_BUDDY(node);
-		
-		// act = purple_menu_action_new(_("Initiate _Chat"),
-					// PURPLE_CALLBACK(hangouts_initiate_chat_from_node),
-					// ha, NULL);
-		// m = g_list_append(m, act);
+		act = purple_menu_action_new(_("Initiate _Chat"),
+					PURPLE_CALLBACK(hangouts_initiate_chat_from_node),
+					NULL, NULL);
+		m = g_list_append(m, act);
 	} else if (PURPLE_IS_CHAT(node)) {
 		act = purple_menu_action_new(_("_Leave Chat"),
 					PURPLE_CALLBACK(hangouts_blist_node_removed), // A strange coinkidink

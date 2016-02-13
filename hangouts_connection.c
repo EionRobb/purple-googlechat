@@ -504,10 +504,51 @@ hangouts_pblite_request_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse *
 	g_free(response_message);
 }
 
+PurpleHttpConnection *
+hangouts_client6_request(HangoutsAccount *ha, const gchar *path, HangoutsContentType request_type, const gchar *request_data, gssize request_len, HangoutsContentType response_type, PurpleHttpCallback callback, gpointer user_data)
+{
+	PurpleHttpRequest *request;
+	const gchar *response_type_str;
+	
+	switch (response_type) {
+		default:
+		case HANGOUTS_CONTENT_TYPE_NONE:
+		case HANGOUTS_CONTENT_TYPE_JSON:
+			response_type_str = "json";
+			break;
+		case HANGOUTS_CONTENT_TYPE_PBLITE:
+			response_type_str = "protojson";
+			break;
+		case HANGOUTS_CONTENT_TYPE_PROTOBUF:
+			response_type_str = "proto";
+			break;
+	}
+	
+	request = purple_http_request_new(NULL);
+	purple_http_request_set_url_printf(request, "https://clients6.google.com%s%calt=%s", path, (strchr(path, '?') ? '&' : '?'), response_type_str);
+	purple_http_request_set_cookie_jar(request, ha->cookie_jar);
+	
+	purple_http_request_header_set(request, "X-Goog-Encode-Response-If-Executable", "base64");
+	if (request_type != HANGOUTS_CONTENT_TYPE_NONE) {
+		purple_http_request_set_method(request, "POST");
+		purple_http_request_set_contents(request, request_data, request_len);
+		if (request_type == HANGOUTS_CONTENT_TYPE_PROTOBUF) {
+			purple_http_request_header_set(request, "Content-Type", "application/x-protobuf");
+		} else if (request_type == HANGOUTS_CONTENT_TYPE_PBLITE) {
+			purple_http_request_header_set(request, "Content-Type", "application/json+protobuf");
+		} else if (request_type == HANGOUTS_CONTENT_TYPE_JSON) {
+			purple_http_request_header_set(request, "Content-Type", "application/json");
+		}
+	}
+	
+	hangouts_set_auth_headers(ha, request);
+	return purple_http_request(ha->pc, request, callback, user_data);
+}
+
 void
 hangouts_pblite_request(HangoutsAccount *ha, const gchar *endpoint, ProtobufCMessage *request_message, HangoutsPbliteResponseFunc callback, ProtobufCMessage *response_message, gpointer user_data)
 {
-	PurpleHttpRequest *request;
+	gchar *endpoint_path;
 	gsize request_len;
 	gchar *request_data;
 	LazyPblistRequestStore *request_info = g_new0(LazyPblistRequestStore, 1);
@@ -516,24 +557,16 @@ hangouts_pblite_request(HangoutsAccount *ha, const gchar *endpoint, ProtobufCMes
 	request_data = g_new0(gchar, request_len);
 	protobuf_c_message_pack(request_message, (guchar *)request_data);
 	
-	request = purple_http_request_new(NULL);
-	purple_http_request_set_url_printf(request, "https://clients6.google.com/chat/v1/%s?alt=protojson", endpoint);
-	purple_http_request_set_cookie_jar(request, ha->cookie_jar);
-	purple_http_request_set_method(request, "POST");
-	purple_http_request_header_set(request, "Content-Type", "application/x-protobuf");
-	purple_http_request_header_set(request, "X-Goog-Encode-Response-If-Executable", "base64");
-	purple_http_request_set_contents(request, request_data, request_len);
+	endpoint_path = g_strdup_printf("/chat/v1/%s", endpoint);
 	
 	request_info->ha = ha;
 	request_info->callback = callback;
 	request_info->response_message = response_message;
 	request_info->user_data = user_data;
 	
+	hangouts_client6_request(ha, endpoint_path, HANGOUTS_CONTENT_TYPE_PROTOBUF, request_data, request_len, HANGOUTS_CONTENT_TYPE_PBLITE, hangouts_pblite_request_cb, request_info);
 	
-	hangouts_set_auth_headers(ha, request);
-	
-	purple_http_request(ha->pc, request, hangouts_pblite_request_cb, request_info);
-	
+	g_free(endpoint_path);
 	g_free(request_data);
 }
 

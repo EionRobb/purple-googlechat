@@ -27,6 +27,13 @@ void hangouts_add_channel_services(HangoutsAccount *ha);
 void hangouts_default_response_dump(HangoutsAccount *ha, ProtobufCMessage *response, gpointer user_data);
 gboolean hangouts_set_active_client(PurpleConnection *pc);
 
+typedef enum {
+	HANGOUTS_CONTENT_TYPE_NONE = 0,
+	HANGOUTS_CONTENT_TYPE_JSON,
+	HANGOUTS_CONTENT_TYPE_PBLITE,
+	HANGOUTS_CONTENT_TYPE_PROTOBUF
+} HangoutsContentType;
+PurpleHttpConnection *hangouts_client6_request(HangoutsAccount *ha, const gchar *path, HangoutsContentType request_type, const gchar *request_data, gssize request_len, HangoutsContentType response_type, PurpleHttpCallback callback, gpointer user_data);
 
 typedef void(* HangoutsPbliteResponseFunc)(HangoutsAccount *ha, ProtobufCMessage *response, gpointer user_data);
 void hangouts_pblite_request(HangoutsAccount *ha, const gchar *endpoint, ProtobufCMessage *request, HangoutsPbliteResponseFunc callback, ProtobufCMessage *response_message, gpointer user_data);

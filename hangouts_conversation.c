@@ -339,7 +339,6 @@ struct  _ConversationState
 					hangouts_group = purple_group_new("Hangouts");
 					purple_blist_add_group(hangouts_group, NULL);
 				}
-				purple_blist_add_group(hangouts_group, NULL);
 			}
 			purple_blist_add_buddy(purple_buddy_new(ha->account, other_person, conversation->participant_data[participant_num]->fallback_name), NULL, hangouts_group, NULL);
 		}
@@ -359,7 +358,6 @@ struct  _ConversationState
 					hangouts_group = purple_group_new("Hangouts");
 					purple_blist_add_group(hangouts_group, NULL);
 				}
-				purple_blist_add_group(hangouts_group, NULL);
 			}
 			if (!has_name) {
 				gchar **name_set = g_new0(gchar *, conversation->n_participant_data + 1);
@@ -453,21 +451,39 @@ hangouts_get_conversation_list(HangoutsAccount *ha)
 	hangouts_request_header_free(request.request_header);
 }
 
-void
-hangouts_get_buddy_list(HangoutsAccount *ha)
+
+static void
+hangouts_got_buddy_photo(PurpleHttpConnection *connection, PurpleHttpResponse *response, gpointer user_data)
 {
-	/*
-	POST https://clients6.google.com/rpc/plusi?key={KEY}&alt=json 
-Authorization: SAPISIDHASH {AUTH HEADER}
-Content-Type: application/json
-Accept: application/json
-Cookie: {COOKIES}
-Pragma: no-cache
-Cache-Control: no-cache
+	PurpleBuddy *buddy = user_data;
+	PurpleAccount *account = purple_buddy_get_account(buddy);
+	const gchar *name = purple_buddy_get_name(buddy);
+	PurpleHttpRequest *request = purple_http_conn_get_request(connection);
+	const gchar *photo_url = purple_http_request_get_url(request);
+	const gchar *response_str;
+	gsize response_len;
+	gpointer response_dup;
+	
+	if (purple_http_response_get_error(response) != NULL) {
+		purple_debug_error("hangouts", "Failed to get buddy photo for %s from %s\n", name, photo_url);
+		return;
+	}
+	
+	response_str = purple_http_response_get_data(response, &response_len);
+	response_dup = g_memdup(response_str, response_len);
+	purple_buddy_icons_set_for_user(account, name, response_dup, response_len, photo_url);
+}
 
-{"method":"plusi.ozinternal.listmergedpeople","id":"ListMergedPeople","apiVersion":"v2","jsonrpc":"2.0","params":{"pageSelection":{"maxResults":1000},"params":{"personId":"{MY_USER_ID}","collection":6,"hasField":[8,11],"requestMask":{"includeField":[1,2,3,8,9,11,32]},"commonParams":{"includeAffinity":[3]},"extensionSet":{"extensionNames":[4]}}}} 
-*/
-
+static void
+hangouts_got_buddy_list(PurpleHttpConnection *http_conn, PurpleHttpResponse *response, gpointer user_data)
+{
+	HangoutsAccount *ha = user_data;
+	PurpleGroup *hangouts_group = NULL;
+	const gchar *response_str;
+	gsize response_len;
+	JsonObject *obj;
+	JsonArray *mergedPerson;
+	gsize i, len;
 /*
 {
 	"id": "ListMergedPeople",
@@ -505,6 +521,90 @@ Cache-Control: no-cache
 			 }]
 		}
 */
+	if (purple_http_response_get_error(response) != NULL) {
+		purple_debug_error("hangouts", "Failed to download buddy list: %s\n", purple_http_response_get_error(response));
+		return;
+	}
+	
+	response_str = purple_http_response_get_data(response, &response_len);
+	obj = json_decode_object(response_str, response_len);
+	mergedPerson = json_object_get_array_member(json_object_get_object_member(obj, "result"), "mergedPerson");
+	len = json_array_get_length(mergedPerson);
+	for (i = 0; i < len; i++) {
+		JsonNode *node = json_array_get_element(mergedPerson, i);
+		JsonObject *person = json_node_get_object(node);
+		const gchar *name;
+		gchar *alias;
+		gchar *photo;
+		PurpleBuddy *buddy;
+		gchar *reachableAppType = hangouts_json_path_query_string(node, "$.inAppReachability[*].appType", NULL);
+		
+		if (g_strcmp0(reachableAppType, "BABEL")) {
+			//Not a hangouts user
+			g_free(reachableAppType);
+			continue;
+		}
+		g_free(reachableAppType);
+		
+		name = json_object_get_string_member(person, "personId");
+		alias = hangouts_json_path_query_string(node, "$.name[*].displayName", NULL);
+		photo = hangouts_json_path_query_string(node, "$.photo[*].url", NULL);
+		buddy = purple_blist_find_buddy(ha->account, name);
+		
+		if (buddy == NULL) {
+			if (hangouts_group == NULL) {
+				hangouts_group = purple_blist_find_group("Hangouts");
+				if (!hangouts_group)
+				{
+					hangouts_group = purple_group_new("Hangouts");
+					purple_blist_add_group(hangouts_group, NULL);
+				}
+			}
+			buddy = purple_buddy_new(ha->account, name, alias);
+			purple_blist_add_buddy(buddy, NULL, hangouts_group, NULL);
+		}
+		
+		if (g_strcmp0(purple_buddy_icons_get_checksum_for_user(buddy), photo)) {
+			PurpleHttpRequest *photo_request = purple_http_request_new(photo);
+			
+			if (ha->icons_keepalive_pool == NULL) {
+				ha->icons_keepalive_pool = purple_http_keepalive_pool_new();
+				purple_http_keepalive_pool_set_limit_per_host(ha->icons_keepalive_pool, 4);
+			}
+			purple_http_request_set_keepalive_pool(photo_request, ha->icons_keepalive_pool);
+			
+			purple_http_request(ha->pc, photo_request, hangouts_got_buddy_photo, buddy);
+			purple_http_request_unref(photo_request);
+		}
+		
+		g_free(alias);
+		g_free(photo);
+	}
+}
+
+void
+hangouts_get_buddy_list(HangoutsAccount *ha)
+{
+	gchar *request_data;
+	/*
+	POST https://clients6.google.com/rpc/plusi?key={KEY}&alt=json 
+Authorization: SAPISIDHASH {AUTH HEADER}
+Content-Type: application/json
+Accept: application/json
+Cookie: {COOKIES}
+Pragma: no-cache
+Cache-Control: no-cache
+
+{"method":"plusi.ozinternal.listmergedpeople","id":"ListMergedPeople","apiVersion":"v2","jsonrpc":"2.0","params":{"pageSelection":{"maxResults":1000},"params":{"personId":"{MY_USER_ID}","collection":6,"hasField":[8,11],"requestMask":{"includeField":[1,2,3,8,9,11,32]},"commonParams":{"includeAffinity":[3]},"extensionSet":{"extensionNames":[4]}}}} 
+*/
+	request_data = g_strdup_printf("{\"method\":\"plusi.ozinternal.listmergedpeople\",\"id\":\"ListMergedPeople\",\"apiVersion\":\"v2\",\"jsonrpc\":\"2.0\",\"params\":{\"pageSelection\":{\"maxResults\":1000},\"params\":{\"personId\":\"%s\",\"collection\":6,\"hasField\":[8,11],\"requestMask\":{\"includeField\":[1,2,3,8,9,11,32]},\"commonParams\":{\"includeAffinity\":[3]},\"extensionSet\":{\"extensionNames\":[4]}}}}", ha->self_gaia_id);
+	
+	hangouts_client6_request(ha, "/rpc/plusi?key=" GOOGLE_GPLUS_KEY, HANGOUTS_CONTENT_TYPE_JSON, request_data, -1, HANGOUTS_CONTENT_TYPE_JSON, hangouts_got_buddy_list, ha);
+	
+	g_free(request_data);
+
+	//TODO blocked users
+/* {"method":"plusi.ozinternal.loadblockedpeople","id":"getBlockedUsers","apiVersion":"v2","jsonrpc":"2.0","params":{"includeChatBlocked":true}} */
 }
 
 static Segment **

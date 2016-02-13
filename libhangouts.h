@@ -38,6 +38,7 @@
 
 #define GOOGLE_CLIENT_ID "936475272427.apps.googleusercontent.com"
 #define GOOGLE_CLIENT_SECRET "KWsJlkaMn1jGLxQpWxMnOox-"
+#define GOOGLE_GPLUS_KEY "AIzaSyAfFJCeph-euFSwtmqFZi0kaKk-cZ5wufM"
 
 #define MINIFIED_OAUTH_URL "https://goo.gl/eJHvDX"
 #define HANGOUTS_API_OAUTH2_REDIRECT_URI "urn:ietf:wg:oauth:2.0:oob"
@@ -62,6 +63,7 @@ typedef struct {
 	
 	GByteArray *channel_buffer;
 	PurpleHttpKeepalivePool *channel_keepalive_pool;
+	PurpleHttpKeepalivePool *icons_keepalive_pool;
 	gint idle_time;
 	
 	GHashTable *one_to_ones;     // A store of known conv_id's->gaia_id's

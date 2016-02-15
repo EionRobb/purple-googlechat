@@ -325,6 +325,9 @@ pblite_decode(ProtobufCMessage *message, JsonArray *pblite_array, gboolean ignor
 #ifdef DEBUG
 	printf("pblite_decode of %s with length %d\n", descriptor->name, len);
 #endif
+	if (len == 0) {
+		return TRUE;
+	}
 	
 	if (JSON_NODE_HOLDS_OBJECT(json_array_get_element(pblite_array, len - 1))) {
 #ifdef DEBUG

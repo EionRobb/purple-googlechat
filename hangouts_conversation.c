@@ -462,26 +462,7 @@ static void
 hangouts_got_conversation_list(HangoutsAccount *ha, SyncRecentConversationsResponse *response, gpointer user_data)
 {
 	guint i;
-	GHashTable *one_to_ones = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
-	GHashTable *one_to_ones_rev = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
-	GHashTable *group_chats = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 	GHashTable *unique_user_ids = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, NULL);
-	
-	if (ha->one_to_ones) {
-		g_hash_table_remove_all(ha->one_to_ones);
-		g_hash_table_unref(ha->one_to_ones);
-	}
-	if (ha->one_to_ones_rev) {
-		g_hash_table_remove_all(ha->one_to_ones_rev);
-		g_hash_table_unref(ha->one_to_ones_rev);
-	}
-	if (ha->group_chats) {
-		g_hash_table_remove_all(ha->group_chats);
-		g_hash_table_unref(ha->group_chats);
-	}
-	ha->one_to_ones = one_to_ones;
-	ha->one_to_ones_rev = one_to_ones_rev;
-	ha->group_chats = group_chats;
 	
 	for (i = 0; i < response->n_conversation_state; i++) {
 		ConversationState *conversation_state = response->conversation_state[i];

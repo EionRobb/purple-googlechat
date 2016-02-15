@@ -140,6 +140,10 @@ hangouts_login(PurpleAccount *account)
 	ha->channel_keepalive_pool = purple_http_keepalive_pool_new();
 	ha->sent_message_ids = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 	
+	ha->one_to_ones = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
+	ha->one_to_ones_rev = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
+	ha->group_chats = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+	
 	purple_connection_set_protocol_data(pc, ha);
 	
 	if (password && *password) {

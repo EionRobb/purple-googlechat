@@ -322,11 +322,13 @@ struct  _ConversationState
 	if (conversation->type == CONVERSATION_TYPE__CONVERSATION_TYPE_ONE_TO_ONE) {
 		gchar *other_person = conversation->participant_data[0]->id->gaia_id;
 		guint participant_num = 0;
+		gchar *other_person_alias;
 		
 		if (!g_strcmp0(other_person, conversation->self_conversation_state->self_read_state->participant_id->gaia_id)) {
 			other_person = conversation->participant_data[1]->id->gaia_id;
 			participant_num = 1;
 		}
+		other_person_alias = conversation->participant_data[participant_num]->fallback_name;
 		
 		g_hash_table_replace(ha->one_to_ones, g_strdup(conversation->conversation_id->id), g_strdup(other_person));
 		g_hash_table_replace(ha->one_to_ones_rev, g_strdup(other_person), g_strdup(conversation->conversation_id->id));
@@ -340,17 +342,19 @@ struct  _ConversationState
 					purple_blist_add_group(hangouts_group, NULL);
 				}
 			}
-			purple_blist_add_buddy(purple_buddy_new(ha->account, other_person, conversation->participant_data[participant_num]->fallback_name), NULL, hangouts_group, NULL);
+			purple_blist_add_buddy(purple_buddy_new(ha->account, other_person, other_person_alias), NULL, hangouts_group, NULL);
+		} else {
+			purple_serv_got_alias(ha->pc, other_person, other_person_alias);
 		}
-		
 	} else {
 		gchar *conv_id = conversation->conversation_id->id;
+		PurpleChat *chat = purple_blist_find_chat(ha->account, conv_id);
+		gchar *name = conversation->name;
+		gboolean has_name = name ? TRUE : FALSE;
+		
 		g_hash_table_replace(ha->group_chats, conv_id, NULL);
 		
-		if (!purple_blist_find_chat(ha->account, conv_id)) {
-			gchar *name = conversation->name;
-			gboolean has_name = name ? TRUE : FALSE;
-			
+		if (chat == NULL) {
 			if (hangouts_group == NULL) {
 				hangouts_group = purple_blist_find_group("Hangouts");
 				if (!hangouts_group)
@@ -375,6 +379,10 @@ struct  _ConversationState
 			purple_blist_add_chat(purple_chat_new(ha->account, name, hangouts_chat_info_defaults(ha->pc, conv_id)), hangouts_group, NULL);
 			if (!has_name)
 				g_free(name);
+		} else {
+			if(has_name && strstr(purple_chat_get_name(chat), _("Unknown")) != NULL) {
+				purple_chat_set_alias(chat, name);
+			}
 		}
 	}
 	
@@ -562,6 +570,8 @@ hangouts_got_buddy_list(PurpleHttpConnection *http_conn, PurpleHttpResponse *res
 			}
 			buddy = purple_buddy_new(ha->account, name, alias);
 			purple_blist_add_buddy(buddy, NULL, hangouts_group, NULL);
+		} else {
+			purple_serv_got_alias(ha->pc, name, alias);
 		}
 		
 		if (g_strcmp0(purple_buddy_icons_get_checksum_for_user(buddy), photo)) {

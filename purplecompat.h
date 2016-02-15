@@ -24,6 +24,7 @@
 #define PURPLE_IS_BUDDY            PURPLE_BLIST_NODE_IS_BUDDY
 #define PURPLE_IS_CHAT             PURPLE_BLIST_NODE_IS_CHAT
 #define purple_chat_get_name_only  purple_chat_get_name
+#define purple_chat_set_alias      purple_blist_alias_chat
 
 #define PURPLE_CMD_FLAG_PROTOCOL_ONLY  PURPLE_CMD_FLAG_PRPL_ONLY
 

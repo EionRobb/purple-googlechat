@@ -229,8 +229,6 @@ hangouts_status_types(PurpleAccount *account)
 static gboolean
 plugin_load(PurplePlugin *plugin, GError **error)
 {
-	purple_http_init();
-	
 	purple_cmd_register("leave", "", PURPLE_CMD_P_PLUGIN, PURPLE_CMD_FLAG_CHAT |
 						PURPLE_CMD_FLAG_PROTOCOL_ONLY | PURPLE_CMD_FLAG_ALLOW_WRONG_ARGS,
 						HANGOUTS_PLUGIN_ID, hangouts_cmd_leave,
@@ -242,8 +240,6 @@ plugin_load(PurplePlugin *plugin, GError **error)
 static gboolean
 plugin_unload(PurplePlugin *plugin, GError **error)
 {
-	purple_http_uninit();
-	
 	purple_signals_disconnect_by_handle(plugin);
 	
 	return TRUE;
@@ -390,16 +386,26 @@ PURPLE_PLUGIN_INIT(hangouts, plugin_query,
 		libpurple3_plugin_load, libpurple3_plugin_unload);
 
 #else
+	
+// Normally set in core.c in purple3
+void _purple_socket_init(void);
+void _purple_socket_uninit(void);
 
 static gboolean
 libpurple2_plugin_load(PurplePlugin *plugin)
 {
+	_purple_socket_init();
+	purple_http_init();
+	
 	return plugin_load(plugin, NULL);
 }
 
 static gboolean
 libpurple2_plugin_unload(PurplePlugin *plugin)
 {
+	_purple_socket_uninit();
+	purple_http_uninit();
+	
 	return plugin_unload(plugin, NULL);
 }
 

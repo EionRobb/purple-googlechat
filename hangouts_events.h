@@ -16,5 +16,6 @@ void hangouts_received_state_update(PurpleConnection *pc, StateUpdate *state_upd
 
 
 void hangouts_process_presence_result(HangoutsAccount *ha, PresenceResult *presence);
+void hangouts_process_conversation_event(HangoutsAccount *ha, Conversation *conversation, Event *event, gint64 current_server_time);
 
 #endif /*_HANGOUTS_EVENTS_H_*/

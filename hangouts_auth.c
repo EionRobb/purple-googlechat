@@ -122,6 +122,7 @@ void
 hangouts_auth_get_session_cookies_got_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse *response, gpointer user_data)
 {
 	HangoutsAccount *ha = user_data;
+	guint64 last_event_timestamp;
 	
 	gchar *sapisid_cookie = purple_http_cookie_jar_get(ha->cookie_jar, "SAPISID");
 	
@@ -129,6 +130,13 @@ hangouts_auth_get_session_cookies_got_cb(PurpleHttpConnection *http_conn, Purple
 		purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED, 
 			_("SAPISID Cookie not recieved"));
 		return;
+	}
+	
+	//Restore the last_event_timestamp before it gets overridden by new events
+	last_event_timestamp = purple_account_get_int(ha->account, "last_event_timestamp_high", 0);
+	if (last_event_timestamp != 0) {
+		last_event_timestamp = (last_event_timestamp << 32) | ((guint64) purple_account_get_int(ha->account, "last_event_timestamp_low", 0) & 0xFFFFFFFF);
+		ha->last_event_timestamp = last_event_timestamp;
 	}
 	
 	// SOUND THE TRUMPETS

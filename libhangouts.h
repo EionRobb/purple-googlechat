@@ -60,6 +60,7 @@ typedef struct {
 	gchar *client_id;
 	gchar *self_gaia_id;
 	ActiveClientState active_client_state;
+	gint64 last_event_timestamp;
 	
 	GByteArray *channel_buffer;
 	PurpleHttpKeepalivePool *channel_keepalive_pool;

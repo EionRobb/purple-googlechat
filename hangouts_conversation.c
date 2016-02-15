@@ -97,6 +97,10 @@ hangouts_get_self_info(HangoutsAccount *ha)
 	hangouts_pblite_get_self_info(ha, &request, hangouts_got_self_info, NULL);
 	
 	hangouts_request_header_free(request.request_header);
+	
+	if (ha->last_event_timestamp != 0) {
+		hangouts_get_all_events(ha, ha->last_event_timestamp);
+	}
 }
 
 static void
@@ -180,13 +184,11 @@ hangouts_got_conversation_events(HangoutsAccount *ha, GetConversationResponse *r
 		}
 	}
 
-#if 0
-	for (i = 0; i < conversation->n_event; i++) {
-		Event *event = conversation->event[i];
-		//TODO send event to the hangouts_events.c slaughterhouse
-		(void) event;
+	for (i = 0; i < response->conversation_state->n_event; i++) {
+		Event *event = response->conversation_state->event[i];
+		//Send event to the hangouts_events.c slaughterhouse
+		hangouts_process_conversation_event(ha, conversation, event, response->response_header->current_server_time);
 	}
-#endif
 }
 
 void
@@ -210,7 +212,9 @@ hangouts_get_conversation_events(HangoutsAccount *ha, const gchar *conv_id, gint
 	if (since_timestamp > 0) {
 		EventContinuationToken event_continuation_token;
 		
+		request.has_include_event = TRUE;
 		request.include_event = TRUE;
+		request.has_max_events_per_conversation = TRUE;
 		request.max_events_per_conversation = 50;
 		
 		event_continuation_token__init(&event_continuation_token);
@@ -222,6 +226,69 @@ hangouts_get_conversation_events(HangoutsAccount *ha, const gchar *conv_id, gint
 	
 	hangouts_request_header_free(request.request_header);
 	
+}
+
+static void
+hangouts_got_all_events(HangoutsAccount *ha, SyncAllNewEventsResponse *response, gpointer user_data)
+{
+	guint i, j;
+	guint64 sync_timestamp;
+	
+	//purple_debug_info("hangouts", "%s\n", pblite_dump_json((ProtobufCMessage *)response));
+	/*
+struct  _SyncAllNewEventsResponse
+{
+  ProtobufCMessage base;
+  ResponseHeader *response_header;
+  protobuf_c_boolean has_sync_timestamp;
+  uint64_t sync_timestamp;
+  size_t n_conversation_state;
+  ConversationState **conversation_state;
+};
+
+struct  _ConversationState
+{
+  ProtobufCMessage base;
+  ConversationId *conversation_id;
+  Conversation *conversation;
+  size_t n_event;
+  Event **event;
+  EventContinuationToken *event_continuation_token;
+};
+
+*/
+	sync_timestamp = response->sync_timestamp;
+	for (i = 0; i < response->n_conversation_state; i++) {
+		ConversationState *conversation_state = response->conversation_state[i];
+		Conversation *conversation = conversation_state->conversation;
+		
+		for (j = 0; j < conversation_state->n_event; j++) {
+			Event *event = conversation_state->event[j];
+			
+			hangouts_process_conversation_event(ha, conversation, event, sync_timestamp);
+		}
+	}
+}
+
+void
+hangouts_get_all_events(HangoutsAccount *ha, guint64 since_timestamp)
+{
+	SyncAllNewEventsRequest request;
+	
+	g_return_if_fail(since_timestamp > 0);
+	
+	sync_all_new_events_request__init(&request);
+	request.request_header = hangouts_get_request_header(ha);
+	
+	request.has_last_sync_timestamp = TRUE;
+	request.last_sync_timestamp = since_timestamp;
+	
+	request.has_max_response_size_bytes = TRUE;
+	request.max_response_size_bytes = 1048576; // 1 mibbily bite
+	
+	hangouts_pblite_sync_all_new_events(ha, &request, hangouts_got_all_events, NULL);
+	
+	hangouts_request_header_free(request.request_header);
 }
 
 GList *
@@ -308,16 +375,6 @@ hangouts_add_conversation_to_blist(HangoutsAccount *ha, Conversation *conversati
 {
 	PurpleGroup *hangouts_group = NULL;
 	guint i;
-	/*
-struct  _ConversationState
-{
-  ProtobufCMessage base;
-  ConversationId *conversation_id;
-  Conversation *conversation;
-  size_t n_event;
-  Event **event;
-  EventContinuationToken *event_continuation_token;
-}; */
 	
 	if (conversation->type == CONVERSATION_TYPE__CONVERSATION_TYPE_ONE_TO_ONE) {
 		gchar *other_person = conversation->participant_data[0]->id->gaia_id;
@@ -391,7 +448,9 @@ struct  _ConversationState
 		ConversationParticipantData *participant_data = conversation->participant_data[i];
 		
 		if (participant_data->participant_type == PARTICIPANT_TYPE__PARTICIPANT_TYPE_GAIA) {
-			purple_serv_got_alias(ha->pc, participant_data->id->gaia_id, participant_data->fallback_name);
+			if (participant_data->fallback_name != NULL) {
+				purple_serv_got_alias(ha->pc, participant_data->id->gaia_id, participant_data->fallback_name);
+			}
 			if (unique_user_ids != NULL) {
 				g_hash_table_replace(unique_user_ids, participant_data->id->gaia_id, participant_data->id);
 			}

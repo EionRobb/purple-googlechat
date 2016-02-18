@@ -10,4 +10,4 @@ Heavily inspired by the [hangups library](https://github.com/tdryer/hangups) by 
 To compile, just do the standard `make && sudo make install` dance.  You'll need development packages for libpurple, libjson-glib, glib and libprotobuf-c to be able to compile.
 
 ## Windows ##
-Use the [Windows installer](http://eion.robbmobb.com/purple-hangouts.exe) to make life easier, otherwise development builds of Windows dll's live at http://eion.robbmob.com/libhangouts.dll (you'll also need libprotobuf-c-1.dll and libjson-glib-1.0.dll in your Pidgin folder)
+Use the [Windows installer](http://eion.robbmob.com/purple-hangouts.exe) to make life easier, otherwise development builds of Windows dll's live at http://eion.robbmob.com/libhangouts.dll (you'll also need libprotobuf-c-1.dll and libjson-glib-1.0.dll in your Pidgin folder)

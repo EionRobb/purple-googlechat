@@ -83,6 +83,7 @@ hangouts_got_self_info(HangoutsAccount *ha, GetSelfInfoResponse *response, gpoin
 	g_free(ha->self_gaia_id);
 	ha->self_gaia_id = g_strdup(self_entity->id->gaia_id);
 	purple_connection_set_display_name(ha->pc, ha->self_gaia_id);
+	purple_account_set_string(ha->account, "self_gaia_id", ha->self_gaia_id);
 	
 	hangouts_get_buddy_list(ha);
 }
@@ -1156,11 +1157,12 @@ hangouts_chat_invite(PurpleConnection *pc, int id, const char *message, const ch
 	hangouts_event_request_header_free(request.event_request_header);
 }
 
-void
-hangouts_mark_conversation_seen(PurpleConversation *conv, PurpleConversationUpdateType type)
+gboolean
+hangouts_mark_conversation_seen_timeout(gpointer convpointer)
 {
-	HangoutsAccount *ha;
+	PurpleConversation *conv = convpointer;
 	PurpleConnection *pc = purple_conversation_get_connection(conv);
+	HangoutsAccount *ha;
 	UpdateWatermarkRequest request;
 	ConversationId conversation_id;
 	const gchar *conv_id = NULL;
@@ -1168,51 +1170,74 @@ hangouts_mark_conversation_seen(PurpleConversation *conv, PurpleConversationUpda
 	gint64 *last_event_timestamp_ptr, last_event_timestamp = 0;
 	
 	if (!PURPLE_CONNECTION_IS_CONNECTED(pc))
-		return;
+		return FALSE;
+	
+	purple_conversation_set_data(conv, "mark_seen_timeout", NULL);
 	
 	ha = purple_connection_get_protocol_data(pc);
 	
+	last_read_timestamp_ptr = (gint64 *)purple_conversation_get_data(conv, "last_read_timestamp");
+	if (last_read_timestamp_ptr != NULL) {
+		last_read_timestamp = *last_read_timestamp_ptr;
+	}
+	last_event_timestamp_ptr = (gint64 *)purple_conversation_get_data(conv, "last_event_timestamp");
+	if (last_event_timestamp_ptr != NULL) {
+		last_event_timestamp = *last_event_timestamp_ptr;
+	}
+	
+	if (last_event_timestamp <= last_read_timestamp) {
+		return FALSE;
+	}
+	
+	update_watermark_request__init(&request);
+	request.request_header = hangouts_get_request_header(ha);
+	
+	conv_id = purple_conversation_get_data(conv, "conv_id");
+	if (conv_id == NULL) {
+		if (PURPLE_IS_IM_CONVERSATION(conv)) {
+			conv_id = g_hash_table_lookup(ha->one_to_ones_rev, purple_conversation_get_name(conv));
+		} else {
+			conv_id = purple_conversation_get_name(conv);
+		}
+	}
+	conversation_id__init(&conversation_id);
+	conversation_id.id = (gchar *) conv_id;
+	request.conversation_id = &conversation_id;
+	
+	request.has_last_read_timestamp = TRUE;
+	request.last_read_timestamp = last_event_timestamp;
+	
+	hangouts_pblite_update_watermark(ha, &request, (HangoutsPbliteUpdateWatermarkResponseFunc)hangouts_default_response_dump, NULL);
+	
+	hangouts_request_header_free(request.request_header);
+	
+	if (last_read_timestamp_ptr == NULL) {
+		last_read_timestamp_ptr = g_new0(gint64, 1);
+	}
+	*last_read_timestamp_ptr = last_event_timestamp;
+	purple_conversation_set_data(conv, "last_read_timestamp", last_read_timestamp_ptr);
+	
+	return FALSE;
+}
+
+void
+hangouts_mark_conversation_seen(PurpleConversation *conv, PurpleConversationUpdateType type)
+{
+	PurpleConnection *pc = purple_conversation_get_connection(conv);
+	
+	if (!PURPLE_CONNECTION_IS_CONNECTED(pc))
+		return;
+	
 	if (type == PURPLE_CONVERSATION_UPDATE_UNSEEN) {
-		last_read_timestamp_ptr = (gint64 *)purple_conversation_get_data(conv, "last_read_timestamp");
-		if (last_read_timestamp_ptr != NULL) {
-			last_read_timestamp = *last_read_timestamp_ptr;
-		}
-		last_event_timestamp_ptr = (gint64 *)purple_conversation_get_data(conv, "last_event_timestamp");
-		if (last_event_timestamp_ptr != NULL) {
-			last_event_timestamp = *last_event_timestamp_ptr;
+		gint mark_seen_timeout = GPOINTER_TO_INT(purple_conversation_get_data(conv, "mark_seen_timeout"));
+		
+		if (mark_seen_timeout) {
+			purple_timeout_remove(mark_seen_timeout);
 		}
 		
-		if (last_event_timestamp <= last_read_timestamp) {
-			return;
-		}
+		mark_seen_timeout = purple_timeout_add_seconds(1, hangouts_mark_conversation_seen_timeout, conv);
 		
-		update_watermark_request__init(&request);
-		request.request_header = hangouts_get_request_header(ha);
-		
-		conv_id = purple_conversation_get_data(conv, "conv_id");
-		if (conv_id == NULL) {
-			if (PURPLE_IS_IM_CONVERSATION(conv)) {
-				conv_id = g_hash_table_lookup(ha->one_to_ones_rev, purple_conversation_get_name(conv));
-			} else {
-				conv_id = purple_conversation_get_name(conv);
-			}
-		}
-		conversation_id__init(&conversation_id);
-		conversation_id.id = (gchar *) conv_id;
-		request.conversation_id = &conversation_id;
-		
-		request.has_last_read_timestamp = TRUE;
-		request.last_read_timestamp = last_event_timestamp;
-		
-		hangouts_pblite_update_watermark(ha, &request, (HangoutsPbliteUpdateWatermarkResponseFunc)hangouts_default_response_dump, NULL);
-		
-		hangouts_request_header_free(request.request_header);
-		
-		if (last_read_timestamp_ptr == NULL) {
-			last_read_timestamp_ptr = g_new0(gint64, 1);
-		}
-		*last_read_timestamp_ptr = last_event_timestamp;
-		purple_conversation_set_data(conv, "last_read_timestamp", last_read_timestamp_ptr);
+		purple_conversation_set_data(conv, "mark_seen_timeout", GINT_TO_POINTER(mark_seen_timeout));
 	}
 }
 

@@ -124,6 +124,7 @@ hangouts_login(PurpleAccount *account)
 	PurpleConnection *pc;
 	HangoutsAccount *ha; //hahaha
 	const gchar *password;
+	const gchar *self_gaia_id;
 	PurpleConnectionFlags pc_flags;
 
 	pc = purple_account_get_connection(account);
@@ -143,6 +144,12 @@ hangouts_login(PurpleAccount *account)
 	ha->one_to_ones = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
 	ha->one_to_ones_rev = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
 	ha->group_chats = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+	
+	self_gaia_id = purple_account_get_string(account, "self_gaia_id", NULL);
+	if (self_gaia_id != NULL) {
+		ha->self_gaia_id = g_strdup(self_gaia_id);
+		purple_connection_set_display_name(pc, ha->self_gaia_id);
+	}
 	
 	purple_connection_set_protocol_data(pc, ha);
 	

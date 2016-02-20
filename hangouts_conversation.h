@@ -52,4 +52,6 @@ void hangouts_initiate_chat_from_node(PurpleBlistNode *node, gpointer userdata);
 
 void hangouts_mark_conversation_seen(PurpleConversation *conv, PurpleConversationUpdateType type);
 
+void hangouts_set_status(PurpleAccount *account, PurpleStatus *status);
+
 #endif /*_HANGOUTS_CONVERSATION_H_*/

@@ -55,6 +55,7 @@ HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(set_typing, SetTyping, "conversations/settyp
 HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(get_self_info, GetSelfInfo, "contacts/getselfinfo");
 HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(sync_recent_conversations, SyncRecentConversations, "conversations/syncrecentconversations");
 HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(sync_all_new_events, SyncAllNewEvents, "conversations/syncallnewevents");
+HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(set_presence, SetPresence, "presence/setpresence");
 HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(query_presence, QueryPresence, "presence/querypresence");
 HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(get_conversation, GetConversation, "conversations/getconversation");
 HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(create_conversation, CreateConversation, "conversations/createconversation");

@@ -14,10 +14,11 @@
 #define purple_hash_destroy             g_object_unref
 #define purple_message_destroy          g_object_unref
 
+#define PURPLE_TYPE_STRING  G_TYPE_STRING
+
 #else
 
 #include "connection.h"
-
 
 #define purple_blist_find_buddy    purple_find_buddy
 #define purple_blist_find_group    purple_find_group
@@ -121,6 +122,8 @@ purple_message_destroy(PurpleMessage *message)
 #define purple_serv_got_chat_in                    serv_got_chat_in
 #define purple_serv_got_chat_left                  serv_got_chat_left
 #define purple_serv_got_joined_chat(pc, id, name)  PURPLE_CONV_CHAT(serv_got_joined_chat(pc, id, name))
+
+#define purple_status_get_status_type  purple_status_get_type
 
 #define PurpleXmlNode                xmlnode
 #define purple_xmlnode_new           xmlnode_new

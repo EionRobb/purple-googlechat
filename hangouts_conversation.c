@@ -5,6 +5,7 @@
 #include "hangouts_events.h"
 
 #include "debug.h"
+#include "status.h"
 #include "glibcompat.h"
 
 // From hangouts_pblite
@@ -1212,6 +1213,102 @@ hangouts_mark_conversation_seen(PurpleConversation *conv, PurpleConversationUpda
 		}
 		*last_read_timestamp_ptr = last_event_timestamp;
 		purple_conversation_set_data(conv, "last_read_timestamp", last_read_timestamp_ptr);
+	}
+}
+
+void
+hangouts_set_status(PurpleAccount *account, PurpleStatus *status)
+{
+	SetPresenceRequest request;
+	PurpleConnection *pc = purple_account_get_connection(account);
+	HangoutsAccount *ha = purple_connection_get_protocol_data(pc);
+	Segment **segments = NULL;
+	/* 
+struct  _SetPresenceRequest
+{
+  ProtobufCMessage base;
+  RequestHeader *request_header;
+  PresenceStateSetting *presence_state_setting;
+  DndSetting *dnd_setting;
+  DesktopOffSetting *desktop_off_setting;
+  MoodSetting *mood_setting;
+};*/
+
+	if (!purple_status_is_active(status) && !purple_status_is_independent(status)) {
+		return;
+	}
+
+	set_presence_request__init(&request);
+	request.request_header = hangouts_get_request_header(ha);
+	
+	//available:
+	if (purple_status_type_get_primitive(purple_status_get_status_type(status)) == PURPLE_STATUS_AVAILABLE) {
+		PresenceStateSetting presence_state_setting;
+		
+		presence_state_setting__init(&presence_state_setting);
+		presence_state_setting.has_timeout_secs = TRUE;
+		presence_state_setting.timeout_secs = 720;
+		presence_state_setting.has_type = TRUE;
+		presence_state_setting.type = CLIENT_PRESENCE_STATE_TYPE__CLIENT_PRESENCE_STATE_DESKTOP_ACTIVE;
+		request.presence_state_setting = &presence_state_setting;
+	}
+	
+	//away
+	if (purple_status_type_get_primitive(purple_status_get_status_type(status)) == PURPLE_STATUS_AWAY) {
+		PresenceStateSetting presence_state_setting;
+		
+		presence_state_setting__init(&presence_state_setting);
+		presence_state_setting.has_timeout_secs = TRUE;
+		presence_state_setting.timeout_secs = 720;
+		presence_state_setting.has_type = TRUE;
+		presence_state_setting.type = CLIENT_PRESENCE_STATE_TYPE__CLIENT_PRESENCE_STATE_DESKTOP_IDLE;
+		request.presence_state_setting = &presence_state_setting;
+	}
+	
+	//dnd
+	if (purple_status_type_get_primitive(purple_status_get_status_type(status)) == PURPLE_STATUS_UNAVAILABLE) {
+		DndSetting dnd_setting;
+		
+		dnd_setting__init(&dnd_setting);
+		if (purple_status_is_active(status)) {
+			dnd_setting.has_do_not_disturb = TRUE;
+			dnd_setting.do_not_disturb = TRUE;
+			dnd_setting.has_timeout_secs = TRUE;
+			dnd_setting.timeout_secs = 172800;
+		} else {
+			dnd_setting.has_do_not_disturb = TRUE;
+			dnd_setting.do_not_disturb = FALSE;
+		}
+		request.dnd_setting = &dnd_setting;
+	}
+	
+	//has message?
+	if (purple_status_type_get_primitive(purple_status_get_status_type(status)) == PURPLE_STATUS_MOOD) {
+		MoodSetting mood_setting;
+		MoodMessage mood_message;
+		MoodContent mood_content;
+		guint n_segments;
+		const gchar *message = purple_status_get_attr_string(status, "message");
+		
+		mood_setting__init(&mood_setting);
+		mood_message__init(&mood_message);
+		mood_content__init(&mood_content);
+		
+		segments = hangouts_convert_html_to_segments(ha, message, &n_segments);
+		mood_content.segment = segments;
+		mood_content.n_segment = n_segments;
+		
+		mood_message.mood_content = &mood_content;
+		mood_setting.mood_message = &mood_message;
+		request.mood_setting = &mood_setting;
+	}
+
+	hangouts_pblite_set_presence(ha, &request, (HangoutsPbliteSetPresenceResponseFunc)hangouts_default_response_dump, NULL);
+	
+	hangouts_request_header_free(request.request_header);
+	
+	if (segments != NULL) {
+		hangouts_free_segments(segments);
 	}
 }
 

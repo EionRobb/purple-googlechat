@@ -1157,6 +1157,8 @@ hangouts_chat_invite(PurpleConnection *pc, int id, const char *message, const ch
 	hangouts_event_request_header_free(request.event_request_header);
 }
 
+#define PURPLE_CONVERSATION_IS_VALID(conv) (g_list_find(purple_conversations_get_all(), conv) != NULL)
+
 gboolean
 hangouts_mark_conversation_seen_timeout(gpointer convpointer)
 {
@@ -1170,6 +1172,8 @@ hangouts_mark_conversation_seen_timeout(gpointer convpointer)
 	gint64 *last_event_timestamp_ptr, last_event_timestamp = 0;
 	
 	if (!PURPLE_CONNECTION_IS_CONNECTED(pc))
+		return FALSE;
+	if (!PURPLE_CONVERSATION_IS_VALID(conv))
 		return FALSE;
 	
 	purple_conversation_set_data(conv, "mark_seen_timeout", NULL);

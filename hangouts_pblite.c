@@ -205,7 +205,7 @@ pblite_encode_field(const ProtobufCFieldDescriptor *field, gpointer value)
 		case PROTOBUF_C_TYPE_BOOL: {
 			protobuf_c_boolean * member = value;
 			node = json_node_new(JSON_NODE_VALUE);
-			json_node_set_int(node, *member);
+			json_node_set_boolean(node, *member);
 			break;
 		}
 			
@@ -375,7 +375,6 @@ pblite_encode(ProtobufCMessage *message)
 	printf("pblite_encode of %s with length %d\n", descriptor->name, descriptor->n_fields);
 #endif
 	
-	json_array_add_object_element(pblite, cheats_object);
 	for (i = 0; i < descriptor->n_fields; i++) {
 		const ProtobufCFieldDescriptor *field_descriptor = descriptor->fields + i;
 		void *field = STRUCT_MEMBER_P(message, field_descriptor->offset);
@@ -417,7 +416,7 @@ pblite_encode(ProtobufCMessage *message)
 					if (ptr == NULL || ptr == field_descriptor->default_value)
 						encoded_value = json_node_new(JSON_NODE_NULL);
 				} else {
-					const protobuf_c_boolean *val = field;
+					const protobuf_c_boolean *val = STRUCT_MEMBER_P(message, field_descriptor->quantifier_offset);
 					if (!*val)
 						encoded_value = json_node_new(JSON_NODE_NULL);
 				}
@@ -427,14 +426,20 @@ pblite_encode(ProtobufCMessage *message)
 			}
 		}
 		
-		//need to insert at point [field_descriptor->id - 1] of the array, somehow
-		//json_array_add_element(pblite, encoded_value);
-		//... so dont, just cheat!
-		if (!JSON_NODE_HOLDS_NULL(encoded_value)) {
-			gchar *obj_id = g_strdup_printf("%u", field_descriptor->id);
-			json_object_set_member(cheats_object, obj_id, encoded_value);
-			g_free(obj_id);
+		if (json_array_get_length(pblite) + 1 == field_descriptor->id) {
+			json_array_add_element(pblite, encoded_value);
+		} else {
+			//need to insert at point [field_descriptor->id - 1] of the array, somehow
+			//... so dont, just cheat!
+			if (!JSON_NODE_HOLDS_NULL(encoded_value)) {
+				gchar *obj_id = g_strdup_printf("%u", field_descriptor->id);
+				json_object_set_member(cheats_object, obj_id, encoded_value);
+				g_free(obj_id);
+			}
 		}
+	}
+	if (json_object_get_size(cheats_object)) {
+		json_array_add_object_element(pblite, cheats_object);
 	}
 	
 	return pblite;
@@ -467,7 +472,13 @@ pblite_encode_field_for_json(const ProtobufCFieldDescriptor *field, gpointer val
 			const ProtobufCEnumDescriptor *enum_descriptor = field->descriptor;
 			const ProtobufCEnumValue *enum_value = protobuf_c_enum_descriptor_get_value(enum_descriptor, *member);
 			node = json_node_new(JSON_NODE_VALUE);
-			json_node_set_string(node, enum_value->name);
+			if (enum_value == NULL) {
+				gchar *unknown_text = g_strdup_printf("UNKNOWN ENUM VALUE %d", *member);
+				json_node_set_string(node, unknown_text);
+				g_free(unknown_text);
+			} else {
+				json_node_set_string(node, enum_value->name);
+			}
 			break;
 		}
 			
@@ -499,7 +510,7 @@ pblite_encode_field_for_json(const ProtobufCFieldDescriptor *field, gpointer val
 		case PROTOBUF_C_TYPE_BOOL: {
 			protobuf_c_boolean * member = value;
 			node = json_node_new(JSON_NODE_VALUE);
-			json_node_set_int(node, *member);
+			json_node_set_boolean(node, *member);
 			break;
 		}
 			
@@ -572,7 +583,7 @@ pblite_encode_for_json(ProtobufCMessage *message)
 					if (ptr == NULL || ptr == field_descriptor->default_value)
 						encoded_value = json_node_new(JSON_NODE_NULL);
 				} else {
-					const protobuf_c_boolean *val = field;
+					const protobuf_c_boolean *val = STRUCT_MEMBER_P(message, field_descriptor->quantifier_offset);
 					if (!*val)
 						encoded_value = json_node_new(JSON_NODE_NULL);
 				}

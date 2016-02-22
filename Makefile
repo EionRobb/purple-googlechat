@@ -8,7 +8,7 @@ PROTOBUF_C_DIR ?= $(WIN32_DEV_TOP)/protobuf-c-Release-2.6
 WIN32_CC ?= $(WIN32_DEV_TOP)/mingw/bin/gcc
 
 CC ?= gcc
-PROTOC-C ?= protoc-c
+PROTOC_C ?= protoc-c
 PKG_CONFIG ?= pkg-config
 
 # Do some nasty OS and purple version detection
@@ -47,7 +47,7 @@ TEST_C_FILES := hangouts_test.c $(C_FILES)
 all: $(HANGOUTS_TARGET)
 
 hangouts.pb-c.c: hangouts.proto
-	$(PROTOC-C) --c_out=. hangouts.proto
+	$(PROTOC_C) --c_out=. hangouts.proto
 
 libhangouts.so: $(PURPLE_C_FILES) $(PURPLE_COMPAT_FILES)
 	$(CC) -fPIC -shared -o $@ $^ `$(PKG_CONFIG) purple glib-2.0 json-glib-1.0 libprotobuf-c --libs --cflags` -I/usr/include/protobuf-c -Ipurple2compat -g -ggdb
@@ -61,7 +61,7 @@ libhangouts.dll: $(PURPLE_C_FILES) $(PURPLE_COMPAT_FILES)
 libhangouts3.dll: $(PURPLE_C_FILES) $(PURPLE_COMPAT_FILES)
 	$(WIN32_CC) -shared -o $@ $^ $(WIN32_PIDGIN3_CFLAGS) $(WIN32_PIDGIN3_LDFLAGS)
 
-libhangouts.exe: $(TEST_C_FILES)
+libhangouts.exe: $(TEST_C_FILES) $(PURPLE_COMPAT_FILES)
 	$(WIN32_CC) -o $@ -DDEBUG $^ $(WIN32_PIDGIN2_CFLAGS) $(WIN32_PIDGIN2_LDFLAGS) -Ipurple2compat
 
 install: $(HANGOUTS_TARGET)

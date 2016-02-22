@@ -141,10 +141,12 @@ hangouts_get_users_presence(HangoutsAccount *ha, GList *user_ids)
 	request.participant_id = participant_id;
 	request.n_participant_id = n_participant_id;
 	
-	request.n_field_mask = 2;
+	request.n_field_mask = 4;
 	request.field_mask = g_new0(FieldMask, request.n_field_mask);
 	request.field_mask[0] = FIELD_MASK__FIELD_MASK_AVAILABLE;
 	request.field_mask[1] = FIELD_MASK__FIELD_MASK_REACHABLE;
+	request.field_mask[2] = FIELD_MASK__FIELD_MASK_MOOD;
+	request.field_mask[3] = FIELD_MASK__FIELD_MASK_LAST_SEEN;
 
 	hangouts_pblite_query_presence(ha, &request, hangouts_got_users_presence, NULL);
 	
@@ -1252,20 +1254,8 @@ hangouts_set_status(PurpleAccount *account, PurpleStatus *status)
 	PurpleConnection *pc = purple_account_get_connection(account);
 	HangoutsAccount *ha = purple_connection_get_protocol_data(pc);
 	Segment **segments = NULL;
-	/* 
-struct  _SetPresenceRequest
-{
-  ProtobufCMessage base;
-  RequestHeader *request_header;
-  PresenceStateSetting *presence_state_setting;
-  DndSetting *dnd_setting;
-  DesktopOffSetting *desktop_off_setting;
-  MoodSetting *mood_setting;
-};*/
-
-	if (!purple_status_is_active(status) && !purple_status_is_independent(status)) {
-		return;
-	}
+	const gchar *message;
+	DndSetting dnd_setting;
 
 	set_presence_request__init(&request);
 	request.request_header = hangouts_get_request_header(ha);
@@ -1294,30 +1284,26 @@ struct  _SetPresenceRequest
 		request.presence_state_setting = &presence_state_setting;
 	}
 	
-	//dnd
+	//do-not-disturb
+	dnd_setting__init(&dnd_setting);
 	if (purple_status_type_get_primitive(purple_status_get_status_type(status)) == PURPLE_STATUS_UNAVAILABLE) {
-		DndSetting dnd_setting;
-		
-		dnd_setting__init(&dnd_setting);
-		if (purple_status_is_active(status)) {
-			dnd_setting.has_do_not_disturb = TRUE;
-			dnd_setting.do_not_disturb = TRUE;
-			dnd_setting.has_timeout_secs = TRUE;
-			dnd_setting.timeout_secs = 172800;
-		} else {
-			dnd_setting.has_do_not_disturb = TRUE;
-			dnd_setting.do_not_disturb = FALSE;
-		}
-		request.dnd_setting = &dnd_setting;
+		dnd_setting.has_do_not_disturb = TRUE;
+		dnd_setting.do_not_disturb = TRUE;
+		dnd_setting.has_timeout_secs = TRUE;
+		dnd_setting.timeout_secs = 172800;
+	} else {
+		dnd_setting.has_do_not_disturb = TRUE;
+		dnd_setting.do_not_disturb = FALSE;
 	}
+	request.dnd_setting = &dnd_setting;
 	
 	//has message?
-	if (purple_status_type_get_primitive(purple_status_get_status_type(status)) == PURPLE_STATUS_MOOD) {
+	message = purple_status_get_attr_string(status, "message");
+	if (message && *message) {
 		MoodSetting mood_setting;
 		MoodMessage mood_message;
 		MoodContent mood_content;
 		guint n_segments;
-		const gchar *message = purple_status_get_attr_string(status, "message");
 		
 		mood_setting__init(&mood_setting);
 		mood_message__init(&mood_message);

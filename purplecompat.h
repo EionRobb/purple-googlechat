@@ -52,6 +52,7 @@
 #define purple_conversations_find_chat_with_account(id, account) \
 		PURPLE_CONV_CHAT(purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT, id, account))
 #define purple_conversations_find_chat(pc, id)  PURPLE_CONV_CHAT(purple_find_chat(pc, id))
+#define purple_conversations_get_all            purple_get_conversations
 #define purple_conversation_get_connection      purple_conversation_get_gc
 #define purple_chat_conversation_get_id         purple_conv_chat_get_id
 #define purple_conversations_find_im_with_account(name, account)  \

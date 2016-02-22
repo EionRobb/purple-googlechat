@@ -222,6 +222,49 @@ void   device_status__free_unpacked
   assert(message->base.descriptor == &device_status__descriptor);
   protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
 }
+void   last_seen__init
+                     (LastSeen         *message)
+{
+  static LastSeen init_value = LAST_SEEN__INIT;
+  *message = init_value;
+}
+size_t last_seen__get_packed_size
+                     (const LastSeen *message)
+{
+  assert(message->base.descriptor == &last_seen__descriptor);
+  return protobuf_c_message_get_packed_size ((const ProtobufCMessage*)(message));
+}
+size_t last_seen__pack
+                     (const LastSeen *message,
+                      uint8_t       *out)
+{
+  assert(message->base.descriptor == &last_seen__descriptor);
+  return protobuf_c_message_pack ((const ProtobufCMessage*)message, out);
+}
+size_t last_seen__pack_to_buffer
+                     (const LastSeen *message,
+                      ProtobufCBuffer *buffer)
+{
+  assert(message->base.descriptor == &last_seen__descriptor);
+  return protobuf_c_message_pack_to_buffer ((const ProtobufCMessage*)message, buffer);
+}
+LastSeen *
+       last_seen__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data)
+{
+  return (LastSeen *)
+     protobuf_c_message_unpack (&last_seen__descriptor,
+                                allocator, len, data);
+}
+void   last_seen__free_unpacked
+                     (LastSeen *message,
+                      ProtobufCAllocator *allocator)
+{
+  assert(message->base.descriptor == &last_seen__descriptor);
+  protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
+}
 void   presence__init
                      (Presence         *message)
 {
@@ -5821,7 +5864,45 @@ const ProtobufCMessageDescriptor device_status__descriptor =
   (ProtobufCMessageInit) device_status__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
-static const ProtobufCFieldDescriptor presence__field_descriptors[4] =
+static const ProtobufCFieldDescriptor last_seen__field_descriptors[1] =
+{
+  {
+    "last_seen_timestamp",
+    1,
+    PROTOBUF_C_LABEL_REQUIRED,
+    PROTOBUF_C_TYPE_UINT64,
+    0,   /* quantifier_offset */
+    offsetof(LastSeen, last_seen_timestamp),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+};
+static const unsigned last_seen__field_indices_by_name[] = {
+  0,   /* field[0] = last_seen_timestamp */
+};
+static const ProtobufCIntRange last_seen__number_ranges[1 + 1] =
+{
+  { 1, 0 },
+  { 0, 1 }
+};
+const ProtobufCMessageDescriptor last_seen__descriptor =
+{
+  PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
+  "LastSeen",
+  "LastSeen",
+  "LastSeen",
+  "",
+  sizeof(LastSeen),
+  1,
+  last_seen__field_descriptors,
+  last_seen__field_indices_by_name,
+  1,  last_seen__number_ranges,
+  (ProtobufCMessageInit) last_seen__init,
+  NULL,NULL,NULL    /* reserved[123] */
+};
+static const ProtobufCFieldDescriptor presence__field_descriptors[5] =
 {
   {
     "reachable",
@@ -5871,10 +5952,23 @@ static const ProtobufCFieldDescriptor presence__field_descriptors[4] =
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
+  {
+    "last_seen",
+    10,
+    PROTOBUF_C_LABEL_OPTIONAL,
+    PROTOBUF_C_TYPE_MESSAGE,
+    0,   /* quantifier_offset */
+    offsetof(Presence, last_seen),
+    &last_seen__descriptor,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
 };
 static const unsigned presence__field_indices_by_name[] = {
   1,   /* field[1] = available */
   2,   /* field[2] = device_status */
+  4,   /* field[4] = last_seen */
   3,   /* field[3] = mood_setting */
   0,   /* field[0] = reachable */
 };
@@ -5883,7 +5977,7 @@ static const ProtobufCIntRange presence__number_ranges[3 + 1] =
   { 1, 0 },
   { 6, 2 },
   { 9, 3 },
-  { 0, 4 }
+  { 0, 5 }
 };
 const ProtobufCMessageDescriptor presence__descriptor =
 {
@@ -5893,7 +5987,7 @@ const ProtobufCMessageDescriptor presence__descriptor =
   "Presence",
   "",
   sizeof(Presence),
-  4,
+  5,
   presence__field_descriptors,
   presence__field_indices_by_name,
   3,  presence__number_ranges,
@@ -15413,19 +15507,27 @@ const ProtobufCEnumDescriptor rich_presence_type__descriptor =
   rich_presence_type__value_ranges,
   NULL,NULL,NULL,NULL   /* reserved[1234] */
 };
-const ProtobufCEnumValue field_mask__enum_values_by_number[3] =
+const ProtobufCEnumValue field_mask__enum_values_by_number[7] =
 {
   { "FIELD_MASK_REACHABLE", "FIELD_MASK__FIELD_MASK_REACHABLE", 1 },
   { "FIELD_MASK_AVAILABLE", "FIELD_MASK__FIELD_MASK_AVAILABLE", 2 },
+  { "FIELD_MASK_MOOD", "FIELD_MASK__FIELD_MASK_MOOD", 3 },
+  { "FIELD_MASK_LOCATION", "FIELD_MASK__FIELD_MASK_LOCATION", 4 },
+  { "FIELD_MASK_IN_CALL", "FIELD_MASK__FIELD_MASK_IN_CALL", 6 },
   { "FIELD_MASK_DEVICE", "FIELD_MASK__FIELD_MASK_DEVICE", 7 },
+  { "FIELD_MASK_LAST_SEEN", "FIELD_MASK__FIELD_MASK_LAST_SEEN", 10 },
 };
 static const ProtobufCIntRange field_mask__value_ranges[] = {
-{1, 0},{7, 2},{0, 3}
+{1, 0},{6, 4},{10, 6},{0, 7}
 };
-const ProtobufCEnumValueIndex field_mask__enum_values_by_name[3] =
+const ProtobufCEnumValueIndex field_mask__enum_values_by_name[7] =
 {
   { "FIELD_MASK_AVAILABLE", 1 },
-  { "FIELD_MASK_DEVICE", 2 },
+  { "FIELD_MASK_DEVICE", 5 },
+  { "FIELD_MASK_IN_CALL", 4 },
+  { "FIELD_MASK_LAST_SEEN", 6 },
+  { "FIELD_MASK_LOCATION", 3 },
+  { "FIELD_MASK_MOOD", 2 },
   { "FIELD_MASK_REACHABLE", 0 },
 };
 const ProtobufCEnumDescriptor field_mask__descriptor =
@@ -15435,11 +15537,11 @@ const ProtobufCEnumDescriptor field_mask__descriptor =
   "FieldMask",
   "FieldMask",
   "",
-  3,
+  7,
   field_mask__enum_values_by_number,
-  3,
+  7,
   field_mask__enum_values_by_name,
-  2,
+  3,
   field_mask__value_ranges,
   NULL,NULL,NULL,NULL   /* reserved[1234] */
 };

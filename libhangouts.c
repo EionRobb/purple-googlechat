@@ -220,22 +220,19 @@ hangouts_status_types(PurpleAccount *account)
 	GList *types = NULL;
 	PurpleStatusType *status;
 	
-	status = purple_status_type_new_full(PURPLE_STATUS_AVAILABLE, NULL, NULL, TRUE, TRUE, FALSE);
+	status = purple_status_type_new_with_attrs(PURPLE_STATUS_AVAILABLE, NULL, NULL, TRUE, TRUE, FALSE, "message", _("Mood"), purple_value_new(PURPLE_TYPE_STRING), NULL);
 	types = g_list_append(types, status);
 	
-	status = purple_status_type_new_full(PURPLE_STATUS_AWAY, NULL, NULL, FALSE, TRUE, FALSE);
+	status = purple_status_type_new_with_attrs(PURPLE_STATUS_AWAY, NULL, NULL, FALSE, TRUE, FALSE, "message", _("Mood"), purple_value_new(PURPLE_TYPE_STRING), NULL);
 	types = g_list_append(types, status);
 	
-	status = purple_status_type_new_full(PURPLE_STATUS_EXTENDED_AWAY, NULL, NULL, FALSE, FALSE, FALSE);
+	status = purple_status_type_new_with_attrs(PURPLE_STATUS_EXTENDED_AWAY, NULL, NULL, FALSE, FALSE, FALSE, "message", _("Mood"), purple_value_new(PURPLE_TYPE_STRING), NULL);
 	types = g_list_append(types, status);
 	
-	status = purple_status_type_new_full(PURPLE_STATUS_UNAVAILABLE, NULL, _("Do Not Disturb"), FALSE, TRUE, TRUE);
+	status = purple_status_type_new_with_attrs(PURPLE_STATUS_UNAVAILABLE, NULL, _("Do Not Disturb"), FALSE, TRUE, FALSE, "message", _("Mood"), purple_value_new(PURPLE_TYPE_STRING), NULL);
 	types = g_list_append(types, status);
 	
 	status = purple_status_type_new_full(PURPLE_STATUS_OFFLINE, NULL, NULL, TRUE, TRUE, FALSE);
-	types = g_list_append(types, status);
-	
-	status = purple_status_type_new_with_attrs(PURPLE_STATUS_MOOD, NULL, NULL, TRUE, TRUE, TRUE, "message", "Mood", purple_value_new(PURPLE_TYPE_STRING), NULL);
 	types = g_list_append(types, status);
 	
 	return types;

@@ -20,6 +20,7 @@ typedef struct _NotificationSettings NotificationSettings;
 typedef struct _ConversationId ConversationId;
 typedef struct _ParticipantId ParticipantId;
 typedef struct _DeviceStatus DeviceStatus;
+typedef struct _LastSeen LastSeen;
 typedef struct _Presence Presence;
 typedef struct _PresenceResult PresenceResult;
 typedef struct _ClientIdentifier ClientIdentifier;
@@ -412,7 +413,11 @@ typedef enum _RichPresenceType {
 typedef enum _FieldMask {
   FIELD_MASK__FIELD_MASK_REACHABLE = 1,
   FIELD_MASK__FIELD_MASK_AVAILABLE = 2,
-  FIELD_MASK__FIELD_MASK_DEVICE = 7
+  FIELD_MASK__FIELD_MASK_MOOD = 3,
+  FIELD_MASK__FIELD_MASK_LOCATION = 4,
+  FIELD_MASK__FIELD_MASK_IN_CALL = 6,
+  FIELD_MASK__FIELD_MASK_DEVICE = 7,
+  FIELD_MASK__FIELD_MASK_LAST_SEEN = 10
     PROTOBUF_C__FORCE_ENUM_TO_BE_INT_SIZE(FIELD_MASK)
 } FieldMask;
 typedef enum _DeleteType {
@@ -515,6 +520,16 @@ struct  _DeviceStatus
     , 0,0, 0,0, 0,0 }
 
 
+struct  _LastSeen
+{
+  ProtobufCMessage base;
+  uint64_t last_seen_timestamp;
+};
+#define LAST_SEEN__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&last_seen__descriptor) \
+    , 0 }
+
+
 struct  _Presence
 {
   ProtobufCMessage base;
@@ -524,10 +539,11 @@ struct  _Presence
   protobuf_c_boolean available;
   DeviceStatus *device_status;
   MoodSetting *mood_setting;
+  LastSeen *last_seen;
 };
 #define PRESENCE__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&presence__descriptor) \
-    , 0,0, 0,0, NULL, NULL }
+    , 0,0, 0,0, NULL, NULL, NULL }
 
 
 struct  _PresenceResult
@@ -2319,6 +2335,25 @@ DeviceStatus *
                       const uint8_t       *data);
 void   device_status__free_unpacked
                      (DeviceStatus *message,
+                      ProtobufCAllocator *allocator);
+/* LastSeen methods */
+void   last_seen__init
+                     (LastSeen         *message);
+size_t last_seen__get_packed_size
+                     (const LastSeen   *message);
+size_t last_seen__pack
+                     (const LastSeen   *message,
+                      uint8_t             *out);
+size_t last_seen__pack_to_buffer
+                     (const LastSeen   *message,
+                      ProtobufCBuffer     *buffer);
+LastSeen *
+       last_seen__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data);
+void   last_seen__free_unpacked
+                     (LastSeen *message,
                       ProtobufCAllocator *allocator);
 /* Presence methods */
 void   presence__init
@@ -4699,6 +4734,9 @@ typedef void (*ParticipantId_Closure)
 typedef void (*DeviceStatus_Closure)
                  (const DeviceStatus *message,
                   void *closure_data);
+typedef void (*LastSeen_Closure)
+                 (const LastSeen *message,
+                  void *closure_data);
 typedef void (*Presence_Closure)
                  (const Presence *message,
                   void *closure_data);
@@ -5128,6 +5166,7 @@ extern const ProtobufCMessageDescriptor notification_settings__descriptor;
 extern const ProtobufCMessageDescriptor conversation_id__descriptor;
 extern const ProtobufCMessageDescriptor participant_id__descriptor;
 extern const ProtobufCMessageDescriptor device_status__descriptor;
+extern const ProtobufCMessageDescriptor last_seen__descriptor;
 extern const ProtobufCMessageDescriptor presence__descriptor;
 extern const ProtobufCMessageDescriptor presence_result__descriptor;
 extern const ProtobufCMessageDescriptor client_identifier__descriptor;

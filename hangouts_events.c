@@ -224,24 +224,53 @@ hangouts_process_presence_result(HangoutsAccount *ha, PresenceResult *presence)
 	gboolean reachable = FALSE;
 	gboolean available = FALSE;
 	
-	if (presence->presence->reachable) {
-		reachable = TRUE;
-	}
-	if (presence->presence->available) {
-		available = TRUE;
-	}
-	
-	if (reachable && available) {
-		status_id = purple_primitive_get_id_from_type(PURPLE_STATUS_AVAILABLE);
-	} else if (reachable) {
-		status_id = purple_primitive_get_id_from_type(PURPLE_STATUS_AWAY);
-	} else if (available) {
-		status_id = purple_primitive_get_id_from_type(PURPLE_STATUS_EXTENDED_AWAY);
+	if (presence->presence->has_reachable || presence->presence->has_available) {
+		if (presence->presence->reachable) {
+			reachable = TRUE;
+		}
+		if (presence->presence->available) {
+			available = TRUE;
+		}
+		
+		if (reachable && available) {
+			status_id = purple_primitive_get_id_from_type(PURPLE_STATUS_AVAILABLE);
+		} else if (reachable) {
+			status_id = purple_primitive_get_id_from_type(PURPLE_STATUS_AWAY);
+		} else if (available) {
+			status_id = purple_primitive_get_id_from_type(PURPLE_STATUS_EXTENDED_AWAY);
+		} else {
+			status_id = purple_primitive_get_id_from_type(PURPLE_STATUS_OFFLINE);
+		}
 	} else {
-		status_id = purple_primitive_get_id_from_type(PURPLE_STATUS_OFFLINE);
+		PurpleBuddy *buddy = purple_blist_find_buddy(ha->account, gaia_id);
+		
+		if (buddy == NULL) {
+			return;
+		}
+		status_id = purple_status_get_id(purple_presence_get_active_status(purple_buddy_get_presence(buddy)));
 	}
 	
-	purple_protocol_got_user_status(ha->account, gaia_id, status_id, NULL);
+	if (presence->presence->mood_setting) {
+		MoodMessage *mood_message = presence->presence->mood_setting->mood_message;
+		MoodContent *mood_content = mood_message->mood_content;
+		size_t n_segments = mood_content->n_segment;
+		Segment **segments = mood_content->segment;
+		GString *message = g_string_new(NULL);
+		guint i;
+
+		for (i = 0; i < n_segments; i++) {
+			Segment *segment = segments[i];
+			if (segment->type == SEGMENT_TYPE__SEGMENT_TYPE_TEXT) {
+				g_string_append(message, segment->text);
+				g_string_append_c(message, ' ');
+			}
+		}
+		purple_protocol_got_user_status(ha->account, gaia_id, status_id, "message", message->str, NULL);
+		g_string_free(message, TRUE);
+		
+	} else {
+		purple_protocol_got_user_status(ha->account, gaia_id, status_id, NULL);
+	}
 }
 
 void

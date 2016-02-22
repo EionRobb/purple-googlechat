@@ -223,6 +223,7 @@ hangouts_process_presence_result(HangoutsAccount *ha, PresenceResult *presence)
 	const gchar *status_id;
 	gboolean reachable = FALSE;
 	gboolean available = FALSE;
+	gchar *message = NULL;
 	
 	if (presence->presence->has_reachable || presence->presence->has_available) {
 		if (presence->presence->reachable) {
@@ -253,24 +254,34 @@ hangouts_process_presence_result(HangoutsAccount *ha, PresenceResult *presence)
 	if (presence->presence->mood_setting) {
 		MoodMessage *mood_message = presence->presence->mood_setting->mood_message;
 		MoodContent *mood_content = mood_message->mood_content;
-		size_t n_segments = mood_content->n_segment;
-		Segment **segments = mood_content->segment;
-		GString *message = g_string_new(NULL);
+		size_t n_segments;
+		Segment **segments;
+		GString *message_str;
 		guint i;
 
-		for (i = 0; i < n_segments; i++) {
-			Segment *segment = segments[i];
-			if (segment->type == SEGMENT_TYPE__SEGMENT_TYPE_TEXT) {
-				g_string_append(message, segment->text);
-				g_string_append_c(message, ' ');
+		if (mood_content != NULL && mood_content->n_segment) {
+			n_segments = mood_content->n_segment;
+			segments = mood_content->segment;
+			message_str = g_string_new(NULL);
+			
+			for (i = 0; i < n_segments; i++) {
+				Segment *segment = segments[i];
+				if (segment->type == SEGMENT_TYPE__SEGMENT_TYPE_TEXT) {
+					g_string_append(message_str, segment->text);
+					g_string_append_c(message_str, ' ');
+				}
 			}
+			message = g_string_free(message_str, FALSE);
 		}
-		purple_protocol_got_user_status(ha->account, gaia_id, status_id, "message", message->str, NULL);
-		g_string_free(message, TRUE);
-		
+	}
+	
+	if (message != NULL) {
+		purple_protocol_got_user_status(ha->account, gaia_id, status_id, "message", message, NULL);
 	} else {
 		purple_protocol_got_user_status(ha->account, gaia_id, status_id, NULL);
 	}
+	
+	g_free(message);
 }
 
 void

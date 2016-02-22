@@ -238,6 +238,17 @@ hangouts_status_types(PurpleAccount *account)
 	return types;
 }
 
+static gchar *
+hangouts_status_text(PurpleBuddy *buddy)
+{
+	const gchar *message = purple_status_get_attr_string(purple_presence_get_active_status(purple_buddy_get_presence(buddy)), "message");
+	
+	if (message == NULL) {
+		return NULL;
+	}
+	
+	return g_markup_printf_escaped("%s", message);
+}
 
 
 
@@ -314,6 +325,7 @@ static void
 hangouts_protocol_client_iface_init(PurpleProtocolClientIface *prpl_info)
 {
 	prpl_info->blist_node_menu = hangouts_node_menu;
+	prpl_info->status_text = hangouts_status_text;
 }
 
 static void
@@ -489,6 +501,7 @@ init_plugin(PurplePlugin *plugin)
 	prpl_info->close = hangouts_close;
 	prpl_info->status_types = hangouts_status_types;
 	prpl_info->list_icon = hangouts_list_icon;
+	prpl_info->status_text = hangouts_status_text;
 	
 	prpl_info->set_status = hangouts_set_status;
 	prpl_info->set_idle = hangouts_set_idle;

@@ -110,6 +110,8 @@ purple_message_destroy(PurpleMessage *message)
 #define PURPLE_IM_TYPING	PURPLE_TYPING
 #define PURPLE_IM_TYPED		PURPLE_TYPED
 
+#define purple_protocol_get_id  purple_plugin_get_id
+
 #define purple_protocol_got_user_status		purple_prpl_got_user_status
 
 #define purple_account_set_password(account, password, dummy1, dummy2) \

@@ -1173,14 +1173,19 @@ hangouts_mark_conversation_seen_timeout(gpointer convpointer)
 	gint64 *last_read_timestamp_ptr, last_read_timestamp = 0;
 	gint64 *last_event_timestamp_ptr, last_event_timestamp = 0;
 	
-	if (!PURPLE_CONNECTION_IS_CONNECTED(pc))
-		return FALSE;
 	if (!PURPLE_CONVERSATION_IS_VALID(conv))
+		return FALSE;
+	if (!PURPLE_CONNECTION_IS_CONNECTED(pc))
 		return FALSE;
 	
 	purple_conversation_set_data(conv, "mark_seen_timeout", NULL);
 	
 	ha = purple_connection_get_protocol_data(pc);
+	
+	if (!purple_presence_is_status_primitive_active(purple_account_get_presence(ha->account), PURPLE_STATUS_AVAILABLE)) {
+		// We're not here
+		return FALSE;
+	}
 	
 	last_read_timestamp_ptr = (gint64 *)purple_conversation_get_data(conv, "last_read_timestamp");
 	if (last_read_timestamp_ptr != NULL) {
@@ -1234,6 +1239,9 @@ hangouts_mark_conversation_seen(PurpleConversation *conv, PurpleConversationUpda
 	if (!PURPLE_CONNECTION_IS_CONNECTED(pc))
 		return;
 	
+	if (g_strcmp0(purple_protocol_get_id(purple_connection_get_protocol(pc)), HANGOUTS_PLUGIN_ID))
+		return;
+	
 	if (type == PURPLE_CONVERSATION_UPDATE_UNSEEN) {
 		gint mark_seen_timeout = GPOINTER_TO_INT(purple_conversation_get_data(conv, "mark_seen_timeout"));
 		
@@ -1245,6 +1253,8 @@ hangouts_mark_conversation_seen(PurpleConversation *conv, PurpleConversationUpda
 		
 		purple_conversation_set_data(conv, "mark_seen_timeout", GINT_TO_POINTER(mark_seen_timeout));
 	}
+	
+	hangouts_set_active_client(pc);
 }
 
 void

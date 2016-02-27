@@ -253,7 +253,7 @@ hangouts_process_presence_result(HangoutsAccount *ha, PresenceResult *presence)
 	
 	if (presence->presence->mood_setting) {
 		MoodMessage *mood_message = presence->presence->mood_setting->mood_message;
-		MoodContent *mood_content = mood_message->mood_content;
+		MoodContent *mood_content = mood_message ? mood_message->mood_content : NULL;
 		size_t n_segments;
 		Segment **segments;
 		GString *message_str;

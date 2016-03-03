@@ -476,6 +476,7 @@ enum InvitationStatus {
   INVITATION_STATUS_UNKNOWN = 0;
   INVITATION_STATUS_PENDING = 1;
   INVITATION_STATUS_ACCEPTED = 2;
+  INVITATION_STATUS_NEEDED = 3;
 }
 
 message ConversationParticipantData {

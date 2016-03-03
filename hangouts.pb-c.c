@@ -15037,18 +15037,20 @@ const ProtobufCEnumDescriptor participant_type__descriptor =
   participant_type__value_ranges,
   NULL,NULL,NULL,NULL   /* reserved[1234] */
 };
-const ProtobufCEnumValue invitation_status__enum_values_by_number[3] =
+const ProtobufCEnumValue invitation_status__enum_values_by_number[4] =
 {
   { "INVITATION_STATUS_UNKNOWN", "INVITATION_STATUS__INVITATION_STATUS_UNKNOWN", 0 },
   { "INVITATION_STATUS_PENDING", "INVITATION_STATUS__INVITATION_STATUS_PENDING", 1 },
   { "INVITATION_STATUS_ACCEPTED", "INVITATION_STATUS__INVITATION_STATUS_ACCEPTED", 2 },
+  { "INVITATION_STATUS_NEEDED", "INVITATION_STATUS__INVITATION_STATUS_NEEDED", 3 },
 };
 static const ProtobufCIntRange invitation_status__value_ranges[] = {
-{0, 0},{0, 3}
+{0, 0},{0, 4}
 };
-const ProtobufCEnumValueIndex invitation_status__enum_values_by_name[3] =
+const ProtobufCEnumValueIndex invitation_status__enum_values_by_name[4] =
 {
   { "INVITATION_STATUS_ACCEPTED", 2 },
+  { "INVITATION_STATUS_NEEDED", 3 },
   { "INVITATION_STATUS_PENDING", 1 },
   { "INVITATION_STATUS_UNKNOWN", 0 },
 };
@@ -15059,9 +15061,9 @@ const ProtobufCEnumDescriptor invitation_status__descriptor =
   "InvitationStatus",
   "InvitationStatus",
   "",
-  3,
+  4,
   invitation_status__enum_values_by_number,
-  3,
+  4,
   invitation_status__enum_values_by_name,
   1,
   invitation_status__value_ranges,

@@ -158,6 +158,57 @@ hangouts_get_users_presence(HangoutsAccount *ha, GList *user_ids)
 	g_free(request.field_mask);
 }
 
+
+static void
+hangouts_got_users_information(HangoutsAccount *ha, GetEntityByIdResponse *response, gpointer user_data)
+{
+	guint i;
+	
+	for (i = 0; i < response->n_entity; i++) {
+		Entity *entity = response->entity[i];
+		const gchar *display_name = entity && entity->properties ? entity->properties->display_name : NULL;
+		const gchar *gaia_id = entity && entity->id ? entity->id->gaia_id : NULL;
+		
+		if (gaia_id != NULL && display_name != NULL) {
+			purple_serv_got_alias(ha->pc, gaia_id, display_name);
+		}
+	}
+}
+
+void
+hangouts_get_users_information(HangoutsAccount *ha, GList *user_ids)
+{
+	GetEntityByIdRequest request;
+	size_t n_batch_lookup_spec;
+	EntityLookupSpec **batch_lookup_spec;
+	GList *cur;
+	guint i;
+	
+	get_entity_by_id_request__init(&request);
+	request.request_header = hangouts_get_request_header(ha);
+	
+	n_batch_lookup_spec = g_list_length(user_ids);
+	batch_lookup_spec = g_new0(EntityLookupSpec *, n_batch_lookup_spec);
+	
+	for (i = 0, cur = user_ids; cur && cur->data && i < n_batch_lookup_spec; (cur = cur->next), i++) {
+		batch_lookup_spec[i] = g_new0(EntityLookupSpec, 1);
+		entity_lookup_spec__init(batch_lookup_spec[i]);
+		
+		batch_lookup_spec[i]->gaia_id = (gchar *) cur->data;
+	}
+	
+	request.batch_lookup_spec = batch_lookup_spec;
+	request.n_batch_lookup_spec = n_batch_lookup_spec;
+	
+	hangouts_pblite_get_entity_by_id(ha, &request, hangouts_got_users_information, NULL);
+	
+	hangouts_request_header_free(request.request_header);
+	for (i = 0; i < n_batch_lookup_spec; i++) {
+		g_free(batch_lookup_spec[i]);
+	}
+	g_free(batch_lookup_spec);
+}
+
 static void
 hangouts_got_conversation_events(HangoutsAccount *ha, GetConversationResponse *response, gpointer user_data)
 {
@@ -478,6 +529,7 @@ hangouts_got_conversation_list(HangoutsAccount *ha, SyncRecentConversationsRespo
 	//todo mark the account as connected
 	
 	hangouts_get_users_presence(ha, g_hash_table_get_keys(unique_user_ids));
+	hangouts_get_users_information(ha, g_hash_table_get_keys(unique_user_ids));
 	g_hash_table_unref(unique_user_ids);
 }
 

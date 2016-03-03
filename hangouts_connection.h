@@ -64,5 +64,6 @@ HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(add_user, AddUser, "conversations/adduser");
 HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(remove_user, RemoveUser, "conversations/removeuser");
 HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(update_watermark, UpdateWatermark, "conversations/updatewatermark");
 HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(set_active_client, SetActiveClient, "clients/setactiveclient");
+HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(get_entity_by_id, GetEntityById, "contacts/getentitybyid");
 
 #endif /*_HANGOUTS_CONNECTION_H_*/

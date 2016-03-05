@@ -10,6 +10,7 @@
 
 #include "ciphers/sha1hash.h"
 #include "debug.h"
+#include "request.h"
 
 #include "hangouts_pblite.h"
 #include "hangouts_json.h"
@@ -621,3 +622,132 @@ hangouts_set_active_client(PurpleConnection *pc)
 	return TRUE;
 }
 
+
+void
+hangouts_search_results_add_buddy(PurpleConnection *pc, GList *row, void *user_data)
+{
+	PurpleAccount *account = purple_connection_get_account(pc);
+
+	if (!purple_blist_find_buddy(account, g_list_nth_data(row, 0)))
+		purple_blist_request_add_buddy(account, g_list_nth_data(row, 0), "Hangouts", g_list_nth_data(row, 1));
+}
+
+void
+hangouts_search_users_text_cb(PurpleHttpConnection *connection, PurpleHttpResponse *response, gpointer user_data)
+{
+	HangoutsAccount *ha = user_data;
+	const gchar *response_data;
+	size_t response_size;
+	JsonArray *resultsarray;
+	JsonObject *node;
+	gint index, length;
+	gchar *search_term;
+	
+	PurpleNotifySearchResults *results;
+	PurpleNotifySearchColumn *column;
+	
+	if (purple_http_response_get_error(response) != NULL) {
+		purple_notify_error(ha->pc, _("Search Error"), _("There was an error searching for the user"), purple_http_response_get_error(response), purple_request_cpar_from_connection(ha->pc));
+		g_dataset_destroy(connection);
+		return;
+	}
+	
+	response_data = purple_http_response_get_data(response, &response_size);
+	node = json_decode_object(response_data, response_size);
+	
+	search_term = g_dataset_get_data(connection, "search_term");
+	resultsarray = json_object_get_array_member(node, "results");
+	length = json_array_get_length(resultsarray);
+	
+	if (length == 0) {
+		gchar *primary_text = g_strdup_printf(_("Your search for the user \"%s\" returned no results"), search_term);
+		purple_notify_warning(ha->pc, _("No users found"), primary_text, "", purple_request_cpar_from_connection(ha->pc));
+		g_free(primary_text);
+		
+		g_dataset_destroy(connection);
+		json_object_unref(node);
+		return;
+	}
+	
+	results = purple_notify_searchresults_new();
+	if (results == NULL)
+	{
+		g_dataset_destroy(connection);
+		json_object_unref(node);
+		return;
+	}
+		
+	/* columns: Friend ID, Name, Network */
+	column = purple_notify_searchresults_column_new(_("ID"));
+	purple_notify_searchresults_column_add(results, column);
+	column = purple_notify_searchresults_column_new(_("Display Name"));
+	purple_notify_searchresults_column_add(results, column);
+	
+	purple_notify_searchresults_button_add(results, PURPLE_NOTIFY_BUTTON_ADD, hangouts_search_results_add_buddy);
+	
+	for(index = 0; index < length; index++)
+	{
+		JsonObject *result = json_array_get_object_element(resultsarray, index);
+		// Maybe this is better using hangouts_json_path_query_string() ?
+		const gchar *id = json_object_get_string_member(json_object_get_object_member(result, "person"), "personId");
+		const gchar *displayname = json_object_get_string_member(json_object_get_object_member(result, "name"), "displayName");
+		GList *row = NULL;
+		
+		row = g_list_append(row, g_strdup(id));
+		row = g_list_append(row, g_strdup(displayname));
+		
+		purple_notify_searchresults_row_add(results, row);
+	}
+	
+	purple_notify_searchresults(ha->pc, NULL, search_term, NULL, results, NULL, NULL);
+	
+	g_dataset_destroy(connection);
+	json_object_unref(node);
+}
+
+void
+hangouts_search_users_text(gpointer user_data, const gchar *text)
+{
+	PurpleHttpRequest *request;
+	HangoutsAccount *ha = user_data;
+	const gchar *url = "https://people-pa.clients6.google.com/v2/people/autocomplete";
+	GString *postdata = g_string_new(NULL);
+	PurpleHttpConnection *connection;
+	
+	request = purple_http_request_new(NULL);
+	purple_http_request_set_cookie_jar(request, ha->cookie_jar);
+	purple_http_request_set_url(request, url);
+	purple_http_request_set_method(request, "POST");
+	purple_http_request_header_set(request, "Content-Type", "application/x-www-form-urlencoded");
+	
+	hangouts_set_auth_headers(ha, request);
+	
+	g_string_append_printf(postdata, "query=%s&", purple_url_encode(text));
+	g_string_append(postdata, "client=HANGOUTS_WITH_DATA&");
+	g_string_append(postdata, "pageSize=20&");
+	g_string_append_printf(postdata, "key=%s&", purple_url_encode(GOOGLE_GPLUS_KEY));
+	
+	purple_http_request_set_contents(request, postdata->str, postdata->len);
+
+	connection = purple_http_request(ha->pc, request, hangouts_search_users_text_cb, ha);
+	g_dataset_set_data_full(connection, "search_term", g_strdup(text), g_free);
+	
+	g_string_free(postdata, TRUE);
+}
+
+void
+hangouts_search_users(PurpleProtocolAction *action)
+{
+	PurpleConnection *pc = purple_protocol_action_get_connection(action);;
+	HangoutsAccount *ha = purple_connection_get_protocol_data(pc);
+	
+	purple_request_input(pc, _("Search for friends..."),
+					   _("Search for friends..."),
+					   NULL,
+					   NULL, FALSE, FALSE, NULL,
+					   _("_Search"), G_CALLBACK(hangouts_search_users_text),
+					   _("_Cancel"), NULL,
+					   purple_request_cpar_from_connection(pc),
+					   ha);
+
+}

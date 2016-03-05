@@ -26,6 +26,7 @@ void hangouts_add_channel_services(HangoutsAccount *ha);
 
 void hangouts_default_response_dump(HangoutsAccount *ha, ProtobufCMessage *response, gpointer user_data);
 gboolean hangouts_set_active_client(PurpleConnection *pc);
+void hangouts_search_users(PurpleProtocolAction *action);
 
 typedef enum {
 	HANGOUTS_CONTENT_TYPE_NONE = 0,

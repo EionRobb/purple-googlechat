@@ -100,6 +100,24 @@ hangouts_node_menu(PurpleBlistNode *node)
 	return m;
 }
 
+static GList *
+hangouts_actions(
+#if !PURPLE_VERSION_CHECK(3, 0, 0)
+PurplePlugin *plugin, gpointer context
+#else
+PurpleConnection *pc
+#endif
+)
+{
+	GList *m = NULL;
+	PurpleProtocolAction *act;
+
+	act = purple_protocol_action_new(_("Search for friends..."), hangouts_search_users);
+	m = g_list_append(m, act);
+
+	return m;
+}
+
 static void
 hangouts_authcode_input_cb(gpointer user_data, const gchar *auth_code)
 {
@@ -324,6 +342,7 @@ hangouts_protocol_class_init(PurpleProtocolClass *prpl_info)
 static void
 hangouts_protocol_client_iface_init(PurpleProtocolClientIface *prpl_info)
 {
+	prpl_info->get_actions = hangouts_actions;
 	prpl_info->blist_node_menu = hangouts_node_menu;
 	prpl_info->status_text = hangouts_status_text;
 }
@@ -524,6 +543,8 @@ init_plugin(PurplePlugin *plugin)
 	#if PURPLE_MINOR_VERSION >= 8
 		//prpl_info->add_buddy_with_invite = skypeweb_add_buddy_with_invite;
 	#endif
+	
+	info->actions = hangouts_actions;
 }
 	
 PURPLE_INIT_PLUGIN(hangouts, init_plugin, info);

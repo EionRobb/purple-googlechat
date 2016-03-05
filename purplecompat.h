@@ -16,6 +16,8 @@
 
 #define PURPLE_TYPE_STRING  G_TYPE_STRING
 
+#define purple_protocol_action_get_connection(action)  ((action)->connection)
+
 #else
 
 #include "connection.h"
@@ -110,6 +112,18 @@ purple_message_destroy(PurpleMessage *message)
 #define PURPLE_IM_TYPING	PURPLE_TYPING
 #define PURPLE_IM_TYPED		PURPLE_TYPED
 
+#undef purple_notify_error
+#define purple_notify_error(handle, title, primary, secondary, cpar)   \
+	purple_notify_message((handle), PURPLE_NOTIFY_MSG_ERROR, (title), \
+						(primary), (secondary), NULL, NULL)
+#undef purple_notify_warning
+#define purple_notify_warning(handle, title, primary, secondary, cpar)   \
+	purple_notify_message((handle), PURPLE_NOTIFY_MSG_WARNING, (title), \
+						(primary), (secondary), NULL, NULL)
+
+#define PurpleProtocolAction  PurplePluginAction
+#define purple_protocol_action_get_connection(action)  ((PurpleConnection *) (action)->context)
+#define purple_protocol_action_new  purple_plugin_action_new
 #define purple_protocol_get_id  purple_plugin_get_id
 
 #define purple_protocol_got_user_status		purple_prpl_got_user_status

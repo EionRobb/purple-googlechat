@@ -1389,3 +1389,6 @@ hangouts_set_status(PurpleAccount *account, PurpleStatus *status)
 	}
 }
 
+
+
+

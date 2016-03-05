@@ -289,7 +289,8 @@ typedef enum _DeliveryMediumType {
 } DeliveryMediumType;
 typedef enum _ParticipantType {
   PARTICIPANT_TYPE__PARTICIPANT_TYPE_UNKNOWN = 0,
-  PARTICIPANT_TYPE__PARTICIPANT_TYPE_GAIA = 2
+  PARTICIPANT_TYPE__PARTICIPANT_TYPE_GAIA = 2,
+  PARTICIPANT_TYPE__PARTICIPANT_TYPE_OFF_NETWORK_PHONE = 3
     PROTOBUF_C__FORCE_ENUM_TO_BE_INT_SIZE(PARTICIPANT_TYPE)
 } ParticipantType;
 typedef enum _InvitationStatus {
@@ -306,7 +307,8 @@ typedef enum _ForceHistory {
 } ForceHistory;
 typedef enum _NetworkType {
   NETWORK_TYPE__NETWORK_TYPE_UNKNOWN = 0,
-  NETWORK_TYPE__NETWORK_TYPE_BABEL = 1
+  NETWORK_TYPE__NETWORK_TYPE_BABEL = 1,
+  NETWORK_TYPE__NETWORK_TYPE_PHONE = 2
     PROTOBUF_C__FORCE_ENUM_TO_BE_INT_SIZE(NETWORK_TYPE)
 } NetworkType;
 typedef enum _BlockState {
@@ -599,8 +601,8 @@ struct  _Formatting
   ProtobufCMessage base;
   protobuf_c_boolean has_bold;
   protobuf_c_boolean bold;
-  protobuf_c_boolean has_italic;
-  protobuf_c_boolean italic;
+  protobuf_c_boolean has_italics;
+  protobuf_c_boolean italics;
   protobuf_c_boolean has_strikethrough;
   protobuf_c_boolean strikethrough;
   protobuf_c_boolean has_underline;
@@ -839,11 +841,11 @@ struct  _Event
   OTRModification *otr_modification;
   protobuf_c_boolean has_advances_sort_timestamp;
   protobuf_c_boolean advances_sort_timestamp;
-  protobuf_c_boolean has_otr_status;
-  OffTheRecordStatus otr_status;
+  protobuf_c_boolean has_event_otr;
+  OffTheRecordStatus event_otr;
   protobuf_c_boolean has_persisted;
   protobuf_c_boolean persisted;
-  DeliveryMedium *medium_type;
+  DeliveryMedium *delivery_medium;
   protobuf_c_boolean has_event_type;
   EventType event_type;
   protobuf_c_boolean has_event_version;
@@ -872,7 +874,7 @@ struct  _DeliveryMedium
   ProtobufCMessage base;
   protobuf_c_boolean has_medium_type;
   DeliveryMediumType medium_type;
-  Phone *phone;
+  PhoneNumber *self_phone;
 };
 #define DELIVERY_MEDIUM__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&delivery_medium__descriptor) \
@@ -885,10 +887,12 @@ struct  _DeliveryMediumOption
   DeliveryMedium *delivery_medium;
   protobuf_c_boolean has_current_default;
   protobuf_c_boolean current_default;
+  protobuf_c_boolean has_primary;
+  protobuf_c_boolean primary;
 };
 #define DELIVERY_MEDIUM_OPTION__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&delivery_medium_option__descriptor) \
-    , NULL, 0,0 }
+    , NULL, 0,0, 0,0 }
 
 
 struct  _UserConversationState
@@ -924,6 +928,7 @@ struct  _ConversationParticipantData
   char *fallback_name;
   protobuf_c_boolean has_invitation_status;
   InvitationStatus invitation_status;
+  PhoneNumber *phone_number;
   protobuf_c_boolean has_participant_type;
   ParticipantType participant_type;
   protobuf_c_boolean has_new_invitation_status;
@@ -931,7 +936,7 @@ struct  _ConversationParticipantData
 };
 #define CONVERSATION_PARTICIPANT_DATA__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&conversation_participant_data__descriptor) \
-    , NULL, NULL, 0,0, 0,0, 0,0 }
+    , NULL, NULL, 0,0, NULL, 0,0, 0,0 }
 
 
 struct  _Conversation
@@ -956,14 +961,18 @@ struct  _Conversation
   ParticipantId **current_participant;
   size_t n_participant_data;
   ConversationParticipantData **participant_data;
+  protobuf_c_boolean has_fork_on_external_invite;
+  protobuf_c_boolean fork_on_external_invite;
   size_t n_network_type;
   NetworkType *network_type;
   protobuf_c_boolean has_force_history_state;
   ForceHistory force_history_state;
+  protobuf_c_boolean has_is_group_link_sharing_enabled;
+  protobuf_c_boolean is_group_link_sharing_enabled;
 };
 #define CONVERSATION__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&conversation__descriptor) \
-    , NULL, 0,0, NULL, NULL, 0,NULL, 0,0, 0,0, 0,0, 0,0, 0,NULL, 0,NULL, 0,NULL, 0,0 }
+    , NULL, 0,0, NULL, NULL, 0,NULL, 0,0, 0,0, 0,0, 0,0, 0,NULL, 0,NULL, 0,0, 0,NULL, 0,0, 0,0 }
 
 
 struct  _EasterEgg
@@ -1350,7 +1359,7 @@ struct  _PhoneData
 struct  _Phone
 {
   ProtobufCMessage base;
-  PhoneNumber *phone_number;
+  char *phone_number;
   protobuf_c_boolean has_google_voice;
   protobuf_c_boolean google_voice;
   protobuf_c_boolean has_verification_status;

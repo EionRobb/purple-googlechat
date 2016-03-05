@@ -6226,12 +6226,12 @@ static const ProtobufCFieldDescriptor formatting__field_descriptors[4] =
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
-    "italic",
+    "italics",
     2,
     PROTOBUF_C_LABEL_OPTIONAL,
     PROTOBUF_C_TYPE_BOOL,
-    offsetof(Formatting, has_italic),
-    offsetof(Formatting, italic),
+    offsetof(Formatting, has_italics),
+    offsetof(Formatting, italics),
     NULL,
     NULL,
     0,             /* flags */
@@ -6264,7 +6264,7 @@ static const ProtobufCFieldDescriptor formatting__field_descriptors[4] =
 };
 static const unsigned formatting__field_indices_by_name[] = {
   0,   /* field[0] = bold */
-  1,   /* field[1] = italic */
+  1,   /* field[1] = italics */
   2,   /* field[2] = strikethrough */
   3,   /* field[3] = underline */
 };
@@ -7473,12 +7473,12 @@ static const ProtobufCFieldDescriptor event__field_descriptors[19] =
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
-    "otr_status",
+    "event_otr",
     16,
     PROTOBUF_C_LABEL_OPTIONAL,
     PROTOBUF_C_TYPE_ENUM,
-    offsetof(Event, has_otr_status),
-    offsetof(Event, otr_status),
+    offsetof(Event, has_event_otr),
+    offsetof(Event, event_otr),
     &off_the_record_status__descriptor,
     NULL,
     0,             /* flags */
@@ -7497,12 +7497,12 @@ static const ProtobufCFieldDescriptor event__field_descriptors[19] =
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
-    "medium_type",
+    "delivery_medium",
     20,
     PROTOBUF_C_LABEL_OPTIONAL,
     PROTOBUF_C_TYPE_MESSAGE,
     0,   /* quantifier_offset */
-    offsetof(Event, medium_type),
+    offsetof(Event, delivery_medium),
     &delivery_medium__descriptor,
     NULL,
     0,             /* flags */
@@ -7550,16 +7550,16 @@ static const unsigned event__field_indices_by_name[] = {
   5,   /* field[5] = chat_message */
   0,   /* field[0] = conversation_id */
   7,   /* field[7] = conversation_rename */
+  15,   /* field[15] = delivery_medium */
   9,   /* field[9] = event_id */
+  13,   /* field[13] = event_otr */
   16,   /* field[16] = event_type */
   17,   /* field[17] = event_version */
   10,   /* field[10] = expiration_timestamp */
   8,   /* field[8] = hangout_event */
   18,   /* field[18] = hash_modifier */
-  15,   /* field[15] = medium_type */
   6,   /* field[6] = membership_change */
   11,   /* field[11] = otr_modification */
-  13,   /* field[13] = otr_status */
   14,   /* field[14] = persisted */
   3,   /* field[3] = self_event_state */
   1,   /* field[1] = sender_id */
@@ -7657,13 +7657,13 @@ static const ProtobufCFieldDescriptor delivery_medium__field_descriptors[2] =
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
-    "phone",
+    "self_phone",
     2,
     PROTOBUF_C_LABEL_OPTIONAL,
     PROTOBUF_C_TYPE_MESSAGE,
     0,   /* quantifier_offset */
-    offsetof(DeliveryMedium, phone),
-    &phone__descriptor,
+    offsetof(DeliveryMedium, self_phone),
+    &phone_number__descriptor,
     NULL,
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
@@ -7671,7 +7671,7 @@ static const ProtobufCFieldDescriptor delivery_medium__field_descriptors[2] =
 };
 static const unsigned delivery_medium__field_indices_by_name[] = {
   0,   /* field[0] = medium_type */
-  1,   /* field[1] = phone */
+  1,   /* field[1] = self_phone */
 };
 static const ProtobufCIntRange delivery_medium__number_ranges[1 + 1] =
 {
@@ -7693,7 +7693,7 @@ const ProtobufCMessageDescriptor delivery_medium__descriptor =
   (ProtobufCMessageInit) delivery_medium__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
-static const ProtobufCFieldDescriptor delivery_medium_option__field_descriptors[2] =
+static const ProtobufCFieldDescriptor delivery_medium_option__field_descriptors[3] =
 {
   {
     "delivery_medium",
@@ -7719,15 +7719,28 @@ static const ProtobufCFieldDescriptor delivery_medium_option__field_descriptors[
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
+  {
+    "primary",
+    3,
+    PROTOBUF_C_LABEL_OPTIONAL,
+    PROTOBUF_C_TYPE_BOOL,
+    offsetof(DeliveryMediumOption, has_primary),
+    offsetof(DeliveryMediumOption, primary),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
 };
 static const unsigned delivery_medium_option__field_indices_by_name[] = {
   1,   /* field[1] = current_default */
   0,   /* field[0] = delivery_medium */
+  2,   /* field[2] = primary */
 };
 static const ProtobufCIntRange delivery_medium_option__number_ranges[1 + 1] =
 {
   { 1, 0 },
-  { 0, 2 }
+  { 0, 3 }
 };
 const ProtobufCMessageDescriptor delivery_medium_option__descriptor =
 {
@@ -7737,7 +7750,7 @@ const ProtobufCMessageDescriptor delivery_medium_option__descriptor =
   "DeliveryMediumOption",
   "",
   sizeof(DeliveryMediumOption),
-  2,
+  3,
   delivery_medium_option__field_descriptors,
   delivery_medium_option__field_indices_by_name,
   1,  delivery_medium_option__number_ranges,
@@ -7901,7 +7914,7 @@ const ProtobufCMessageDescriptor user_conversation_state__descriptor =
   (ProtobufCMessageInit) user_conversation_state__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
-static const ProtobufCFieldDescriptor conversation_participant_data__field_descriptors[5] =
+static const ProtobufCFieldDescriptor conversation_participant_data__field_descriptors[6] =
 {
   {
     "id",
@@ -7940,6 +7953,18 @@ static const ProtobufCFieldDescriptor conversation_participant_data__field_descr
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
+    "phone_number",
+    4,
+    PROTOBUF_C_LABEL_OPTIONAL,
+    PROTOBUF_C_TYPE_MESSAGE,
+    0,   /* quantifier_offset */
+    offsetof(ConversationParticipantData, phone_number),
+    &phone_number__descriptor,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
     "participant_type",
     5,
     PROTOBUF_C_LABEL_OPTIONAL,
@@ -7968,14 +7993,14 @@ static const unsigned conversation_participant_data__field_indices_by_name[] = {
   1,   /* field[1] = fallback_name */
   0,   /* field[0] = id */
   2,   /* field[2] = invitation_status */
-  4,   /* field[4] = new_invitation_status */
-  3,   /* field[3] = participant_type */
+  5,   /* field[5] = new_invitation_status */
+  4,   /* field[4] = participant_type */
+  3,   /* field[3] = phone_number */
 };
-static const ProtobufCIntRange conversation_participant_data__number_ranges[2 + 1] =
+static const ProtobufCIntRange conversation_participant_data__number_ranges[1 + 1] =
 {
   { 1, 0 },
-  { 5, 3 },
-  { 0, 5 }
+  { 0, 6 }
 };
 const ProtobufCMessageDescriptor conversation_participant_data__descriptor =
 {
@@ -7985,14 +8010,14 @@ const ProtobufCMessageDescriptor conversation_participant_data__descriptor =
   "ConversationParticipantData",
   "",
   sizeof(ConversationParticipantData),
-  5,
+  6,
   conversation_participant_data__field_descriptors,
   conversation_participant_data__field_indices_by_name,
-  2,  conversation_participant_data__number_ranges,
+  1,  conversation_participant_data__number_ranges,
   (ProtobufCMessageInit) conversation_participant_data__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
-static const ProtobufCFieldDescriptor conversation__field_descriptors[13] =
+static const ProtobufCFieldDescriptor conversation__field_descriptors[15] =
 {
   {
     "conversation_id",
@@ -8127,6 +8152,18 @@ static const ProtobufCFieldDescriptor conversation__field_descriptors[13] =
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
+    "fork_on_external_invite",
+    16,
+    PROTOBUF_C_LABEL_OPTIONAL,
+    PROTOBUF_C_TYPE_BOOL,
+    offsetof(Conversation, has_fork_on_external_invite),
+    offsetof(Conversation, fork_on_external_invite),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
     "network_type",
     18,
     PROTOBUF_C_LABEL_REPEATED,
@@ -8150,15 +8187,29 @@ static const ProtobufCFieldDescriptor conversation__field_descriptors[13] =
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
+  {
+    "is_group_link_sharing_enabled",
+    21,
+    PROTOBUF_C_LABEL_OPTIONAL,
+    PROTOBUF_C_TYPE_BOOL,
+    offsetof(Conversation, has_is_group_link_sharing_enabled),
+    offsetof(Conversation, is_group_link_sharing_enabled),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
 };
 static const unsigned conversation__field_indices_by_name[] = {
   8,   /* field[8] = conversation_history_supported */
   0,   /* field[0] = conversation_id */
   9,   /* field[9] = current_participant */
-  12,   /* field[12] = force_history_state */
+  13,   /* field[13] = force_history_state */
+  11,   /* field[11] = fork_on_external_invite */
   5,   /* field[5] = has_active_hangout */
+  14,   /* field[14] = is_group_link_sharing_enabled */
   2,   /* field[2] = name */
-  11,   /* field[11] = network_type */
+  12,   /* field[12] = network_type */
   6,   /* field[6] = otr_status */
   7,   /* field[7] = otr_toggle */
   10,   /* field[10] = participant_data */
@@ -8166,12 +8217,14 @@ static const unsigned conversation__field_indices_by_name[] = {
   3,   /* field[3] = self_conversation_state */
   1,   /* field[1] = type */
 };
-static const ProtobufCIntRange conversation__number_ranges[3 + 1] =
+static const ProtobufCIntRange conversation__number_ranges[5 + 1] =
 {
   { 1, 0 },
   { 8, 4 },
-  { 18, 11 },
-  { 0, 13 }
+  { 16, 11 },
+  { 18, 12 },
+  { 21, 14 },
+  { 0, 15 }
 };
 const ProtobufCMessageDescriptor conversation__descriptor =
 {
@@ -8181,10 +8234,10 @@ const ProtobufCMessageDescriptor conversation__descriptor =
   "Conversation",
   "",
   sizeof(Conversation),
-  13,
+  15,
   conversation__field_descriptors,
   conversation__field_indices_by_name,
-  3,  conversation__number_ranges,
+  5,  conversation__number_ranges,
   (ProtobufCMessageInit) conversation__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
@@ -9958,10 +10011,10 @@ static const ProtobufCFieldDescriptor phone__field_descriptors[6] =
     "phone_number",
     1,
     PROTOBUF_C_LABEL_OPTIONAL,
-    PROTOBUF_C_TYPE_MESSAGE,
+    PROTOBUF_C_TYPE_STRING,
     0,   /* quantifier_offset */
     offsetof(Phone, phone_number),
-    &phone_number__descriptor,
+    NULL,
     NULL,
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
@@ -15009,17 +15062,19 @@ const ProtobufCEnumDescriptor delivery_medium_type__descriptor =
   delivery_medium_type__value_ranges,
   NULL,NULL,NULL,NULL   /* reserved[1234] */
 };
-const ProtobufCEnumValue participant_type__enum_values_by_number[2] =
+const ProtobufCEnumValue participant_type__enum_values_by_number[3] =
 {
   { "PARTICIPANT_TYPE_UNKNOWN", "PARTICIPANT_TYPE__PARTICIPANT_TYPE_UNKNOWN", 0 },
   { "PARTICIPANT_TYPE_GAIA", "PARTICIPANT_TYPE__PARTICIPANT_TYPE_GAIA", 2 },
+  { "PARTICIPANT_TYPE_OFF_NETWORK_PHONE", "PARTICIPANT_TYPE__PARTICIPANT_TYPE_OFF_NETWORK_PHONE", 3 },
 };
 static const ProtobufCIntRange participant_type__value_ranges[] = {
-{0, 0},{2, 1},{0, 2}
+{0, 0},{2, 1},{0, 3}
 };
-const ProtobufCEnumValueIndex participant_type__enum_values_by_name[2] =
+const ProtobufCEnumValueIndex participant_type__enum_values_by_name[3] =
 {
   { "PARTICIPANT_TYPE_GAIA", 1 },
+  { "PARTICIPANT_TYPE_OFF_NETWORK_PHONE", 2 },
   { "PARTICIPANT_TYPE_UNKNOWN", 0 },
 };
 const ProtobufCEnumDescriptor participant_type__descriptor =
@@ -15029,9 +15084,9 @@ const ProtobufCEnumDescriptor participant_type__descriptor =
   "ParticipantType",
   "ParticipantType",
   "",
-  2,
+  3,
   participant_type__enum_values_by_number,
-  2,
+  3,
   participant_type__enum_values_by_name,
   2,
   participant_type__value_ranges,
@@ -15097,17 +15152,19 @@ const ProtobufCEnumDescriptor force_history__descriptor =
   force_history__value_ranges,
   NULL,NULL,NULL,NULL   /* reserved[1234] */
 };
-const ProtobufCEnumValue network_type__enum_values_by_number[2] =
+const ProtobufCEnumValue network_type__enum_values_by_number[3] =
 {
   { "NETWORK_TYPE_UNKNOWN", "NETWORK_TYPE__NETWORK_TYPE_UNKNOWN", 0 },
   { "NETWORK_TYPE_BABEL", "NETWORK_TYPE__NETWORK_TYPE_BABEL", 1 },
+  { "NETWORK_TYPE_PHONE", "NETWORK_TYPE__NETWORK_TYPE_PHONE", 2 },
 };
 static const ProtobufCIntRange network_type__value_ranges[] = {
-{0, 0},{0, 2}
+{0, 0},{0, 3}
 };
-const ProtobufCEnumValueIndex network_type__enum_values_by_name[2] =
+const ProtobufCEnumValueIndex network_type__enum_values_by_name[3] =
 {
   { "NETWORK_TYPE_BABEL", 1 },
+  { "NETWORK_TYPE_PHONE", 2 },
   { "NETWORK_TYPE_UNKNOWN", 0 },
 };
 const ProtobufCEnumDescriptor network_type__descriptor =
@@ -15117,9 +15174,9 @@ const ProtobufCEnumDescriptor network_type__descriptor =
   "NetworkType",
   "NetworkType",
   "",
-  2,
+  3,
   network_type__enum_values_by_number,
-  2,
+  3,
   network_type__enum_values_by_name,
   1,
   network_type__value_ranges,

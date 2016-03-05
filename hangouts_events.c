@@ -468,7 +468,7 @@ hangouts_process_conversation_event(HangoutsAccount *ha, Conversation *conversat
 				if (formatting->bold) {
 					node = purple_xmlnode_new_child(node, "b");
 				}
-				if (formatting->italic) {
+				if (formatting->italics) {
 					node = purple_xmlnode_new_child(node, "i");
 				}
 				if (formatting->strikethrough) {

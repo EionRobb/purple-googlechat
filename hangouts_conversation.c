@@ -754,8 +754,8 @@ hangouts_convert_html_to_segments(HangoutsAccount *ha, const gchar *html_message
 				formatting__init(segment->formatting);
 				segment->formatting->has_bold = TRUE;
 				segment->formatting->bold = is_bold;
-				segment->formatting->has_italic = TRUE;
-				segment->formatting->italic = is_italic;
+				segment->formatting->has_italics = TRUE;
+				segment->formatting->italics = is_italic;
 				segment->formatting->has_strikethrough = TRUE;
 				segment->formatting->strikethrough = is_strikethrough;
 				segment->formatting->has_underline = TRUE;
@@ -868,8 +868,8 @@ hangouts_convert_html_to_segments(HangoutsAccount *ha, const gchar *html_message
 		formatting__init(segment->formatting);
 		segment->formatting->has_bold = TRUE;
 		segment->formatting->bold = is_bold;
-		segment->formatting->has_italic = TRUE;
-		segment->formatting->italic = is_italic;
+		segment->formatting->has_italics = TRUE;
+		segment->formatting->italics = is_italic;
 		segment->formatting->has_strikethrough = TRUE;
 		segment->formatting->strikethrough = is_strikethrough;
 		segment->formatting->has_underline = TRUE;

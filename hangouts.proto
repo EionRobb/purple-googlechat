@@ -150,7 +150,7 @@ enum SegmentType {
 
 message Formatting {
   optional bool bold = 1;
-  optional bool italic = 2;
+  optional bool italics = 2;
   optional bool strikethrough = 3;
   optional bool underline = 4;
 }
@@ -393,9 +393,9 @@ message Event {
   optional uint64 expiration_timestamp = 13;
   optional OTRModification otr_modification = 14;
   optional bool advances_sort_timestamp = 15;
-  optional OffTheRecordStatus otr_status = 16;
+  optional OffTheRecordStatus event_otr = 16;
   optional bool persisted = 17;
-  optional DeliveryMedium medium_type = 20;
+  optional DeliveryMedium delivery_medium = 20;
   // The event's type.
   optional EventType event_type = 23;
   // Event version timestamp.
@@ -446,12 +446,13 @@ enum DeliveryMediumType {
 message DeliveryMedium {
   optional DeliveryMediumType medium_type = 1;
   // Phone number to use for sending Google Voice messages.
-  optional Phone phone = 2;
+  optional PhoneNumber self_phone = 2;
 }
 
 message DeliveryMediumOption {
   optional DeliveryMedium delivery_medium = 1;
   optional bool current_default = 2;
+  optional bool primary = 3;
 }
 
 message UserConversationState {
@@ -470,6 +471,7 @@ message UserConversationState {
 enum ParticipantType {
   PARTICIPANT_TYPE_UNKNOWN = 0;
   PARTICIPANT_TYPE_GAIA = 2;
+  PARTICIPANT_TYPE_OFF_NETWORK_PHONE = 3;
 }
 
 enum InvitationStatus {
@@ -483,6 +485,7 @@ message ConversationParticipantData {
   optional ParticipantId id = 1;
   optional string fallback_name = 2;
   optional InvitationStatus invitation_status = 3;
+  optional PhoneNumber phone_number = 4;
   optional ParticipantType participant_type = 5;
   optional InvitationStatus new_invitation_status = 6;
 }
@@ -492,9 +495,10 @@ enum ForceHistory {
   FORCE_HISTORY_NO = 1;
 }
 
-enum NetworkType {
+enum NetworkType { //ER is this the same as DeliveryMediumType ?
   NETWORK_TYPE_UNKNOWN = 0;
   NETWORK_TYPE_BABEL = 1;
+  NETWORK_TYPE_PHONE = 2;
 }
 
 // A conversation between two or more users.
@@ -513,8 +517,10 @@ message Conversation {
   optional bool conversation_history_supported = 12;
   repeated ParticipantId current_participant = 13;
   repeated ConversationParticipantData participant_data = 14;
+  optional bool fork_on_external_invite = 16;
   repeated NetworkType network_type = 18;
   optional ForceHistory force_history_state = 19;
+  optional bool is_group_link_sharing_enabled = 21;
 }
 
 message EasterEgg {
@@ -931,7 +937,7 @@ enum PhoneDiscoverabilityStatus {
 }
 
 message Phone {
-  optional PhoneNumber phone_number = 1;
+  optional string phone_number = 1;
   optional bool google_voice = 2;
   optional PhoneVerificationStatus verification_status = 3;
   optional bool discoverable = 4;

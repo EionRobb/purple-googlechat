@@ -59,10 +59,11 @@ hangouts_get_event_request_header(HangoutsAccount *ha, const gchar *conv_id)
 			phone_number__init(self_phone);
 			
 			delivery_medium->medium_type = DELIVERY_MEDIUM_TYPE__DELIVERY_MEDIUM_GOOGLE_VOICE;
-			self_phone->e164 = ha->self_phone;
+			self_phone->e164 = g_strdup(ha->self_phone);
 			delivery_medium->self_phone = self_phone;
 			
 			header->delivery_medium = delivery_medium;
+			header->event_type = EVENT_TYPE__EVENT_TYPE_SMS;
 		}
 	}
 	
@@ -81,6 +82,13 @@ hangouts_event_request_header_free(EventRequestHeader *header)
 	if (header->conversation_id) {
 		g_free(header->conversation_id->id);
 		g_free(header->conversation_id);
+	}
+	if (header->delivery_medium) {
+		if (header->delivery_medium->self_phone) {
+			g_free(header->delivery_medium->self_phone->e164);
+			g_free(header->delivery_medium->self_phone);
+		}
+		g_free(header->delivery_medium);
 	}
 	
 	g_free(header);

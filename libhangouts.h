@@ -59,6 +59,7 @@ typedef struct {
 	gchar *sid_param;
 	gchar *client_id;
 	gchar *self_gaia_id;
+	gchar *self_phone;
 	ActiveClientState active_client_state;
 	gint64 last_event_timestamp;
 	
@@ -71,6 +72,7 @@ typedef struct {
 	GHashTable *one_to_ones_rev; // A store of known gaia_id's->conv_id's
 	GHashTable *group_chats;     // A store of known conv_id's
 	GHashTable *sent_message_ids;// A store of message id's that we generated from this instance
+	GHashTable *google_voice_conversations; // A store of known SMS conv_id's
 } HangoutsAccount;
 
 

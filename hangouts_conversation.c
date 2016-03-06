@@ -51,6 +51,19 @@ hangouts_get_event_request_header(HangoutsAccount *ha, const gchar *conv_id)
 		
 		conversation_id->id = g_strdup(conv_id);
 		header->conversation_id = conversation_id;
+		
+		if (g_hash_table_contains(ha->google_voice_conversations, conv_id)) {
+			DeliveryMedium *delivery_medium = g_new0(DeliveryMedium, 1);
+			PhoneNumber *self_phone = g_new0(PhoneNumber, 1);
+			delivery_medium__init(delivery_medium);
+			phone_number__init(self_phone);
+			
+			delivery_medium->medium_type = DELIVERY_MEDIUM_TYPE__DELIVERY_MEDIUM_GOOGLE_VOICE;
+			self_phone->e164 = ha->self_phone;
+			delivery_medium->self_phone = self_phone;
+			
+			header->delivery_medium = delivery_medium;
+		}
 	}
 	
 	header->has_client_generated_id = TRUE;
@@ -430,6 +443,15 @@ hangouts_add_conversation_to_blist(HangoutsAccount *ha, Conversation *conversati
 {
 	PurpleGroup *hangouts_group = NULL;
 	guint i;
+	gchar *conv_id = conversation->conversation_id->id;
+	
+	if (conversation->self_conversation_state->delivery_medium_option[0]->delivery_medium->medium_type == DELIVERY_MEDIUM_TYPE__DELIVERY_MEDIUM_GOOGLE_VOICE) {
+		g_hash_table_replace(ha->google_voice_conversations, g_strdup(conv_id), NULL);
+		
+		if (ha->self_phone == NULL) {
+			ha->self_phone = g_strdup(conversation->self_conversation_state->delivery_medium_option[0]->delivery_medium->self_phone->e164);
+		}
+	}
 	
 	if (conversation->type == CONVERSATION_TYPE__CONVERSATION_TYPE_ONE_TO_ONE) {
 		gchar *other_person = conversation->participant_data[0]->id->gaia_id;
@@ -442,8 +464,8 @@ hangouts_add_conversation_to_blist(HangoutsAccount *ha, Conversation *conversati
 		}
 		other_person_alias = conversation->participant_data[participant_num]->fallback_name;
 		
-		g_hash_table_replace(ha->one_to_ones, g_strdup(conversation->conversation_id->id), g_strdup(other_person));
-		g_hash_table_replace(ha->one_to_ones_rev, g_strdup(other_person), g_strdup(conversation->conversation_id->id));
+		g_hash_table_replace(ha->one_to_ones, g_strdup(conv_id), g_strdup(other_person));
+		g_hash_table_replace(ha->one_to_ones_rev, g_strdup(other_person), g_strdup(conv_id));
 		
 		if (!purple_blist_find_buddy(ha->account, other_person)) {
 			if (hangouts_group == NULL) {
@@ -459,12 +481,11 @@ hangouts_add_conversation_to_blist(HangoutsAccount *ha, Conversation *conversati
 			purple_serv_got_alias(ha->pc, other_person, other_person_alias);
 		}
 	} else {
-		gchar *conv_id = conversation->conversation_id->id;
 		PurpleChat *chat = purple_blist_find_chat(ha->account, conv_id);
 		gchar *name = conversation->name;
 		gboolean has_name = name ? TRUE : FALSE;
 		
-		g_hash_table_replace(ha->group_chats, conv_id, NULL);
+		g_hash_table_replace(ha->group_chats, g_strdup(conv_id), NULL);
 		
 		if (chat == NULL) {
 			if (hangouts_group == NULL) {

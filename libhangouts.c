@@ -162,6 +162,7 @@ hangouts_login(PurpleAccount *account)
 	ha->one_to_ones = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
 	ha->one_to_ones_rev = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
 	ha->group_chats = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+	ha->google_voice_conversations = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 	
 	self_gaia_id = purple_account_get_string(account, "self_gaia_id", NULL);
 	if (self_gaia_id != NULL) {
@@ -204,6 +205,7 @@ hangouts_close(PurpleConnection *pc)
 	
 	purple_http_keepalive_pool_unref(ha->channel_keepalive_pool);
 	g_free(ha->self_gaia_id);
+	g_free(ha->self_phone);
 	g_free(ha->refresh_token);
 	g_free(ha->access_token);
 	g_free(ha->gsessionid_param);
@@ -220,6 +222,8 @@ hangouts_close(PurpleConnection *pc)
 	g_hash_table_unref(ha->one_to_ones_rev);
 	g_hash_table_remove_all(ha->group_chats);
 	g_hash_table_unref(ha->group_chats);
+	g_hash_table_remove_all(ha->google_voice_conversations);
+	g_hash_table_unref(ha->google_voice_conversations);
 	
 	g_free(ha);
 }

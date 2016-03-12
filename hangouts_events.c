@@ -550,6 +550,7 @@ hangouts_process_conversation_event(HangoutsAccount *ha, Conversation *conversat
 					PurpleHttpConnection *connection;
 					
 					connection = purple_http_get(ha->pc, hangouts_got_http_image_for_conv, ha, image_url);
+					purple_http_request_set_max_len(purple_http_conn_get_request(connection), -1);
 					g_dataset_set_data_full(connection, "url", g_strdup(url), g_free);
 					g_dataset_set_data_full(connection, "gaia_id", g_strdup(gaia_id), g_free);
 					g_dataset_set_data_full(connection, "conv_id", g_strdup(conv_id), g_free);

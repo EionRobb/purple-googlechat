@@ -73,7 +73,6 @@ hangouts_get_event_request_header(HangoutsAccount *ha, const gchar *conv_id)
 	header->client_generated_id = g_random_int();
 	
 	//todo off the record status
-	//todo delivery medium
 	
 	return header;
 }
@@ -455,10 +454,11 @@ hangouts_add_conversation_to_blist(HangoutsAccount *ha, Conversation *conversati
 	guint i;
 	gchar *conv_id = conversation->conversation_id->id;
 	
-	if (conversation->self_conversation_state->delivery_medium_option[0]->delivery_medium->medium_type == DELIVERY_MEDIUM_TYPE__DELIVERY_MEDIUM_GOOGLE_VOICE) {
+	if ((conversation->self_conversation_state->delivery_medium_option && conversation->self_conversation_state->delivery_medium_option[0]->delivery_medium->medium_type == DELIVERY_MEDIUM_TYPE__DELIVERY_MEDIUM_GOOGLE_VOICE) 
+			|| conversation->network_type[0] == NETWORK_TYPE__NETWORK_TYPE_PHONE) {
 		g_hash_table_replace(ha->google_voice_conversations, g_strdup(conv_id), NULL);
 		
-		if (ha->self_phone == NULL) {
+		if (conversation->self_conversation_state->delivery_medium_option && ha->self_phone == NULL) {
 			ha->self_phone = g_strdup(conversation->self_conversation_state->delivery_medium_option[0]->delivery_medium->self_phone->e164);
 		}
 	}

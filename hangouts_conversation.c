@@ -186,13 +186,17 @@ hangouts_got_users_information(HangoutsAccount *ha, GetEntityByIdResponse *respo
 {
 	guint i;
 	
-	for (i = 0; i < response->n_entity; i++) {
-		Entity *entity = response->entity[i];
+	for (i = 0; i < response->n_entity_result; i++) {
+		Entity *entity = response->entity_result[i]->entity[0];
 		const gchar *display_name = entity && entity->properties ? entity->properties->display_name : NULL;
 		const gchar *gaia_id = entity && entity->id ? entity->id->gaia_id : NULL;
 		
 		if (gaia_id != NULL && display_name != NULL) {
 			purple_serv_got_alias(ha->pc, gaia_id, display_name);
+		}
+		
+		if (entity->entity_type == PARTICIPANT_TYPE__PARTICIPANT_TYPE_OFF_NETWORK_PHONE) {
+			purple_protocol_got_user_status(ha->account, gaia_id, "mobile", NULL);
 		}
 	}
 }
@@ -533,7 +537,7 @@ hangouts_add_conversation_to_blist(HangoutsAccount *ha, Conversation *conversati
 	for (i = 0; i < conversation->n_participant_data; i++) {
 		ConversationParticipantData *participant_data = conversation->participant_data[i];
 		
-		if (participant_data->participant_type == PARTICIPANT_TYPE__PARTICIPANT_TYPE_GAIA) {
+		if (participant_data->participant_type != PARTICIPANT_TYPE__PARTICIPANT_TYPE_UNKNOWN) {
 			if (participant_data->fallback_name != NULL) {
 				purple_serv_got_alias(ha->pc, participant_data->id->gaia_id, participant_data->fallback_name);
 			}

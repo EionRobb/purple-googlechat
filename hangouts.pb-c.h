@@ -115,6 +115,7 @@ typedef struct _GetConversationRequest GetConversationRequest;
 typedef struct _GetConversationResponse GetConversationResponse;
 typedef struct _GetEntityByIdRequest GetEntityByIdRequest;
 typedef struct _GetEntityByIdResponse GetEntityByIdResponse;
+typedef struct _EntityResult EntityResult;
 typedef struct _GetSuggestedEntitiesRequest GetSuggestedEntitiesRequest;
 typedef struct _GetSuggestedEntitiesResponse GetSuggestedEntitiesResponse;
 typedef struct _GetSelfInfoRequest GetSelfInfoRequest;
@@ -1828,9 +1829,23 @@ struct  _GetEntityByIdResponse
   ResponseHeader *response_header;
   size_t n_entity;
   Entity **entity;
+  size_t n_entity_result;
+  EntityResult **entity_result;
 };
 #define GET_ENTITY_BY_ID_RESPONSE__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&get_entity_by_id_response__descriptor) \
+    , NULL, 0,NULL, 0,NULL }
+
+
+struct  _EntityResult
+{
+  ProtobufCMessage base;
+  EntityLookupSpec *lookup_spec;
+  size_t n_entity;
+  Entity **entity;
+};
+#define ENTITY_RESULT__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&entity_result__descriptor) \
     , NULL, 0,NULL }
 
 
@@ -2043,10 +2058,14 @@ struct  _SetActiveClientResponse
 {
   ProtobufCMessage base;
   ResponseHeader *response_header;
+  protobuf_c_boolean has_client_last_seen_timestamp_usec;
+  uint64_t client_last_seen_timestamp_usec;
+  protobuf_c_boolean has_last_seen_delta_usec;
+  uint64_t last_seen_delta_usec;
 };
 #define SET_ACTIVE_CLIENT_RESPONSE__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&set_active_client_response__descriptor) \
-    , NULL }
+    , NULL, 0,0, 0,0 }
 
 
 struct  _SetConversationLevelRequest
@@ -4119,6 +4138,25 @@ GetEntityByIdResponse *
 void   get_entity_by_id_response__free_unpacked
                      (GetEntityByIdResponse *message,
                       ProtobufCAllocator *allocator);
+/* EntityResult methods */
+void   entity_result__init
+                     (EntityResult         *message);
+size_t entity_result__get_packed_size
+                     (const EntityResult   *message);
+size_t entity_result__pack
+                     (const EntityResult   *message,
+                      uint8_t             *out);
+size_t entity_result__pack_to_buffer
+                     (const EntityResult   *message,
+                      ProtobufCBuffer     *buffer);
+EntityResult *
+       entity_result__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data);
+void   entity_result__free_unpacked
+                     (EntityResult *message,
+                      ProtobufCAllocator *allocator);
 /* GetSuggestedEntitiesRequest methods */
 void   get_suggested_entities_request__init
                      (GetSuggestedEntitiesRequest         *message);
@@ -5029,6 +5067,9 @@ typedef void (*GetEntityByIdRequest_Closure)
 typedef void (*GetEntityByIdResponse_Closure)
                  (const GetEntityByIdResponse *message,
                   void *closure_data);
+typedef void (*EntityResult_Closure)
+                 (const EntityResult *message,
+                  void *closure_data);
 typedef void (*GetSuggestedEntitiesRequest_Closure)
                  (const GetSuggestedEntitiesRequest *message,
                   void *closure_data);
@@ -5273,6 +5314,7 @@ extern const ProtobufCMessageDescriptor get_conversation_request__descriptor;
 extern const ProtobufCMessageDescriptor get_conversation_response__descriptor;
 extern const ProtobufCMessageDescriptor get_entity_by_id_request__descriptor;
 extern const ProtobufCMessageDescriptor get_entity_by_id_response__descriptor;
+extern const ProtobufCMessageDescriptor entity_result__descriptor;
 extern const ProtobufCMessageDescriptor get_suggested_entities_request__descriptor;
 extern const ProtobufCMessageDescriptor get_suggested_entities_response__descriptor;
 extern const ProtobufCMessageDescriptor get_self_info_request__descriptor;

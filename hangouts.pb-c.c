@@ -4233,6 +4233,49 @@ void   get_entity_by_id_response__free_unpacked
   assert(message->base.descriptor == &get_entity_by_id_response__descriptor);
   protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
 }
+void   entity_result__init
+                     (EntityResult         *message)
+{
+  static EntityResult init_value = ENTITY_RESULT__INIT;
+  *message = init_value;
+}
+size_t entity_result__get_packed_size
+                     (const EntityResult *message)
+{
+  assert(message->base.descriptor == &entity_result__descriptor);
+  return protobuf_c_message_get_packed_size ((const ProtobufCMessage*)(message));
+}
+size_t entity_result__pack
+                     (const EntityResult *message,
+                      uint8_t       *out)
+{
+  assert(message->base.descriptor == &entity_result__descriptor);
+  return protobuf_c_message_pack ((const ProtobufCMessage*)message, out);
+}
+size_t entity_result__pack_to_buffer
+                     (const EntityResult *message,
+                      ProtobufCBuffer *buffer)
+{
+  assert(message->base.descriptor == &entity_result__descriptor);
+  return protobuf_c_message_pack_to_buffer ((const ProtobufCMessage*)message, buffer);
+}
+EntityResult *
+       entity_result__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data)
+{
+  return (EntityResult *)
+     protobuf_c_message_unpack (&entity_result__descriptor,
+                                allocator, len, data);
+}
+void   entity_result__free_unpacked
+                     (EntityResult *message,
+                      ProtobufCAllocator *allocator)
+{
+  assert(message->base.descriptor == &entity_result__descriptor);
+  protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
+}
 void   get_suggested_entities_request__init
                      (GetSuggestedEntitiesRequest         *message)
 {
@@ -12323,7 +12366,7 @@ const ProtobufCMessageDescriptor get_entity_by_id_request__descriptor =
   (ProtobufCMessageInit) get_entity_by_id_request__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
-static const ProtobufCFieldDescriptor get_entity_by_id_response__field_descriptors[2] =
+static const ProtobufCFieldDescriptor get_entity_by_id_response__field_descriptors[3] =
 {
   {
     "response_header",
@@ -12349,15 +12392,28 @@ static const ProtobufCFieldDescriptor get_entity_by_id_response__field_descripto
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
+  {
+    "entity_result",
+    3,
+    PROTOBUF_C_LABEL_REPEATED,
+    PROTOBUF_C_TYPE_MESSAGE,
+    offsetof(GetEntityByIdResponse, n_entity_result),
+    offsetof(GetEntityByIdResponse, entity_result),
+    &entity_result__descriptor,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
 };
 static const unsigned get_entity_by_id_response__field_indices_by_name[] = {
   1,   /* field[1] = entity */
+  2,   /* field[2] = entity_result */
   0,   /* field[0] = response_header */
 };
 static const ProtobufCIntRange get_entity_by_id_response__number_ranges[1 + 1] =
 {
   { 1, 0 },
-  { 0, 2 }
+  { 0, 3 }
 };
 const ProtobufCMessageDescriptor get_entity_by_id_response__descriptor =
 {
@@ -12367,11 +12423,62 @@ const ProtobufCMessageDescriptor get_entity_by_id_response__descriptor =
   "GetEntityByIdResponse",
   "",
   sizeof(GetEntityByIdResponse),
-  2,
+  3,
   get_entity_by_id_response__field_descriptors,
   get_entity_by_id_response__field_indices_by_name,
   1,  get_entity_by_id_response__number_ranges,
   (ProtobufCMessageInit) get_entity_by_id_response__init,
+  NULL,NULL,NULL    /* reserved[123] */
+};
+static const ProtobufCFieldDescriptor entity_result__field_descriptors[2] =
+{
+  {
+    "lookup_spec",
+    1,
+    PROTOBUF_C_LABEL_OPTIONAL,
+    PROTOBUF_C_TYPE_MESSAGE,
+    0,   /* quantifier_offset */
+    offsetof(EntityResult, lookup_spec),
+    &entity_lookup_spec__descriptor,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "entity",
+    2,
+    PROTOBUF_C_LABEL_REPEATED,
+    PROTOBUF_C_TYPE_MESSAGE,
+    offsetof(EntityResult, n_entity),
+    offsetof(EntityResult, entity),
+    &entity__descriptor,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+};
+static const unsigned entity_result__field_indices_by_name[] = {
+  1,   /* field[1] = entity */
+  0,   /* field[0] = lookup_spec */
+};
+static const ProtobufCIntRange entity_result__number_ranges[1 + 1] =
+{
+  { 1, 0 },
+  { 0, 2 }
+};
+const ProtobufCMessageDescriptor entity_result__descriptor =
+{
+  PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
+  "EntityResult",
+  "EntityResult",
+  "EntityResult",
+  "",
+  sizeof(EntityResult),
+  2,
+  entity_result__field_descriptors,
+  entity_result__field_indices_by_name,
+  1,  entity_result__number_ranges,
+  (ProtobufCMessageInit) entity_result__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
 static const ProtobufCFieldDescriptor get_suggested_entities_request__field_descriptors[7] =
@@ -13515,7 +13622,7 @@ const ProtobufCMessageDescriptor set_active_client_request__descriptor =
   (ProtobufCMessageInit) set_active_client_request__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
-static const ProtobufCFieldDescriptor set_active_client_response__field_descriptors[1] =
+static const ProtobufCFieldDescriptor set_active_client_response__field_descriptors[3] =
 {
   {
     "response_header",
@@ -13529,14 +13636,41 @@ static const ProtobufCFieldDescriptor set_active_client_response__field_descript
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
+  {
+    "client_last_seen_timestamp_usec",
+    3,
+    PROTOBUF_C_LABEL_OPTIONAL,
+    PROTOBUF_C_TYPE_UINT64,
+    offsetof(SetActiveClientResponse, has_client_last_seen_timestamp_usec),
+    offsetof(SetActiveClientResponse, client_last_seen_timestamp_usec),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "last_seen_delta_usec",
+    4,
+    PROTOBUF_C_LABEL_OPTIONAL,
+    PROTOBUF_C_TYPE_UINT64,
+    offsetof(SetActiveClientResponse, has_last_seen_delta_usec),
+    offsetof(SetActiveClientResponse, last_seen_delta_usec),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
 };
 static const unsigned set_active_client_response__field_indices_by_name[] = {
+  1,   /* field[1] = client_last_seen_timestamp_usec */
+  2,   /* field[2] = last_seen_delta_usec */
   0,   /* field[0] = response_header */
 };
-static const ProtobufCIntRange set_active_client_response__number_ranges[1 + 1] =
+static const ProtobufCIntRange set_active_client_response__number_ranges[2 + 1] =
 {
   { 1, 0 },
-  { 0, 1 }
+  { 3, 1 },
+  { 0, 3 }
 };
 const ProtobufCMessageDescriptor set_active_client_response__descriptor =
 {
@@ -13546,10 +13680,10 @@ const ProtobufCMessageDescriptor set_active_client_response__descriptor =
   "SetActiveClientResponse",
   "",
   sizeof(SetActiveClientResponse),
-  1,
+  3,
   set_active_client_response__field_descriptors,
   set_active_client_response__field_indices_by_name,
-  1,  set_active_client_response__number_ranges,
+  2,  set_active_client_response__number_ranges,
   (ProtobufCMessageInit) set_active_client_response__init,
   NULL,NULL,NULL    /* reserved[123] */
 };

@@ -1221,8 +1221,12 @@ message GetEntityByIdRequest {
 message GetEntityByIdResponse {
   optional ResponseHeader response_header = 1;
   repeated Entity entity = 2;
+  repeated EntityResult entity_result = 3;
+}
 
-  // TODO
+message EntityResult {
+  optional EntityLookupSpec lookup_spec = 1;
+  repeated Entity entity = 2;
 }
 
 message GetSuggestedEntitiesRequest {
@@ -1364,6 +1368,8 @@ message SetActiveClientRequest {
 
 message SetActiveClientResponse {
   optional ResponseHeader response_header = 1;
+  optional uint64 client_last_seen_timestamp_usec = 3;
+  optional uint64 last_seen_delta_usec = 4;
 }
 
 message SetConversationLevelRequest {

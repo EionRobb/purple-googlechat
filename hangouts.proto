@@ -709,7 +709,10 @@ message EventContinuationToken {
 
 message EntityLookupSpec {
   optional string gaia_id = 1;
-
+  optional string email = 3;
+  optional string phone = 4;
+  optional string chat_id = 5;
+  optional bool create_offnetwork_gaia = 6;
   // TODO
 }
 
@@ -1216,6 +1219,7 @@ message GetEntityByIdRequest {
 
   // TODO
   // unknown = 2;
+  // repeated FieldMask field_mask = 4;
 }
 
 message GetEntityByIdResponse {

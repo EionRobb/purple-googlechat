@@ -1159,10 +1159,15 @@ struct  _EntityLookupSpec
 {
   ProtobufCMessage base;
   char *gaia_id;
+  char *email;
+  char *phone;
+  char *chat_id;
+  protobuf_c_boolean has_create_offnetwork_gaia;
+  protobuf_c_boolean create_offnetwork_gaia;
 };
 #define ENTITY_LOOKUP_SPEC__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&entity_lookup_spec__descriptor) \
-    , NULL }
+    , NULL, NULL, NULL, NULL, 0,0 }
 
 
 struct  _ConfigurationBit

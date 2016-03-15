@@ -9257,7 +9257,7 @@ const ProtobufCMessageDescriptor event_continuation_token__descriptor =
   (ProtobufCMessageInit) event_continuation_token__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
-static const ProtobufCFieldDescriptor entity_lookup_spec__field_descriptors[1] =
+static const ProtobufCFieldDescriptor entity_lookup_spec__field_descriptors[5] =
 {
   {
     "gaia_id",
@@ -9271,14 +9271,67 @@ static const ProtobufCFieldDescriptor entity_lookup_spec__field_descriptors[1] =
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
+  {
+    "email",
+    3,
+    PROTOBUF_C_LABEL_OPTIONAL,
+    PROTOBUF_C_TYPE_STRING,
+    0,   /* quantifier_offset */
+    offsetof(EntityLookupSpec, email),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "phone",
+    4,
+    PROTOBUF_C_LABEL_OPTIONAL,
+    PROTOBUF_C_TYPE_STRING,
+    0,   /* quantifier_offset */
+    offsetof(EntityLookupSpec, phone),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "chat_id",
+    5,
+    PROTOBUF_C_LABEL_OPTIONAL,
+    PROTOBUF_C_TYPE_STRING,
+    0,   /* quantifier_offset */
+    offsetof(EntityLookupSpec, chat_id),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "create_offnetwork_gaia",
+    6,
+    PROTOBUF_C_LABEL_OPTIONAL,
+    PROTOBUF_C_TYPE_BOOL,
+    offsetof(EntityLookupSpec, has_create_offnetwork_gaia),
+    offsetof(EntityLookupSpec, create_offnetwork_gaia),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
 };
 static const unsigned entity_lookup_spec__field_indices_by_name[] = {
+  3,   /* field[3] = chat_id */
+  4,   /* field[4] = create_offnetwork_gaia */
+  1,   /* field[1] = email */
   0,   /* field[0] = gaia_id */
+  2,   /* field[2] = phone */
 };
-static const ProtobufCIntRange entity_lookup_spec__number_ranges[1 + 1] =
+static const ProtobufCIntRange entity_lookup_spec__number_ranges[2 + 1] =
 {
   { 1, 0 },
-  { 0, 1 }
+  { 3, 1 },
+  { 0, 5 }
 };
 const ProtobufCMessageDescriptor entity_lookup_spec__descriptor =
 {
@@ -9288,10 +9341,10 @@ const ProtobufCMessageDescriptor entity_lookup_spec__descriptor =
   "EntityLookupSpec",
   "",
   sizeof(EntityLookupSpec),
-  1,
+  5,
   entity_lookup_spec__field_descriptors,
   entity_lookup_spec__field_indices_by_name,
-  1,  entity_lookup_spec__number_ranges,
+  2,  entity_lookup_spec__number_ranges,
   (ProtobufCMessageInit) entity_lookup_spec__init,
   NULL,NULL,NULL    /* reserved[123] */
 };

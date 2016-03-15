@@ -22,7 +22,22 @@ hangouts_oauth_refresh_token_cb(PurpleHttpConnection *http_conn, PurpleHttpRespo
 		ha->access_token = g_strdup(json_object_get_string_member(obj, "access_token"));
 		hangouts_auth_get_session_cookies(ha);
 	} else {
-		purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED, 
+		if (obj != NULL) {
+			if (json_object_has_member(obj, "error")) {
+				if (g_strcmp0(json_object_get_string_member(obj, "error"), "invalid_grant") == 0) {
+					purple_account_set_password(ha->account, NULL, NULL, NULL);
+					purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+						json_object_get_string_member(obj, "error_description"));
+				} else {
+					purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED,
+						json_object_get_string_member(obj, "error_description"));
+				}
+			} else {
+				purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED, 
+					_("Invalid response"));
+			}
+		}
+		purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
 			_("Invalid response"));
 	}
 
@@ -59,7 +74,7 @@ hangouts_oauth_refresh_token(HangoutsAccount *ha)
 
 
 static void
-hangouts_oauth_with_code_cb (PurpleHttpConnection *http_conn, PurpleHttpResponse *response, gpointer user_data)
+hangouts_oauth_with_code_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse *response, gpointer user_data)
 {
 	HangoutsAccount *ha = user_data;
 	JsonObject *obj;
@@ -80,7 +95,22 @@ hangouts_oauth_with_code_cb (PurpleHttpConnection *http_conn, PurpleHttpResponse
 		
 		hangouts_auth_get_session_cookies(ha);
 	} else {
-		purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED, 
+		if (obj != NULL) {
+			if (json_object_has_member(obj, "error")) {
+				if (g_strcmp0(json_object_get_string_member(obj, "error"), "invalid_grant") == 0) {
+					purple_account_set_password(ha->account, NULL, NULL, NULL);
+					purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+						json_object_get_string_member(obj, "error_description"));
+				} else {
+					purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED,
+						json_object_get_string_member(obj, "error_description"));
+				}
+			} else {
+				purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED, 
+					_("Invalid response"));
+			}
+		}
+		purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
 			_("Invalid response"));
 	}
 

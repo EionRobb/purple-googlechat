@@ -272,6 +272,11 @@ hangouts_longpoll_request_closed(PurpleHttpConnection *http_conn, PurpleHttpResp
 		return;
 	}
 	
+	if (ha->channel_watchdog) {
+		purple_timeout_remove(ha->channel_watchdog);
+		ha->channel_watchdog = 0;
+	}
+	
 	// remaining data 'should' have been dealt with in hangouts_longpoll_request_content
 	g_byte_array_free(ha->channel_buffer, TRUE);
 	ha->channel_buffer = g_byte_array_sized_new(HANGOUTS_BUFFER_DEFAULT_SIZE);
@@ -282,6 +287,27 @@ hangouts_longpoll_request_closed(PurpleHttpConnection *http_conn, PurpleHttpResp
 	} else {
 		hangouts_longpoll_request(ha);
 	}
+}
+
+static gboolean
+channel_watchdog_check(gpointer data)
+{
+	PurpleConnection *pc = data;
+	HangoutsAccount *ha;
+	PurpleHttpConnection *conn;
+	
+	if (PURPLE_IS_CONNECTION(pc)) {
+		ha = purple_connection_get_protocol_data(pc);
+		conn = ha->channel_connection;
+		
+		if (!purple_http_conn_is_running(conn)) {
+			hangouts_longpoll_request(ha);
+		}
+		
+		return TRUE;
+	}
+	
+	return FALSE;
 }
 
 void
@@ -310,9 +336,14 @@ hangouts_longpoll_request(HangoutsAccount *ha)
 	
 	hangouts_set_auth_headers(ha, request);
 	
-	purple_http_request(ha->pc, request, hangouts_longpoll_request_closed, ha);
+	ha->channel_connection = purple_http_request(ha->pc, request, hangouts_longpoll_request_closed, ha);
 	
 	g_string_free(url, TRUE);
+	
+	if (ha->channel_watchdog) {
+		purple_timeout_remove(ha->channel_watchdog);
+	}
+	ha->channel_watchdog = purple_timeout_add_seconds(1, channel_watchdog_check, ha->pc);
 }
 
 

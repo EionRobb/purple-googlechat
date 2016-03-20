@@ -64,6 +64,8 @@ typedef struct {
 	gint64 last_event_timestamp;
 	
 	GByteArray *channel_buffer;
+	guint channel_watchdog;
+	PurpleHttpConnection *channel_connection;
 	PurpleHttpKeepalivePool *channel_keepalive_pool;
 	PurpleHttpKeepalivePool *icons_keepalive_pool;
 	gint idle_time;

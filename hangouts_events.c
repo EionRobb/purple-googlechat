@@ -220,12 +220,20 @@ void
 hangouts_process_presence_result(HangoutsAccount *ha, PresenceResult *presence)
 {
 	const gchar *gaia_id = presence->user_id->gaia_id;
-	const gchar *status_id;
+	const gchar *status_id = NULL;
 	gboolean reachable = FALSE;
 	gboolean available = FALSE;
 	gchar *message = NULL;
+	PurpleBuddy *buddy = purple_blist_find_buddy(ha->account, gaia_id);
 	
-	if (presence->presence->has_reachable || presence->presence->has_available) {
+	if (buddy != NULL) {
+		status_id = purple_status_get_id(purple_presence_get_active_status(purple_buddy_get_presence(buddy)));
+	}
+	
+	if (g_strcmp0(status_id, "mobile") == 0 || g_hash_table_contains(ha->google_voice_conversations, g_hash_table_lookup(ha->one_to_ones_rev, gaia_id))) {
+		// SMS contacts normally appear as 'offline'
+		status_id = "mobile";
+	} else if (presence->presence->has_reachable || presence->presence->has_available) {
 		if (presence->presence->reachable) {
 			reachable = TRUE;
 		}
@@ -242,13 +250,8 @@ hangouts_process_presence_result(HangoutsAccount *ha, PresenceResult *presence)
 		} else {
 			status_id = purple_primitive_get_id_from_type(PURPLE_STATUS_OFFLINE);
 		}
-	} else {
-		PurpleBuddy *buddy = purple_blist_find_buddy(ha->account, gaia_id);
-		
-		if (buddy == NULL) {
-			return;
-		}
-		status_id = purple_status_get_id(purple_presence_get_active_status(purple_buddy_get_presence(buddy)));
+	} else if (buddy == NULL) {
+		return;
 	}
 	
 	if (presence->presence->mood_setting) {

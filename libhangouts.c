@@ -424,16 +424,16 @@ static PurplePluginInfo *
 plugin_query(GError **error)
 {
 	return purple_plugin_info_new(
-		"id",		HANGOUTS_PLUGIN_ID,
-		"name",		"Hangouts",
-		"version",	HANGOUTS_PLUGIN_VERSION,
-		"category",	N_("Protocol"),
-		"summary",	N_("Hangouts Protocol Plugins."),
-		"description",	N_("Adds Hangouts protocol support to libpurple."),
-		"website",	"TODO",
-		"abi-version",	PURPLE_ABI_VERSION,
-		"flags",	PURPLE_PLUGIN_INFO_FLAGS_INTERNAL |
-				PURPLE_PLUGIN_INFO_FLAGS_AUTO_LOAD,
+		"id",          HANGOUTS_PLUGIN_ID,
+		"name",        "Hangouts",
+		"version",     HANGOUTS_PLUGIN_VERSION,
+		"category",    N_("Protocol"),
+		"summary",     N_("Hangouts Protocol Plugins."),
+		"description", N_("Adds Hangouts protocol support to libpurple."),
+		"website",     "https://bitbucket.org/EionRobb/purple-hangouts/",
+		"abi-version", PURPLE_ABI_VERSION,
+		"flags",       PURPLE_PLUGIN_INFO_FLAGS_INTERNAL |
+		               PURPLE_PLUGIN_INFO_FLAGS_AUTO_LOAD,
 		NULL
 	);
 }
@@ -471,29 +471,29 @@ static PurplePluginInfo info =
 	PURPLE_MAJOR_VERSION,
 	PURPLE_MINOR_VERSION,
 	PURPLE_PLUGIN_PROTOCOL,                             /**< type           */
-	NULL,                                             /**< ui_requirement */
-	0,                                                /**< flags          */
-	NULL,                                             /**< dependencies   */
+	NULL,                                               /**< ui_requirement */
+	0,                                                  /**< flags          */
+	NULL,                                               /**< dependencies   */
 	PURPLE_PRIORITY_DEFAULT,                            /**< priority       */
 
-	HANGOUTS_PLUGIN_ID,                               /**< id             */
-	N_("Hangouts"),                           /**< name           */
-	HANGOUTS_PLUGIN_VERSION,                          /**< version        */
-	                                                  /**  summary        */
-	N_("Hangouts Protocol Plugins."),
-	                                                  /**  description    */
-	N_("Adds Hangouts protocol support to libpurple."),
-	"Eion Robb <eionrobb+hangouts@gmail.com>",             /**< author         */
-	"TODO",                                     /**< homepage       */
+	HANGOUTS_PLUGIN_ID,                                 /**< id             */
+	N_("Hangouts"),                                     /**< name           */
+	HANGOUTS_PLUGIN_VERSION,                            /**< version        */
+	                                 
+	N_("Hangouts Protocol Plugins."),                   /**< summary        */
+	                                                  
+	N_("Adds Hangouts protocol support to libpurple."), /**< description    */
+	"Eion Robb <eionrobb+hangouts@gmail.com>",          /**< author         */
+	"https://bitbucket.org/EionRobb/purple-hangouts/",  /**< homepage       */
 
-	libpurple2_plugin_load,                           /**< load           */
-	libpurple2_plugin_unload,                         /**< unload         */
-	NULL,                                             /**< destroy        */
+	libpurple2_plugin_load,                             /**< load           */
+	libpurple2_plugin_unload,                           /**< unload         */
+	NULL,                                               /**< destroy        */
 
-	NULL,                                             /**< ui_info        */
-	NULL,                                             /**< extra_info     */
-	NULL,                                      /**< prefs_info     */
-	NULL,                                             /**< actions        */
+	NULL,                                               /**< ui_info        */
+	NULL,                                               /**< extra_info     */
+	NULL,                                               /**< prefs_info     */
+	NULL,                                               /**< actions        */
 
 	/* padding */
 	NULL,

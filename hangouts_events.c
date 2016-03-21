@@ -221,6 +221,7 @@ hangouts_process_presence_result(HangoutsAccount *ha, PresenceResult *presence)
 {
 	const gchar *gaia_id = presence->user_id->gaia_id;
 	const gchar *status_id = NULL;
+	const gchar *conv_id = g_hash_table_lookup(ha->one_to_ones_rev, gaia_id);
 	gboolean reachable = FALSE;
 	gboolean available = FALSE;
 	gchar *message = NULL;
@@ -230,7 +231,7 @@ hangouts_process_presence_result(HangoutsAccount *ha, PresenceResult *presence)
 		status_id = purple_status_get_id(purple_presence_get_active_status(purple_buddy_get_presence(buddy)));
 	}
 	
-	if (g_strcmp0(status_id, "mobile") == 0 || g_hash_table_contains(ha->google_voice_conversations, g_hash_table_lookup(ha->one_to_ones_rev, gaia_id))) {
+	if (g_strcmp0(status_id, "mobile") == 0 || (conv_id != NULL && g_hash_table_contains(ha->google_voice_conversations, conv_id))) {
 		// SMS contacts normally appear as 'offline'
 		status_id = "mobile";
 	} else if (presence->presence->has_reachable || presence->presence->has_available) {

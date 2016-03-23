@@ -1,7 +1,7 @@
 ![Logo](https://bitbucket.org/EionRobb/purple-hangouts/avatar)
 # Hangouts Plugin for libpurple #
 
-A replacement prpl for Hangouts in Pidgin/libpurple to support the proprietary protocol that Google uses for its Hangouts service.
+A replacement prpl for Hangouts in Pidgin/libpurple to support the proprietary protocol that Google uses for its Hangouts service.  So far it supports all the fun things that aren't part of the XMPP interface, such as Group Chats, synchronised history between devices and SMS support via Google Voice.
 
 This plugin is written by [Eion Robb](http://eion.robbmob.com/blog/) and [Mike 'Maiku' Ruprecht](https://bitbucket.org/CMaiku/).
 Heavily inspired by the [hangups library](https://github.com/tdryer/hangups) by Tom Dryer (et. al.) using code from [Nakul Gulati](https://hg.pidgin.im/soc/2015/nakulgulati/main/) and protobufs from [Darryl Pogue](http://dpogue.ca/)

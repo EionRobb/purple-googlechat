@@ -7,15 +7,33 @@ PROTOBUF_C_DIR ?= $(WIN32_DEV_TOP)/protobuf-c-Release-2.6
 
 WIN32_CC ?= $(WIN32_DEV_TOP)/mingw/bin/gcc
 
-CC ?= gcc
 PROTOC_C ?= protoc-c
 PKG_CONFIG ?= pkg-config
+
 
 # Do some nasty OS and purple version detection
 ifeq ($(OS),Windows_NT)
   HANGOUTS_TARGET = libhangouts.dll
   HANGOUTS_DEST = "$(PROGRAMFILES)/Pidgin/plugins"
 else
+
+  UNAME_S := $(shell uname -s)
+  
+  #.. There are special flags we need for OSX
+  ifeq ($(UNAME_S), Darwin) 
+    #
+    #.. /opt/local/include and subdirs are included here to ensure this compiles
+    #   for folks using Macports.  I believe Homebrew uses /usr/local/include
+    #   so things should "just work".  You *must* make sure your packages are
+    #   all up to date or you will most likely get compilation errors.
+    #
+    INCLUDES = -I/opt/local/include/protobuf-c  -I/opt/local/include -lz $(OS)
+
+    CC = gcc
+  else
+    CC ?= gcc
+  endif
+
   ifeq ($(shell pkg-config --exists purple-3 2>/dev/null && echo "true"),)
     ifeq ($(shell pkg-config --exists purple 2>/dev/null && echo "true"),)
       HANGOUTS_TARGET = FAILNOPURPLE
@@ -42,6 +60,9 @@ PURPLE_COMPAT_FILES := purple2compat/http.c purple2compat/purple-socket.c
 PURPLE_C_FILES := libhangouts.c $(C_FILES)
 TEST_C_FILES := hangouts_test.c $(C_FILES)
 
+
+
+
 .PHONY:	all install install-windows FAILNOPURPLE
 
 all: $(HANGOUTS_TARGET)
@@ -50,10 +71,10 @@ hangouts.pb-c.c: hangouts.proto
 	$(PROTOC_C) --c_out=. hangouts.proto
 
 libhangouts.so: $(PURPLE_C_FILES) $(PURPLE_COMPAT_FILES)
-	$(CC) -fPIC -shared -o $@ $^ `$(PKG_CONFIG) purple glib-2.0 json-glib-1.0 libprotobuf-c --libs --cflags` -I/usr/include/protobuf-c -Ipurple2compat -g -ggdb
+	$(CC) -fPIC -shared -o $@ $^ `$(PKG_CONFIG) purple glib-2.0 json-glib-1.0 libprotobuf-c --libs --cflags`  $(INCLUDES) -Ipurple2compat -g -ggdb
 
 libhangouts3.so: $(PURPLE_C_FILES)
-	$(CC) -fPIC -shared -o $@ $^ `$(PKG_CONFIG) purple-3 glib-2.0 json-glib-1.0 libprotobuf-c --libs --cflags` -I/usr/include/protobuf-c -g -ggdb
+	$(CC) -fPIC -shared -o $@ $^ `$(PKG_CONFIG) purple-3 glib-2.0 json-glib-1.0 libprotobuf-c --libs --cflags` $(INCLUDES)  -g -ggdb
 
 libhangouts.dll: $(PURPLE_C_FILES) $(PURPLE_COMPAT_FILES)
 	$(WIN32_CC) -shared -o $@ $^ $(WIN32_PIDGIN2_CFLAGS) $(WIN32_PIDGIN2_LDFLAGS) -Ipurple2compat

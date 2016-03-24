@@ -31,6 +31,7 @@ else
 
     CC = gcc
   else
+    INCLUDES = -I/usr/include/protobuf-c
     CC ?= gcc
   endif
 

@@ -7,6 +7,7 @@
 #include "debug.h"
 #include "status.h"
 #include "glibcompat.h"
+#include "image-store.h"
 
 // From hangouts_pblite
 gchar *pblite_dump_json(ProtobufCMessage *message);
@@ -952,6 +953,157 @@ hangouts_free_segments(Segment **segments)
 	g_free(segments);
 }
 
+//Received the photoid of the sent image to be able to attach to an outgoing message
+static void
+hangouts_conversation_send_image_part2_cb(PurpleHttpConnection *connection, PurpleHttpResponse *response, gpointer user_data)
+{
+	HangoutsAccount *ha;
+	gchar *conv_id;
+	gchar *photoid;
+	const gchar *response_raw;
+	size_t response_len;
+	JsonNode *node;
+	PurpleConnection *pc = purple_http_conn_get_purple_connection(connection);
+	SendChatMessageRequest request;
+	ExistingMedia existing_media;
+	Photo photo;
+	
+	if (purple_http_response_get_error(response) != NULL) {
+		purple_notify_error(pc, _("Image Send Error"), _("There was an error sending the image"), purple_http_response_get_error(response), purple_request_cpar_from_connection(pc));
+		g_dataset_destroy(connection);
+		return;
+	}
+	
+	ha = user_data;
+	response_raw = purple_http_response_get_data(response, &response_len);
+	purple_debug_info("hangouts", "image_part2_cb %s\n", response_raw);
+	node = json_decode(response_raw, response_len);
+	
+	photoid = hangouts_json_path_query_string(node, "$..photoid", NULL);
+	conv_id = g_dataset_get_data(connection, "conv_id");
+	
+	send_chat_message_request__init(&request);
+	existing_media__init(&existing_media);
+	photo__init(&photo);
+	
+	request.request_header = hangouts_get_request_header(ha);
+	request.event_request_header = hangouts_get_event_request_header(ha, conv_id);
+	
+	photo.photo_id = photoid;
+	existing_media.photo = &photo;
+	request.existing_media = &existing_media;
+	
+	hangouts_pblite_send_chat_message(ha, &request, NULL, NULL);
+	
+	g_hash_table_insert(ha->sent_message_ids, g_strdup_printf("%" G_GUINT64_FORMAT, request.event_request_header->client_generated_id), NULL);
+	
+	g_free(photoid);
+	g_dataset_destroy(connection);
+	hangouts_request_header_free(request.request_header);
+	hangouts_event_request_header_free(request.event_request_header);
+	json_node_free(node);
+}
+
+//Received the url to upload the image data to
+static void
+hangouts_conversation_send_image_part1_cb(PurpleHttpConnection *connection, PurpleHttpResponse *response, gpointer user_data)
+{
+	HangoutsAccount *ha;
+	gchar *conv_id;
+	PurpleImage *image;
+	gchar *upload_url;
+	JsonNode *node;
+	PurpleHttpRequest *request;
+	PurpleHttpConnection *new_connection;
+	PurpleConnection *pc = purple_http_conn_get_purple_connection(connection);
+	const gchar *response_raw;
+	size_t response_len;
+	
+	if (purple_http_response_get_error(response) != NULL) {
+		purple_notify_error(pc, _("Image Send Error"), _("There was an error sending the image"), purple_http_response_get_error(response), purple_request_cpar_from_connection(pc));
+		g_dataset_destroy(connection);
+		return;
+	}
+	
+	ha = user_data;
+	conv_id = g_dataset_get_data(connection, "conv_id");
+	image = g_dataset_get_data(connection, "image");
+	
+	response_raw = purple_http_response_get_data(response, &response_len);
+	purple_debug_info("hangouts", "image_part1_cb %s\n", response_raw);
+	node = json_decode(response_raw, response_len);
+	
+	upload_url = hangouts_json_path_query_string(node, "$..putInfo.url", NULL);
+	
+	request = purple_http_request_new(upload_url);
+	purple_http_request_set_cookie_jar(request, ha->cookie_jar);
+	purple_http_request_header_set(request, "Content-Type", "application/octet-stream");
+	purple_http_request_set_method(request, "POST");
+	purple_http_request_set_contents(request, purple_image_get_data(image), purple_image_get_size(image));
+	
+	new_connection = purple_http_request(ha->pc, request, hangouts_conversation_send_image_part2_cb, ha);
+	
+	g_dataset_set_data_full(new_connection, "conv_id", g_strdup(conv_id), g_free);
+	
+	g_free(upload_url);
+	g_dataset_destroy(connection);
+	json_node_free(node);
+}
+
+static void
+hangouts_conversation_send_image(HangoutsAccount *ha, const gchar *conv_id, PurpleImage *image)
+{
+	PurpleHttpRequest *request;
+	PurpleHttpConnection *connection;
+	gchar *postdata;
+	gchar *filename;
+	
+	filename = (gchar *)purple_image_get_path(image);
+	if (filename != NULL) {
+		filename = g_path_get_basename(filename);
+	} else {
+		filename = g_strdup_printf("purple%d.%s", g_random_int(), purple_image_get_extension(image));
+	}
+	
+	postdata = g_strdup_printf("{\"protocolVersion\":\"0.8\",\"createSessionRequest\":{\"fields\":[{\"external\":{\"name\":\"file\",\"filename\":\"%s\",\"put\":{},\"size\":%d}},{\"inlined\":{\"name\":\"client\",\"content\":\"hangouts\",\"contentType\":\"text/plain\"}}]}}", filename, purple_image_get_size(image));
+	
+	request = purple_http_request_new(HANGOUTS_IMAGE_UPLOAD_URL);
+	purple_http_request_set_cookie_jar(request, ha->cookie_jar);
+	purple_http_request_header_set(request, "Content-Type", "application/x-www-form-urlencoded;charset=UTF-8");
+	purple_http_request_set_method(request, "POST");
+	purple_http_request_set_contents(request, postdata, -1);
+	purple_http_request_set_max_redirects(request, 0);
+	
+	connection = purple_http_request(ha->pc, request, hangouts_conversation_send_image_part1_cb, ha);
+	
+	g_dataset_set_data_full(connection, "conv_id", g_strdup(conv_id), g_free);
+	g_dataset_set_data_full(connection, "image", image, NULL);
+	
+	g_free(filename);
+	g_free(postdata);
+}
+
+static void
+hangouts_conversation_check_message_for_images(HangoutsAccount *ha, const gchar *conv_id, const gchar *message)
+{
+	const gchar *img;
+	
+	if ((img = strstr(message, "<img ")) || (img = strstr(message, "<IMG "))) {
+		const gchar *id;
+		const gchar *close = strchr(img, '>');
+		
+		if (((id = strstr(img, "ID=\"")) || (id = strstr(img, "id=\""))) &&
+				id < close) {
+			int imgid = atoi(id + 4);
+			PurpleImage *image = purple_image_store_get(imgid);
+			
+			if (image != NULL) {
+				hangouts_conversation_send_image(ha, conv_id, image);
+			}
+		}
+	}
+}
+
 static gint
 hangouts_conversation_send_message(HangoutsAccount *ha, const gchar *conv_id, const gchar *message)
 {
@@ -959,6 +1111,9 @@ hangouts_conversation_send_message(HangoutsAccount *ha, const gchar *conv_id, co
 	MessageContent message_content;
 	Segment **segments;
 	guint n_segments;
+	
+	//Check for any images to send first
+	hangouts_conversation_check_message_for_images(ha, conv_id, message);
 	
 	send_chat_message_request__init(&request);
 	message_content__init(&message_content);

@@ -385,7 +385,7 @@ hangouts_send_maps_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse *respo
 		ha->gsessionid_param = gsid;
 	}
 
-	json_node_free (node);
+	json_node_free(node);
 	
 	hangouts_longpoll_request(ha);
 }

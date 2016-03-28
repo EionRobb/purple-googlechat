@@ -149,7 +149,11 @@ hangouts_login(PurpleAccount *account)
 	password = purple_connection_get_password(pc);
 	
 	pc_flags = purple_connection_get_flags(pc);
-	purple_connection_set_flags(pc, pc_flags | PURPLE_CONNECTION_FLAG_HTML | PURPLE_CONNECTION_FLAG_NO_FONTSIZE | PURPLE_CONNECTION_FLAG_NO_BGCOLOR);
+	pc_flags |= PURPLE_CONNECTION_FLAG_HTML;
+	pc_flags |= PURPLE_CONNECTION_FLAG_NO_FONTSIZE;
+	pc_flags |= PURPLE_CONNECTION_FLAG_NO_BGCOLOR;
+	pc_flags &= ~PURPLE_CONNECTION_FLAG_NO_IMAGES;
+	purple_connection_set_flags(pc, pc_flags);
 	
 	ha = g_new0(HangoutsAccount, 1);
 	ha->account = account;
@@ -513,7 +517,7 @@ init_plugin(PurplePlugin *plugin)
 		plugin->info = info = g_new0(PurplePluginInfo, 1);
 	}
 	
-	prpl_info->options = OPT_PROTO_NO_PASSWORD;
+	prpl_info->options = OPT_PROTO_NO_PASSWORD | OPT_PROTO_IM_IMAGE;
 
 	
 	purple_signal_register(plugin, "hangouts-received-stateupdate",

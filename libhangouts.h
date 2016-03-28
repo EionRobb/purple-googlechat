@@ -46,6 +46,8 @@
 
 #define HANGOUTS_API_OAUTH2_AUTHORIZATION_CODE_URL "https://accounts.google.com/o/oauth2/auth?client_id=" GOOGLE_CLIENT_ID "&scope=https://www.google.com/accounts/OAuthLogin&redirect_uri=urn:ietf:wg:oauth:2.0:oob&response_type=code"
 
+#define HANGOUTS_IMAGE_UPLOAD_URL "https://docs.google.com/upload/photos/resumable?authuser=0"
+
 #define HANGOUTS_ACTIVE_CLIENT_TIMEOUT 120
 
 typedef struct {

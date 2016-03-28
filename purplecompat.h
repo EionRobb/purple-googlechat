@@ -38,6 +38,7 @@
 #define PURPLE_CONNECTION_FLAG_HTML        PURPLE_CONNECTION_HTML
 #define PURPLE_CONNECTION_FLAG_NO_BGCOLOR  PURPLE_CONNECTION_NO_BGCOLOR
 #define PURPLE_CONNECTION_FLAG_NO_FONTSIZE PURPLE_CONNECTION_NO_FONTSIZE
+#define PURPLE_CONNECTION_FLAG_NO_IMAGES   PURPLE_CONNECTION_NO_IMAGES
 
 #define purple_request_cpar_from_connection(a)  purple_connection_get_account(a), NULL, NULL
 #define purple_connection_get_protocol          purple_connection_get_prpl

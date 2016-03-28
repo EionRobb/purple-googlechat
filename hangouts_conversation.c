@@ -802,7 +802,7 @@ hangouts_convert_html_to_segments(HangoutsAccount *ha, const gchar *html_message
 					if (last_link) {
 						segment->link_data = g_new0(LinkData, 1);
 						link_data__init(segment->link_data);
-						segment->link_data->link_target = last_link;
+						segment->link_data->link_target = g_strdup(last_link);
 					}
 				}
 				
@@ -916,7 +916,7 @@ hangouts_convert_html_to_segments(HangoutsAccount *ha, const gchar *html_message
 			if (last_link) {
 				segment->link_data = g_new0(LinkData, 1);
 				link_data__init(segment->link_data);
-				segment->link_data->link_target = last_link;
+				segment->link_data->link_target = g_strdup(last_link);
 			}
 		}
 		
@@ -936,6 +936,7 @@ hangouts_convert_html_to_segments(HangoutsAccount *ha, const gchar *html_message
 		*segments_count = n_segments;
 	}
 	
+	g_free(last_link);
 	return segments;
 }
 
@@ -946,6 +947,9 @@ hangouts_free_segments(Segment **segments)
 	for (i = 0; segments[i]; i++) {
 		g_free(segments[i]->text);
 		g_free(segments[i]->formatting);
+		if (segments[i]->link_data != NULL) {
+			g_free(segments[i]->link_data->link_target);
+		}
 		g_free(segments[i]->link_data);
 		g_free(segments[i]);
 	}

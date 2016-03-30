@@ -38,7 +38,7 @@ else
   ifeq ($(shell pkg-config --exists libprotobuf-c && echo "true"),true)
     PROTOBUF_OPTS := $(shell $(PKG_CONFIG) --cflags --libs libprotobuf-c)
   else
-    PROTOBUF_OPTS := -I/usr/include/google -I/usr/include/google/protobuf-c
+    PROTOBUF_OPTS := -I/usr/include/google -I/usr/include/google/protobuf-c -lprotobuf-c
   endif
 
   ifeq ($(shell pkg-config --exists purple-3 2>/dev/null && echo "true"),)

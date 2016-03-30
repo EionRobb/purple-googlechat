@@ -69,7 +69,7 @@ TEST_C_FILES := hangouts_test.c $(C_FILES)
 
 
 
-.PHONY:	all install install-windows FAILNOPURPLE
+.PHONY:	all install install-windows FAILNOPURPLE clean
 
 all: $(HANGOUTS_TARGET)
 
@@ -99,4 +99,7 @@ install-windows: libhangouts.dll
 
 FAILNOPURPLE:
 	echo "You need libpurple development headers installed to be able to compile this plugin"
+
+clean:
+	rm -f $(HANGOUTS_TARGET) hangouts.pb-c.h hangouts.pb-c.c
 

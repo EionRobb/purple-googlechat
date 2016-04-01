@@ -35,14 +35,14 @@ else
     CC ?= gcc
   endif
 
-  ifeq ($(shell pkg-config --exists libprotobuf-c && echo "true"),true)
+  ifeq ($(shell $(PKG_CONFIG) --exists libprotobuf-c && echo "true"),true)
     PROTOBUF_OPTS := $(shell $(PKG_CONFIG) --cflags --libs libprotobuf-c)
   else
     PROTOBUF_OPTS := -I/usr/include/google -I/usr/include/google/protobuf-c -lprotobuf-c
   endif
 
-  ifeq ($(shell pkg-config --exists purple-3 2>/dev/null && echo "true"),)
-    ifeq ($(shell pkg-config --exists purple 2>/dev/null && echo "true"),)
+  ifeq ($(shell $(PKG_CONFIG) --exists purple-3 2>/dev/null && echo "true"),)
+    ifeq ($(shell $(PKG_CONFIG) --exists purple 2>/dev/null && echo "true"),)
       HANGOUTS_TARGET = FAILNOPURPLE
       HANGOUTS_DEST =
     else

@@ -385,12 +385,6 @@ hangouts_chat_info(PurpleConnection *pc)
 	pce->required = TRUE;
 	m = g_list_append(m, pce);
 	
-	pce = g_new0(PurpleProtocolChatEntry, 1);
-	pce->label = _("Alias");
-	pce->identifier = "alias";
-	pce->required = FALSE;
-	m = g_list_append(m, pce);
-	
 	return m;
 }
 

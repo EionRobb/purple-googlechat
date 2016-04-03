@@ -1486,7 +1486,8 @@ gboolean
 hangouts_mark_conversation_seen_timeout(gpointer convpointer)
 {
 	PurpleConversation *conv = convpointer;
-	PurpleConnection *pc = purple_conversation_get_connection(conv);
+	PurpleAccount *account;
+	PurpleConnection *pc;
 	HangoutsAccount *ha;
 	UpdateWatermarkRequest request;
 	ConversationId conversation_id;
@@ -1496,6 +1497,10 @@ hangouts_mark_conversation_seen_timeout(gpointer convpointer)
 	
 	if (!PURPLE_CONVERSATION_IS_VALID(conv))
 		return FALSE;
+	account = purple_conversation_get_account(conv);
+	if (account == NULL || !purple_account_is_connected(account))
+		return FALSE;
+	pc = purple_account_get_connection(account);
 	if (!PURPLE_CONNECTION_IS_CONNECTED(pc))
 		return FALSE;
 	

@@ -44,6 +44,7 @@ guint hangouts_send_typing(PurpleConnection *pc, const gchar *name, PurpleIMTypi
 
 void hangouts_get_users_presence(HangoutsAccount *ha, GList *user_ids);
 void hangouts_get_users_information(HangoutsAccount *ha, GList *user_ids);
+void hangouts_get_info(PurpleConnection *pc, const gchar *who);
 
 void hangouts_chat_leave_by_conv_id(PurpleConnection *pc, const gchar *conv_id);
 void hangouts_chat_leave(PurpleConnection *pc, int id);

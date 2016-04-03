@@ -237,6 +237,87 @@ hangouts_get_users_information(HangoutsAccount *ha, GList *user_ids)
 }
 
 static void
+hangouts_got_user_info(HangoutsAccount *ha, GetEntityByIdResponse *response, gpointer user_data)
+{
+	Entity *entity;
+	EntityProperties *props;
+	PurpleNotifyUserInfo *user_info;
+	gchar *who = user_data;
+	guint i;
+	
+	if (response->n_entity_result < 1) {
+		g_free(who);
+		return;
+	}
+	
+	entity = response->entity_result[0]->entity[0];
+	if (entity == NULL || entity->properties == NULL) {
+		g_free(who);
+		return;
+	}
+	props = entity->properties;
+	
+	user_info = purple_notify_user_info_new();
+	
+	if (props->has_type) {
+		const gchar *type_str;
+		switch (props->type) {
+			case PROFILE_TYPE__PROFILE_TYPE_ES_USER: type_str = _("User"); break;
+			default: type_str = _("Unknown"); break;
+		}
+		purple_notify_user_info_add_pair_html(user_info, _("Type"), type_str);
+	}
+	purple_notify_user_info_add_pair_html(user_info, _("Display Name"), props->display_name);
+	purple_notify_user_info_add_pair_html(user_info, _("First Name"), props->first_name);
+	purple_notify_user_info_add_pair_html(user_info, _("Photo Url"), props->photo_url);
+	for (i = 0; i < props->n_email; i++) {
+		purple_notify_user_info_add_pair_html(user_info, _("Email"), props->email[i]);
+	}
+	for (i = 0; i < props->n_phone; i++) {
+		purple_notify_user_info_add_pair_html(user_info, _("Phone"), props->phone[i]);
+	}
+	if (props->has_gender) {
+		const gchar *gender_str;
+		switch (props->gender) {
+			case GENDER__GENDER_MALE: gender_str = _("Male"); break;
+			case GENDER__GENDER_FEMALE: gender_str = _("Female"); break;
+			default: gender_str = _("Unknown"); break;
+		}
+		purple_notify_user_info_add_pair_html(user_info, _("Gender"), gender_str);
+	}
+	purple_notify_user_info_add_pair_html(user_info, _("Canonical Email"), props->canonical_email);
+	
+	purple_notify_userinfo(ha->pc, who, user_info, NULL, NULL);
+	
+	g_free(who);
+}
+
+
+void
+hangouts_get_info(PurpleConnection *pc, const gchar *who)
+{
+	HangoutsAccount *ha = purple_connection_get_protocol_data(pc);
+	GetEntityByIdRequest request;
+	EntityLookupSpec entity_lookup_spec;
+	EntityLookupSpec *batch_lookup_spec;
+	gchar *who_dup = g_strdup(who);
+	
+	get_entity_by_id_request__init(&request);
+	request.request_header = hangouts_get_request_header(ha);
+	
+	entity_lookup_spec__init(&entity_lookup_spec);
+	entity_lookup_spec.gaia_id = who_dup;
+	
+	batch_lookup_spec = &entity_lookup_spec;
+	request.batch_lookup_spec = &batch_lookup_spec;
+	request.n_batch_lookup_spec = 1;
+	
+	hangouts_pblite_get_entity_by_id(ha, &request, hangouts_got_user_info, who_dup);
+	
+	hangouts_request_header_free(request.request_header);
+}
+
+static void
 hangouts_got_conversation_events(HangoutsAccount *ha, GetConversationResponse *response, gpointer user_data)
 {
 	Conversation *conversation = response->conversation_state->conversation;

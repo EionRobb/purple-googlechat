@@ -361,6 +361,7 @@ hangouts_protocol_client_iface_init(PurpleProtocolClientIface *prpl_info)
 static void
 hangouts_protocol_server_iface_init(PurpleProtocolServerIface *prpl_info)
 {
+	prpl_info->get_info = hangouts_get_info;
 	prpl_info->set_status = hangouts_set_status;
 	prpl_info->set_idle = hangouts_set_idle;
 }
@@ -533,6 +534,7 @@ init_plugin(PurplePlugin *plugin)
 	prpl_info->list_icon = hangouts_list_icon;
 	prpl_info->status_text = hangouts_status_text;
 	
+	prpl_info->get_info = hangouts_get_info;
 	prpl_info->set_status = hangouts_set_status;
 	prpl_info->set_idle = hangouts_set_idle;
 	

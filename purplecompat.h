@@ -121,6 +121,7 @@ purple_message_destroy(PurpleMessage *message)
 #define purple_notify_warning(handle, title, primary, secondary, cpar)   \
 	purple_notify_message((handle), PURPLE_NOTIFY_MSG_WARNING, (title), \
 						(primary), (secondary), NULL, NULL)
+#define purple_notify_user_info_add_pair_html  purple_notify_user_info_add_pair
 
 #define PurpleProtocolAction  PurplePluginAction
 #define purple_protocol_action_get_connection(action)  ((PurpleConnection *) (action)->context)

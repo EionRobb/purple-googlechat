@@ -9,20 +9,33 @@ Heavily inspired by the [hangups library](https://github.com/tdryer/hangups) by 
 ## Compiling ##
 To compile, just do the standard `make && sudo make install` dance.  You'll need development packages for libpurple, libjson-glib, glib and libprotobuf-c to be able to compile.
 
+## Debian/Ubuntu ##
+Run the following commands from a terminal
+
+```
+#!sh
+sudo apt-get install libpurple-dev libjson-glib-dev libglib2.0-dev libprotobuf-c-dev protobuf-c-compiler mercurial make;
+hg clone https://bitbucket.org/EionRobb/purple-hangouts/ && cd purple-hangouts;
+make && sudo make install
+```
+
 ## Fedora ##
 On Fedora you can use [purple-hangouts](https://copr.fedorainfracloud.org/coprs/xvitaly/purple-hangouts/) COPR repository.
 
 At first time you should add COPR repository and enable it:
 ```
+#!sh
 sudo dnf copr enable xvitaly/purple-hangouts
 ```
 Now you can install packages:
 ```
+#!sh
 sudo dnf install purple-hangouts pidgin-hangouts
 ```
 
 ## Building RPM package for Fedora/openSUSE/CentOS/RHEL ##
 ```
+#!sh
 mkdir -p ~/rpmbuild/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS}
 wget https://bitbucket.org/EionRobb/purple-hangouts/raw/440c6734e1540525b2e25797c3856121e12719ee/purple-hangouts.spec -O ~/rpmbuild/SPECS/purple-hangouts.spec
 sudo dnf builddep ~/rpmbuild/SPECS/purple-hangouts.spec

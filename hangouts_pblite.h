@@ -2,7 +2,7 @@
 #ifndef _HANGOUTS_PBLITE_H_
 #define _HANGOUTS_PBLITE_H_
 
-#include <protobuf-c.h>
+#include <protobuf-c/protobuf-c.h>
 
 
 #include "hangouts_json.h"

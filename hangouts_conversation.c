@@ -1144,7 +1144,7 @@ hangouts_conversation_send_image(HangoutsAccount *ha, const gchar *conv_id, Purp
 		filename = g_strdup_printf("purple%d.%s", g_random_int(), purple_image_get_extension(image));
 	}
 	
-	postdata = g_strdup_printf("{\"protocolVersion\":\"0.8\",\"createSessionRequest\":{\"fields\":[{\"external\":{\"name\":\"file\",\"filename\":\"%s\",\"put\":{},\"size\":%d}},{\"inlined\":{\"name\":\"client\",\"content\":\"hangouts\",\"contentType\":\"text/plain\"}}]}}", filename, purple_image_get_size(image));
+	postdata = g_strdup_printf("{\"protocolVersion\":\"0.8\",\"createSessionRequest\":{\"fields\":[{\"external\":{\"name\":\"file\",\"filename\":\"%s\",\"put\":{},\"size\":%" G_GSIZE_FORMAT "}},{\"inlined\":{\"name\":\"client\",\"content\":\"hangouts\",\"contentType\":\"text/plain\"}}]}}", filename, (gsize) purple_image_get_size(image));
 	
 	request = purple_http_request_new(HANGOUTS_IMAGE_UPLOAD_URL);
 	purple_http_request_set_cookie_jar(request, ha->cookie_jar);

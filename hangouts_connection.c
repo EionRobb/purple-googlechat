@@ -204,7 +204,7 @@ hangouts_process_channel_buffer(HangoutsAccount *ha)
 		
 		if (len > bufsize) {
 			// Not enough data to read
-			purple_debug_info("hangouts", "Couldn't read %d bytes when we only have %d\n", len, bufsize);
+			purple_debug_info("hangouts", "Couldn't read %" G_GSIZE_FORMAT " bytes when we only have %" G_GSIZE_FORMAT "\n", len, bufsize);
 			return;
 		}
 		

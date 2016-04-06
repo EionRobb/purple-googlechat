@@ -287,7 +287,14 @@ hangouts_got_user_info(HangoutsAccount *ha, GetEntityByIdResponse *response, gpo
 	}
 	purple_notify_user_info_add_pair_html(user_info, _("Display Name"), props->display_name);
 	purple_notify_user_info_add_pair_html(user_info, _("First Name"), props->first_name);
-	purple_notify_user_info_add_pair_html(user_info, _("Photo Url"), props->photo_url);
+
+	gchar *photo_tag;
+	if (props->photo_url) {
+		photo_tag = g_strdup_printf("<a href=\"https:%s\"><img width=\"128\" src=\"https:%s\"/></a>", props->photo_url, props->photo_url);
+		purple_notify_user_info_add_pair_html(user_info, _("Photo"), photo_tag);
+		g_free(photo_tag);
+	}
+
 	for (i = 0; i < props->n_email; i++) {
 		purple_notify_user_info_add_pair_html(user_info, _("Email"), props->email[i]);
 	}

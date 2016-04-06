@@ -285,14 +285,13 @@ hangouts_got_user_info(HangoutsAccount *ha, GetEntityByIdResponse *response, gpo
 	
 	user_info = purple_notify_user_info_new();
 	
-	if (props->has_type) {
-		const gchar *type_str;
-		switch (props->type) {
-			case PROFILE_TYPE__PROFILE_TYPE_ES_USER: type_str = _("User"); break;
-			default: type_str = _("Unknown"); break;
-		}
-		purple_notify_user_info_add_pair_html(user_info, _("Type"), type_str);
+	const gchar *type_str;
+	switch (entity->entity_type) {
+		case PARTICIPANT_TYPE__PARTICIPANT_TYPE_OFF_NETWORK_PHONE: type_str = _("SMS"); break;
+		case PARTICIPANT_TYPE__PARTICIPANT_TYPE_GAIA: type_str = _("Hangouts (Gaia)"); break;
+		default: type_str = _("Unknown"); break;
 	}
+	purple_notify_user_info_add_pair_html(user_info, _("Type"), type_str);
 	if (props->display_name != NULL)
 		purple_notify_user_info_add_pair_html(user_info, _("Display Name"), props->display_name);
 	if (props->first_name != NULL)

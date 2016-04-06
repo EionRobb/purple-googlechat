@@ -207,11 +207,19 @@ hangouts_got_users_information(HangoutsAccount *ha, GetEntityByIdResponse *respo
 	
 	for (i = 0; i < response->n_entity_result; i++) {
 		Entity *entity = response->entity_result[i]->entity[0];
-		const gchar *display_name = entity && entity->properties ? entity->properties->display_name : NULL;
 		const gchar *gaia_id = entity && entity->id ? entity->id->gaia_id : NULL;
 		
-		if (gaia_id != NULL && display_name != NULL) {
-			purple_serv_got_alias(ha->pc, gaia_id, display_name);
+		if (gaia_id != NULL && entity && entity->properties) {
+			if (entity->properties->display_name)
+				purple_serv_got_alias(ha->pc, gaia_id, entity->properties->display_name);
+			else if (entity->properties->canonical_email)
+				purple_serv_got_alias(ha->pc, gaia_id, entity->properties->canonical_email);
+			else if (entity->entity_type == PARTICIPANT_TYPE__PARTICIPANT_TYPE_OFF_NETWORK_PHONE
+					 && entity->properties->n_phone) {
+				gchar *display_name = g_strdup_printf("%s (SMS)", entity->properties->phone[0]);
+				purple_serv_got_alias(ha->pc, gaia_id, display_name);
+				g_free(display_name);
+			}
 		}
 		
 		if (entity->entity_type == PARTICIPANT_TYPE__PARTICIPANT_TYPE_OFF_NETWORK_PHONE) {

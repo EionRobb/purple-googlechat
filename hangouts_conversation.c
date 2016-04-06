@@ -293,8 +293,10 @@ hangouts_got_user_info(HangoutsAccount *ha, GetEntityByIdResponse *response, gpo
 		}
 		purple_notify_user_info_add_pair_html(user_info, _("Type"), type_str);
 	}
-	purple_notify_user_info_add_pair_html(user_info, _("Display Name"), props->display_name);
-	purple_notify_user_info_add_pair_html(user_info, _("First Name"), props->first_name);
+	if (props->display_name != NULL)
+		purple_notify_user_info_add_pair_html(user_info, _("Display Name"), props->display_name);
+	if (props->first_name != NULL)
+		purple_notify_user_info_add_pair_html(user_info, _("First Name"), props->first_name);
 
 	gchar *photo_tag;
 	if (props->photo_url) {
@@ -318,10 +320,11 @@ hangouts_got_user_info(HangoutsAccount *ha, GetEntityByIdResponse *response, gpo
 		}
 		purple_notify_user_info_add_pair_html(user_info, _("Gender"), gender_str);
 	}
-	purple_notify_user_info_add_pair_html(user_info, _("Canonical Email"), props->canonical_email);
-	
+	if (props->canonical_email != NULL)
+		purple_notify_user_info_add_pair_html(user_info, _("Canonical Email"), props->canonical_email);
+       
 	purple_notify_userinfo(ha->pc, who, user_info, NULL, NULL);
-	
+       
 	g_free(who);
 }
 

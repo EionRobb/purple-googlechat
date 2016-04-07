@@ -215,11 +215,8 @@ hangouts_got_users_information(HangoutsAccount *ha, GetEntityByIdResponse *respo
 			else if (entity->properties->canonical_email)
 				purple_serv_got_alias(ha->pc, gaia_id, entity->properties->canonical_email);
 			else if (entity->entity_type == PARTICIPANT_TYPE__PARTICIPANT_TYPE_OFF_NETWORK_PHONE
-					 && entity->properties->n_phone) {
-				gchar *display_name = g_strdup_printf("%s (SMS)", entity->properties->phone[0]);
-				purple_serv_got_alias(ha->pc, gaia_id, display_name);
-				g_free(display_name);
-			}
+			         && entity->properties->n_phone)
+				purple_serv_got_alias(ha->pc, gaia_id, entity->properties->phone[0]);
 		}
 		
 		if (entity->entity_type == PARTICIPANT_TYPE__PARTICIPANT_TYPE_OFF_NETWORK_PHONE) {
@@ -297,9 +294,10 @@ hangouts_got_user_info(HangoutsAccount *ha, GetEntityByIdResponse *response, gpo
 	if (props->first_name != NULL)
 		purple_notify_user_info_add_pair_html(user_info, _("First Name"), props->first_name);
 
-	gchar *photo_tag;
 	if (props->photo_url) {
-		photo_tag = g_strdup_printf("<a href=\"https:%s\"><img width=\"128\" src=\"https:%s\"/></a>", props->photo_url, props->photo_url);
+		gchar *prefix = strncmp(props->photo_url, "//", 2) ? "" : "https:";
+		gchar *photo_tag = g_strdup_printf("<a href=\"%s%s\"><img width=\"128\" src=\"%s%s\"/></a>",
+		                                   prefix, props->photo_url, prefix, props->photo_url);
 		purple_notify_user_info_add_pair_html(user_info, _("Photo"), photo_tag);
 		g_free(photo_tag);
 	}

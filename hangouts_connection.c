@@ -759,29 +759,24 @@ hangouts_search_users_text(gpointer user_data, const gchar *text)
 {
 	PurpleHttpRequest *request;
 	HangoutsAccount *ha = user_data;
-	const gchar *url = "https://people-pa.clients6.google.com/v2/people/autocomplete";
-	GString *postdata = g_string_new(NULL);
+	GString *url = g_string_new("https://people-pa.clients6.google.com/v2/people/autocomplete?");
 	PurpleHttpConnection *connection;
+	
+	g_string_append_printf(url, "query=%s&", purple_url_encode(text));
+	g_string_append(url, "client=HANGOUTS_WITH_DATA&");
+	g_string_append(url, "pageSize=20&");
+	g_string_append_printf(url, "key=%s&", purple_url_encode(GOOGLE_GPLUS_KEY));
 	
 	request = purple_http_request_new(NULL);
 	purple_http_request_set_cookie_jar(request, ha->cookie_jar);
-	purple_http_request_set_url(request, url);
-	purple_http_request_set_method(request, "POST");
-	purple_http_request_header_set(request, "Content-Type", "application/x-www-form-urlencoded");
+	purple_http_request_set_url(request, url->str);
 	
 	hangouts_set_auth_headers(ha, request);
-	
-	g_string_append_printf(postdata, "query=%s&", purple_url_encode(text));
-	g_string_append(postdata, "client=HANGOUTS_WITH_DATA&");
-	g_string_append(postdata, "pageSize=20&");
-	g_string_append_printf(postdata, "key=%s&", purple_url_encode(GOOGLE_GPLUS_KEY));
-	
-	purple_http_request_set_contents(request, postdata->str, postdata->len);
 
 	connection = purple_http_request(ha->pc, request, hangouts_search_users_text_cb, ha);
 	g_dataset_set_data_full(connection, "search_term", g_strdup(text), g_free);
 	
-	g_string_free(postdata, TRUE);
+	g_string_free(url, TRUE);
 }
 
 void

@@ -383,6 +383,13 @@ hangouts_protocol_server_iface_init(PurpleProtocolServerIface *prpl_info)
 	prpl_info->set_idle = hangouts_set_idle;
 }
 
+static void
+hangouts_protocol_privacy_iface_init(PurpleProtocolPrivacyIface *prpl_info)
+{
+	prpl_info->add_deny = hangouts_block_user;
+	prpl_info->rem_deny = hangouts_unblock_user;
+}
+
 static void 
 hangouts_protocol_im_iface_init(PurpleProtocolIMIface *prpl_info)
 {
@@ -417,6 +424,9 @@ PURPLE_DEFINE_TYPE_EXTENDED(
 
 	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_SERVER_IFACE,
 	                                  hangouts_protocol_server_iface_init)
+
+	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_PRIVACY_IFACE,
+	                                  hangouts_protocol_privacy_iface_init)
 );
 
 static gboolean
@@ -565,6 +575,9 @@ init_plugin(PurplePlugin *plugin)
 	prpl_info->join_chat = hangouts_join_chat;
 	prpl_info->get_chat_name = hangouts_get_chat_name;
 	prpl_info->chat_invite = hangouts_chat_invite;
+	
+	prpl_info->add_deny = hangouts_block_user;
+	prpl_info->rem_deny = hangouts_unblock_user;
 	
 	info->extra_info = prpl_info;
 	#if PURPLE_MINOR_VERSION >= 5

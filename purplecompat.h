@@ -130,6 +130,8 @@ purple_message_destroy(PurpleMessage *message)
 
 #define purple_protocol_got_user_status		purple_prpl_got_user_status
 
+#define purple_account_privacy_deny_add     purple_privacy_deny_add
+#define purple_account_privacy_deny_remove  purple_privacy_deny_remove
 #define purple_account_set_password(account, password, dummy1, dummy2) \
 		purple_account_set_password(account, password);
 

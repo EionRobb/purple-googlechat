@@ -857,6 +857,32 @@ Cache-Control: no-cache
 /* {"method":"plusi.ozinternal.loadblockedpeople","id":"getBlockedUsers","apiVersion":"v2","jsonrpc":"2.0","params":{"includeChatBlocked":true}} */
 }
 
+void
+hangouts_block_user(PurpleConnection *pc, const char *who)
+{
+	HangoutsAccount *ha = purple_connection_get_protocol_data(pc);
+	gchar *request_data;
+	
+	request_data = g_strdup_printf("{\"method\":\"plusi.ozinternal.blockuser\",\"id\":\"blockUser\",\"apiVersion\":\"v2\",\"jsonrpc\":\"2.0\",\"params\":{\"membersToBlock\": {\"members\":[{\"memberId\":{\"obfuscatedGaiaId\":\"%s\"}}],\"block\":true}}}", who);
+	
+	hangouts_client6_request(ha, "/rpc/plusi?key=" GOOGLE_GPLUS_KEY, HANGOUTS_CONTENT_TYPE_JSON, request_data, -1, HANGOUTS_CONTENT_TYPE_JSON, NULL, ha);
+	
+	g_free(request_data);
+}
+
+void
+hangouts_unblock_user(PurpleConnection *pc, const char *who)
+{
+	HangoutsAccount *ha = purple_connection_get_protocol_data(pc);
+	gchar *request_data;
+	
+	request_data = g_strdup_printf("{\"method\":\"plusi.ozinternal.blockuser\",\"id\":\"unblockUser\",\"apiVersion\":\"v2\",\"jsonrpc\":\"2.0\",\"params\":{\"membersToBlock\": {\"members\":[{\"memberId\":{\"obfuscatedGaiaId\":\"%s\"}}],\"block\":false},\"legacyChatUnblock\":true}}", who);
+	
+	hangouts_client6_request(ha, "/rpc/plusi?key=" GOOGLE_GPLUS_KEY, HANGOUTS_CONTENT_TYPE_JSON, request_data, -1, HANGOUTS_CONTENT_TYPE_JSON, NULL, ha);
+	
+	g_free(request_data);
+}
+
 static Segment **
 hangouts_convert_html_to_segments(HangoutsAccount *ha, const gchar *html_message, guint *segments_count)
 {

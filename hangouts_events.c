@@ -39,6 +39,7 @@ hangouts_register_events(gpointer plugin)
 	purple_signal_connect(plugin, "hangouts-received-stateupdate", plugin, PURPLE_CALLBACK(hangouts_received_presence_notification), NULL);
 	purple_signal_connect(plugin, "hangouts-received-stateupdate", plugin, PURPLE_CALLBACK(hangouts_received_watermark_notification), NULL);
 	purple_signal_connect(plugin, "hangouts-received-stateupdate", plugin, PURPLE_CALLBACK(hangouts_received_state_update), NULL);
+	purple_signal_connect(plugin, "hangouts-received-stateupdate", plugin, PURPLE_CALLBACK(hangouts_received_block_notification), NULL);
 	purple_signal_connect(plugin, "hangouts-received-stateupdate", plugin, PURPLE_CALLBACK(hangouts_received_other_notification), NULL);
 }
 
@@ -78,6 +79,33 @@ hangouts_received_state_update(PurpleConnection *pc, StateUpdate *state_update)
 		//  also needs to work cross platform, in case the accounts.xml is being shared (double puke)
 		purple_account_set_int(ha->account, "last_event_timestamp_high", current_server_time >> 32);
 		purple_account_set_int(ha->account, "last_event_timestamp_low", current_server_time & 0xFFFFFFFF);
+	}
+}
+
+void
+hangouts_received_block_notification(PurpleConnection *pc, StateUpdate *state_update)
+{
+	HangoutsAccount *ha;
+	BlockNotification *block_notification = state_update->block_notification;
+	guint i;
+	
+	if (block_notification == NULL) {
+		return;
+	}
+	
+	ha = purple_connection_get_protocol_data(pc);
+	
+	for (i = 0; i < block_notification->n_block_state_change; i++) {
+		BlockStateChange *block_state_change = block_notification->block_state_change[i];
+		
+		if (block_state_change->has_new_block_state) {
+			gchar *gaia_id = block_state_change->participant_id->gaia_id;
+			if (block_state_change->new_block_state == BLOCK_STATE__BLOCK_STATE_BLOCK) {
+				purple_account_privacy_deny_add(ha->account, gaia_id, TRUE);
+			} else if (block_state_change->new_block_state == BLOCK_STATE__BLOCK_STATE_UNBLOCK) {
+				purple_account_privacy_deny_remove(ha->account, gaia_id, TRUE);
+			}
+		}
 	}
 }
 

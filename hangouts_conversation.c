@@ -118,6 +118,8 @@ static void
 hangouts_got_self_info(HangoutsAccount *ha, GetSelfInfoResponse *response, gpointer user_data)
 {
 	Entity *self_entity = response->self_entity;
+	PhoneData *phone_data = response->phone_data;
+	guint i;
 	
 	g_return_if_fail(self_entity);
 	
@@ -125,6 +127,17 @@ hangouts_got_self_info(HangoutsAccount *ha, GetSelfInfoResponse *response, gpoin
 	ha->self_gaia_id = g_strdup(self_entity->id->gaia_id);
 	purple_connection_set_display_name(ha->pc, ha->self_gaia_id);
 	purple_account_set_string(ha->account, "self_gaia_id", ha->self_gaia_id);
+	
+	if (phone_data != NULL) {
+		for (i = 0; i < phone_data->n_phone; i++) {
+			Phone *phone = phone_data->phone[i];
+			if (phone->google_voice) {
+				g_free(ha->self_phone);
+				ha->self_phone = g_strdup(phone->phone_number->e164);
+				break;
+			}
+		}
+	}
 	
 	hangouts_get_buddy_list(ha);
 }

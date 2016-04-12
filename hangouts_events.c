@@ -18,6 +18,7 @@
 
 #include "hangouts_events.h"
 
+#include "core.h"
 #include "debug.h"
 #include "glibcompat.h"
 #include "image.h"
@@ -599,13 +600,18 @@ hangouts_process_conversation_event(HangoutsAccount *ha, Conversation *conversat
 					const gchar *url = plus_photo->original_content_url;
 					PurpleHttpConnection *connection;
 					
-					connection = purple_http_get(ha->pc, hangouts_got_http_image_for_conv, ha, image_url);
-					purple_http_request_set_max_len(purple_http_conn_get_request(connection), -1);
-					g_dataset_set_data_full(connection, "url", g_strdup(url), g_free);
-					g_dataset_set_data_full(connection, "gaia_id", g_strdup(gaia_id), g_free);
-					g_dataset_set_data_full(connection, "conv_id", g_strdup(conv_id), g_free);
-					g_dataset_set_data(connection, "msg_flags", GINT_TO_POINTER(msg_flags));
-					g_dataset_set_data(connection, "message_timestamp", GINT_TO_POINTER(message_timestamp));
+					if (g_strcmp0(purple_core_get_ui(), "BitlBee") == 0) {
+						// Bitlbee doesn't support images, so just plop a url to the image instead
+						purple_serv_got_im(pc, gaia_id, url, msg_flags, message_timestamp);
+					} else {
+						connection = purple_http_get(ha->pc, hangouts_got_http_image_for_conv, ha, image_url);
+						purple_http_request_set_max_len(purple_http_conn_get_request(connection), -1);
+						g_dataset_set_data_full(connection, "url", g_strdup(url), g_free);
+						g_dataset_set_data_full(connection, "gaia_id", g_strdup(gaia_id), g_free);
+						g_dataset_set_data_full(connection, "conv_id", g_strdup(conv_id), g_free);
+						g_dataset_set_data(connection, "msg_flags", GINT_TO_POINTER(msg_flags));
+						g_dataset_set_data(connection, "message_timestamp", GINT_TO_POINTER(message_timestamp));
+					}
 				}
 			}
 		}

@@ -87,6 +87,9 @@ message Presence {
   optional DeviceStatus device_status = 6;
   optional MoodSetting mood_setting = 9;
   optional LastSeen last_seen = 10;
+
+  // TODO:
+  // optional CallType call_type = 5;
 }
 
 message PresenceResult {
@@ -455,6 +458,12 @@ message DeliveryMediumOption {
   optional bool primary = 3;
 }
 
+enum InvitationAffinity {
+  INVITE_AFFINITY_UNKNOWN = 0;
+  INVITE_AFFINITY_HIGH = 1;
+  INVITE_AFFINITY_LOW = 2;
+}
+
 message UserConversationState {
    optional string client_generated_id = 2;
    optional UserReadState self_read_state = 7;
@@ -465,6 +474,7 @@ message UserConversationState {
    optional uint64 invite_timestamp = 12;
    optional uint64 sort_timestamp = 13;
    optional uint64 active_timestamp = 14;
+   optional InvitationAffinity invite_affinity = 15;
    repeated DeliveryMediumOption delivery_medium_option = 17;
 }
 
@@ -663,6 +673,8 @@ message EntityProperties {
   optional ProfileType type = 1;
   optional string display_name = 2;
   optional string first_name = 3;
+  // Photo URL with protocol scheme omitted (eg.
+  // "//lh.googleusercontent.com/...").
   optional string photo_url = 4;
   repeated string email = 5;
   repeated string phone = 6;
@@ -708,12 +720,14 @@ message EventContinuationToken {
   optional uint64 event_timestamp = 3;
 }
 
+// Specifies an entity to lookup by one of its properties.
 message EntityLookupSpec {
   optional string gaia_id = 1;
   optional string jid = 2;
   optional string email = 3;
   optional string phone = 4;
   optional string chat_id = 5;
+  // Whether create a gaia_id for off-network contacts (eg. Google Voice contacts).
   optional bool create_offnetwork_gaia = 6;
 }
 
@@ -797,6 +811,8 @@ enum FieldMask {
   FIELD_MASK_IN_CALL = 6;
   FIELD_MASK_DEVICE = 7;
   FIELD_MASK_LAST_SEEN = 10;
+
+  // TODO: 5,8,9?
 }
 
 message DesktopOffSetting {
@@ -939,19 +955,24 @@ message PhoneNumber {
 message SuggestedContactGroupHash {
   // Number of results to return from this group.
   optional uint64 max_results = 1;
-  // A 4-byte hash.
+  // An optional 4-byte hash. If this matches the server's hash, no results
+  // will be sent.
   optional bytes hash = 2;
 }
 
 message SuggestedContact {
+  // The contact's entity.
   optional Entity entity = 1;
+  // The contact's invitation status.
   optional InvitationStatus invitation_status = 2;
 }
 
 message SuggestedContactGroup {
+  // True if the request's hash matched and no contacts will be included.
   optional bool hash_matched = 1;
-  // A 4-byte hash.
+  // A 4-byte hash which can be used in subsequent requests.
   optional bytes hash = 2;
+  // List of contacts in this group.
   repeated SuggestedContact contact = 3;
 }
 
@@ -973,8 +994,7 @@ message StateUpdate {
   //TODO implement in pblite handler
   //oneof state_update {
 
-  // optional  //UnimplementedMessage conversation_notification = 2; // always null?
-  
+  optional  ConversationNotification conversation_notification = 2;
   optional  EventNotification event_notification = 3;
   optional  SetFocusNotification focus_notification = 4;
   optional  SetTypingNotification typing_notification = 5;
@@ -984,8 +1004,8 @@ message StateUpdate {
   
   // optional  //UnimplementedMessage unknown_1 = 9;
   // optional  //UnimplementedMessage settings_notification = 10;
-  
-  // optional  // TODO: rename to ViewModificationNotification?
+    // TODO: rename to ViewModificationNotification?
+
   
   optional  ConversationViewModification view_modification = 11;
   optional  EasterEggNotification easter_egg_notification = 12;
@@ -1019,6 +1039,10 @@ message StateUpdateHeader {
 // the server to the client simultaneously.
 message BatchUpdate {
   repeated StateUpdate state_update = 1;
+}
+
+message ConversationNotification {
+  optional Conversation conversation = 1;
 }
 
 message EventNotification {
@@ -1113,6 +1137,16 @@ message ConversationSpec {
   // TODO
 }
 
+enum OffnetworkAddressType {
+  OFFNETWORK_ADDRESS_TYPE_UNKNOWN = 0;
+  OFFNETWORK_ADDRESS_TYPE_EMAIL = 1;
+}
+
+message OffnetworkAddress {
+  optional OffnetworkAddressType type = 1;
+  optional string email = 3;
+}
+
 // ----------------------------------------------------------------------------
 // Requests & Responses
 // ----------------------------------------------------------------------------
@@ -1194,7 +1228,9 @@ message GetEntityByIdRequest {
 
 message GetEntityByIdResponse {
   optional ResponseHeader response_header = 1;
+  // Resulting entities of PARTICIPANT_TYPE_GAIA only.
   repeated Entity entity = 2;
+  // All resulting entities.
   repeated EntityResult entity_result = 3;
 }
 
@@ -1205,20 +1241,29 @@ message EntityResult {
 
 message GetSuggestedEntitiesRequest {
   optional RequestHeader request_header = 1;
+  // Max number of non-grouped entities to return.
+  optional uint64 max_count = 4;
+  // Optional hash for "favorites" contact group.
   optional SuggestedContactGroupHash favorites = 8;
+  // Optional hash for "contacts you hangout with" contact group.
   optional SuggestedContactGroupHash contacts_you_hangout_with = 9;
+  // Optional hash for "other contacts on hangouts" contact group.
   optional SuggestedContactGroupHash other_contacts_on_hangouts = 10;
+  // Optional hash for "other contacts" contact group.
   optional SuggestedContactGroupHash other_contacts = 11;
+  // Optional hash for "dismissed contacts" contact group.
   optional SuggestedContactGroupHash dismissed_contacts = 12;
+  // Optional hash for "pinned favorites" contact group.
   optional SuggestedContactGroupHash pinned_favorites = 13;
 
   // TODO: possible other fields:
-  // unknown bytes = 2;
-  // unknown bytes = 3;
-  // unknown int/enum = 4;
-  // unknown bool = 5;
-  // repeated ParticipantId unknown = 6;
+  // repeated EntityID given_entity_id = 2
+  // repeated EntityFilterType entity_type_filter = 3;
+  // optional bool include_availability = 5;
+  // repeated ParticipantId given_entity_id = 6
   // unknown bool = 7;
+  // unknown bool = 14;
+  // unknown repeated int = 15;
 }
 
 message GetSuggestedEntitiesResponse {
@@ -1326,6 +1371,15 @@ message SendChatMessageResponse {
 
   // TODO:
   // unknown [] = 4;
+}
+
+message SendOffnetworkInvitationRequest {
+  optional RequestHeader request_header = 1;
+  optional OffnetworkAddress invitee_address = 2;
+}
+
+message SendOffnetworkInvitationResponse {
+  optional ResponseHeader response_header = 1;
 }
 
 message SetActiveClientRequest {

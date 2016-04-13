@@ -256,6 +256,25 @@ hangouts_list_icon(PurpleAccount *account, PurpleBuddy *buddy)
 	return "hangouts";
 }
 
+static void
+hangouts_tooltip_text(PurpleBuddy *buddy, PurpleNotifyUserInfo *user_info, gboolean full)
+{
+	PurplePresence *presence;
+	PurpleStatus *status;
+	const gchar *message;
+	
+	g_return_if_fail(buddy != NULL);
+	
+	presence = purple_buddy_get_presence(buddy);
+	status = purple_presence_get_active_status(presence);
+	purple_notify_user_info_add_pair_html(user_info, _("Status"), purple_status_get_name(status));
+	
+	message = purple_status_get_attr_string(status, "message");
+	if (message != NULL) {
+		purple_notify_user_info_add_pair_html(user_info, _("Message"), message);
+	}
+	
+}
 
 GList *
 hangouts_status_types(PurpleAccount *account)
@@ -373,6 +392,7 @@ hangouts_protocol_client_iface_init(PurpleProtocolClientIface *prpl_info)
 	prpl_info->get_actions = hangouts_actions;
 	prpl_info->blist_node_menu = hangouts_node_menu;
 	prpl_info->status_text = hangouts_status_text;
+	prpl_info->tooltip_text = hangouts_tooltip_text;
 }
 
 static void
@@ -560,6 +580,7 @@ init_plugin(PurplePlugin *plugin)
 	prpl_info->status_types = hangouts_status_types;
 	prpl_info->list_icon = hangouts_list_icon;
 	prpl_info->status_text = hangouts_status_text;
+	prpl_info->tooltip_text = hangouts_tooltip_text;
 	
 	prpl_info->get_info = hangouts_get_info;
 	prpl_info->set_status = hangouts_set_status;

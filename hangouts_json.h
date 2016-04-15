@@ -40,6 +40,19 @@
 #define JSON_NODE_HOLDS_NULL(node)   (JSON_NODE_HOLDS ((node), JSON_NODE_NULL))
 #endif
 
+
+// Supress overzealous json-glib 'critical errors'
+#define json_object_get_int_member(JSON_OBJECT, MEMBER) \
+	(json_object_has_member(JSON_OBJECT, MEMBER) ? json_object_get_int_member(JSON_OBJECT, MEMBER) : 0)
+#define json_object_get_string_member(JSON_OBJECT, MEMBER) \
+	(json_object_has_member(JSON_OBJECT, MEMBER) ? json_object_get_string_member(JSON_OBJECT, MEMBER) : NULL)
+#define json_object_get_array_member(JSON_OBJECT, MEMBER) \
+	(json_object_has_member(JSON_OBJECT, MEMBER) ? json_object_get_array_member(JSON_OBJECT, MEMBER) : NULL)
+#define json_object_get_object_member(JSON_OBJECT, MEMBER) \
+	(json_object_has_member(JSON_OBJECT, MEMBER) ? json_object_get_object_member(JSON_OBJECT, MEMBER) : NULL)
+#define json_object_get_boolean_member(JSON_OBJECT, MEMBER) \
+	(json_object_has_member(JSON_OBJECT, MEMBER) ? json_object_get_boolean_member(JSON_OBJECT, MEMBER) : FALSE)
+
 /**
  * Returns a string of the encoded JSON object.
  *

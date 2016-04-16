@@ -23,6 +23,7 @@
 #include "glibcompat.h"
 #include "image.h"
 #include "image-store.h"
+#include "mediamanager.h"
 
 #include "hangouts_conversation.h"
 #include "hangouts.pb-c.h"
@@ -613,6 +614,47 @@ hangouts_process_conversation_event(HangoutsAccount *ha, Conversation *conversat
 						g_dataset_set_data(connection, "message_timestamp", GINT_TO_POINTER(message_timestamp));
 					}
 				}
+			}
+		}
+	}
+	
+	if (event->hangout_event != NULL) {
+		//event->event_type == EVENT_TYPE__EVENT_TYPE_HANGOUT || EVENT_TYPE__EVENT_TYPE_PHONE_CALL
+		//Something to do with calling
+		const gchar *msg;
+		HangoutEvent *hangout_event = event->hangout_event;
+		time_t message_timestamp = time(NULL) - ((current_server_time - timestamp) / 1000000);
+		
+		switch (hangout_event->event_type) {
+			case HANGOUT_EVENT_TYPE__HANGOUT_EVENT_TYPE_START:
+				msg = _("Call started");
+				break;
+			case HANGOUT_EVENT_TYPE__HANGOUT_EVENT_TYPE_ONGOING:
+				msg = _("Call ongoing");
+				break;
+			case HANGOUT_EVENT_TYPE__HANGOUT_EVENT_TYPE_END:
+				msg = _("Call ended");
+				break;
+			default:
+				msg = NULL;
+				break;
+		}
+		if (g_hash_table_contains(ha->group_chats, conv_id)) {
+			purple_serv_got_chat_in(ha->pc, g_str_hash(conv_id), gaia_id, PURPLE_MESSAGE_SYSTEM, msg, message_timestamp);
+		} else {
+			gaia_id = g_hash_table_lookup(ha->one_to_ones, conv_id);
+			purple_serv_got_im(ha->pc, gaia_id, msg, PURPLE_MESSAGE_SYSTEM, message_timestamp);
+		}
+		if (hangout_event->event_type == HANGOUT_EVENT_TYPE__HANGOUT_EVENT_TYPE_START) {
+			if (!purple_media_manager_get()) {
+				//No voice/video support, display URL
+				gchar *join_message = g_strdup_printf("%s https://plus.google.com/hangouts/_/CONVERSATION/%s", _("To join the call, open "), conv_id);
+				if (g_hash_table_contains(ha->group_chats, conv_id)) {
+					purple_serv_got_chat_in(ha->pc, g_str_hash(conv_id), gaia_id, PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG, join_message, message_timestamp);
+				} else {
+					purple_serv_got_im(ha->pc, gaia_id, join_message, PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG, message_timestamp);
+				}
+				g_free(join_message);
 			}
 		}
 	}

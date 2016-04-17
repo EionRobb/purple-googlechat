@@ -600,6 +600,8 @@ enum ClientId {
   CLIENT_ID_WEB_GMAIL = 6;
   // Hangouts Chrome app ("ultraviolet").
   CLIENT_ID_ULTRAVIOLET = 13;
+  // TODO work out what this is
+  CLIENT_ID_SOMETHING = 34;
 }
 
 // Build type of the client.
@@ -1024,6 +1026,8 @@ message StateUpdate {
   
   optional  SetNotificationSettingNotification notification_setting_notification = 19;
   optional  RichPresenceEnabledStateNotification rich_presence_enabled_state_notification = 20;
+  
+  //optional  EventSeenNotification event_seen_notification = 30;
   //}
 }
 
@@ -1142,6 +1146,21 @@ message ConversationSpec {
 
   // TODO
 }
+
+// message ConversationEventSeenNotification {
+  // repeated ConversationEventsSeen conversation_events = 1;
+// }
+
+// message ConversationEventsSeen {
+  // optional ConversationId conversation_id = 1;
+  // repeated EventSeen event_seen = 2;
+// }
+
+// message EventSeen {
+  // optional string event_id = 1;
+  // optional uint64 event_timestamp = 2;
+  // optional uint64 unknown_type = 3;
+// }
 
 enum OffnetworkAddressType {
   OFFNETWORK_ADDRESS_TYPE_UNKNOWN = 0;
@@ -1504,4 +1523,168 @@ message UpdateWatermarkRequest {
 
 message UpdateWatermarkResponse {
   optional ResponseHeader response_header = 1;
+}
+
+message HangoutLookupFilter {
+  optional string gaia_id = 1;
+  optional string circle_id = 2;
+  optional string chat_id = 3;
+  optional string fallback_name = 4;
+}
+
+message HangoutLookupSpec {
+  required string lookup_type = 1;
+  optional string value = 2;
+}
+
+// hangouts/resolve
+message GetHangoutIdRequest {
+  optional RequestHeader request_header = 1;
+  optional HangoutLookupSpec lookup_spec = 2;
+  repeated HangoutLookupFilter lookup_filter = 3;
+}
+
+message GetHangoutIdResponse {
+  optional ResponseHeader response_header = 1;
+  optional string hangout_id = 2;
+  optional string url = 4;
+}
+
+// hangouts/query
+message GetHangoutInfoRequest {
+  optional RequestHeader request_header = 1;
+  optional string hangout_id = 2;
+}
+
+message GetHangoutInfoResponse {
+  optional ResponseHeader response_header = 1;
+  optional Hangout hangout = 2;
+}
+
+message Hangout {
+  optional string hangout_id = 1;
+  optional uint64 type = 2; //TODO enum
+  optional HangoutLookupSpec lookup_spec = 3;
+  optional uint64 timestamp = 6;
+  //optional uint64 unknown = 7
+  optional string topic = 8;
+  optional ConversationId conversation_id = 9;
+  // optional uint64 unknown = 11;
+  // optional uint64 unknown = 12
+  // optional string unknown = 13;
+  optional uint64 media_type = 14; //TODO enum
+  //repeated = 15; //tag?  //repeated string tag = ?
+  //repeated = 19; {0, en-US}
+  //repeated = 25;
+  optional string url = 30;
+}
+
+enum RTCMediaType {
+	RTC_MEDIA_TYPE_UNKNOWN = 0;
+	RTC_MEDIA_TYPE_AUDIO = 1;
+	RTC_MEDIA_TYPE_VIDEO = 2;
+	RTC_MEDIA_TYPE_DATA = 3;
+}
+
+enum RTCProtocolType {
+	RTC_PROTOCOL_TYPE_UNKNOWN = 0;
+	RTC_PROTOCOL_TYPE_UDP = 1;
+	RTC_PROTOCOL_TYPE_TCP = 2;
+	RTC_PROTOCOL_TYPE_SSLTCP = 3;
+}
+
+enum RTCCodecChannels {
+	RTC_CODEC_CHANNELS_UNKNOWN = 0;
+	RTC_CODEC_CHANNELS_MONO = 1;
+	RTC_CODEC_CHANNELS_STEREO = 2;
+}
+
+message RTCCandidate {
+  optional RTCMediaType media = 1;
+  optional RTCProtocolType protocol = 2;
+  optional string ip = 3;
+  optional uint64 port = 4;
+  optional uint64 component = 5;
+  optional uint64 priority = 6;
+  optional string type = 7;
+  optional uint64 generation = 8;
+}
+
+message RTCCodecAdditionalInfo {
+  required string key = 1;
+  required string value = 2;
+}
+
+message RTCCodec {
+  optional uint64 id = 1;
+  optional string name = 2;
+  optional RTCMediaType media_type = 3;
+  optional uint64 frequency = 5;
+  optional uint64 bitrate = 6;
+  optional RTCCodecChannels channels = 7;
+  repeated RTCCodecAdditionalInfo additional_info = 8;
+}
+
+enum RTCCryptoSuite {
+	RTC_CRYPTO_SUITE_AES_CM_128_HMAC_SHA1_80 = 1;
+	RTC_CRYPTO_SUITE_AES_CM_128_HMAC_SHA1_32 = 2;
+	RTC_CRYPTO_SUITE_F8_128_HMAC_SHA1_80 = 3;
+}
+
+message RTCCrypto {
+  optional RTCCryptoSuite crypto_suite = 1;
+  optional string key_param = 2;
+  //optional string unknown = 3;
+  optional uint64 tag = 4;
+}
+
+message RTCRTPHDREXT {
+  optional uint64 id = 1;
+  optional string uri = 2;
+  //optional uint64 unknown = 3;
+}
+
+enum RTCTransportType {
+	//TODO is this the right way around?
+	RTC_TRANSPORT_TYPE_ICE = 1; //urn:xmpp:jingle:transports:ice-udp:1
+	RTC_TRANSPORT_TYPE_GICE = 2; //http://www.google.com/transport/p2p
+}
+
+message RTCTransport {
+	optional RTCTransportType type = 1;
+	//optional unknown = 2;
+	//repeated unknown = 3;
+	optional string ufrag = 4;
+	optional string pwd = 5;
+	repeated RTCCandidate candidates = 6;
+}
+
+message RTCAddSessionRequest {
+	optional RequestHeader request_header = 1;
+	optional RTCCallInfo call_info = 4;
+}
+
+message RTCStream {
+	optional string groupid = 1;
+	optional string streamid = 3;
+}
+
+message RTCCallInfo {
+	optional string remote_session_id = 1;
+	//optional unknown = 2;
+	repeated RTCClientInfo client_info = 3;
+	repeated RTCClientInfo relay_info = 4;
+	repeated RTCStream streams = 5;
+	//repeated string jrpt_session_id = 6; + _hangout@groupchat.google.com
+	//optional uint64 unknown = 7;
+}
+
+message RTCClientInfo {
+	//optional unknown = 1;  //always a 4 - maybe means LOCAL ?
+	optional RTCTransport transport = 2;
+	repeated RTCCodec codecs = 3;
+	repeated RTCCrypto crypto = 4;
+	repeated RTCRTPHDREXT hdrext = 5;
+	//repeated unknown = 6;
+	//repeated unknown = 7;
 }

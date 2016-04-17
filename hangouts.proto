@@ -1207,7 +1207,7 @@ message RichPresenceEnabledStateNotification {
 message ConversationSpec {
   optional ConversationId conversation_id = 1;
   optional ParticipantId participant_id = 2;
-  optional InviteeId invitee_id = 3;
+  optional InviteeID invitee_id = 3;
 }
 
 // message ConversationEventSeenNotification {
@@ -1459,7 +1459,7 @@ message SendChatMessageRequest {
   optional MessageContent message_content = 6;
   optional ExistingMedia existing_media = 7;
   optional EventRequestHeader event_request_header = 8;
-  optional InviteeId other_invitee_id = 9;
+  optional InviteeID other_invitee_id = 9;
   //optional LocationSpec attach_location = 10;
 }
 
@@ -1565,7 +1565,7 @@ message SyncAllNewEventsRequest {
   optional RequestHeader request_header = 1;
   // Timestamp after which to return all new events.
   optional uint64 last_sync_timestamp = 2;
-  repeated LocalState local_state = 3;
+  //repeated LocalState local_state = 3;
   optional uint64 max_total_events = 4;
   repeated SyncFilter sync_filter = 5;
   optional bool no_missed_events_expected = 6;
@@ -1594,7 +1594,7 @@ message SyncRecentConversationsResponse {
   optional ResponseHeader response_header = 1;
   optional uint64 sync_timestamp = 2;
   repeated ConversationState conversation_state = 3;
-  optional unit64 continuation_end_timestamp = 4;
+  optional uint64 continuation_end_timestamp = 4;
   optional InvitationState invitation_state = 5;
 }
 
@@ -1691,16 +1691,16 @@ enum HangoutNotificationType {
 message Hangout {
   optional string hangout_id = 1;
   optional HangoutType type = 2;
-  optional HangoutLookupSpec external_key = 3;
+  optional ExternalKey external_key = 3;
   optional bool active = 4;
   optional bool is_public = 5;
   optional uint64 created_ms = 6;
-  optional uint64 duration_ms = 7
+  optional uint64 last_activity_ms = 7;
   optional string topic = 8;
   optional ConversationId conversation_id = 9;
   optional bool by_invitation_only = 10;
   optional uint64 start_time_ms = 11;
-  optional uint64 duration_ms = 12
+  optional uint64 duration_ms = 12;
   optional string organizer_id = 13;
   optional HangoutMediaType media_type = 14;
   //repeated = 15; //tag?  //repeated string tag = ?

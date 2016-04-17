@@ -104,6 +104,7 @@ hangouts_process_data_chunks(HangoutsAccount *ha, const gchar *data, gsize len)
 					printf("======================\n");
 					printf("Is valid? %s\n", protobuf_c_message_check((ProtobufCMessage *) &batch_update) ? "Yes" : "No");
 					printf("======================\n");
+					printf("CBU %s", pblite_dump_json((ProtobufCMessage *)&batch_update));
 					JsonArray *debug = pblite_encode((ProtobufCMessage *) &batch_update);
 					JsonNode *node = json_node_new(JSON_NODE_ARRAY);
 					json_node_take_array(node, debug);

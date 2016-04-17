@@ -271,7 +271,9 @@ pblite_decode_element(ProtobufCMessage *message, guint index, JsonNode *value)
 	field = protobuf_c_message_descriptor_get_field(message->descriptor, index);
 	if (!field) {
 #ifdef DEBUG
-	printf("skipped\n");
+		gchar *json = json_pretty_encode(value, NULL);
+		printf("skipped unknown %s\n", json);
+		g_free(json);
 #endif
 		return TRUE;
 	}
@@ -281,7 +283,7 @@ pblite_decode_element(ProtobufCMessage *message, guint index, JsonNode *value)
 	
 	if (JSON_NODE_HOLDS_NULL(value)) {
 #ifdef DEBUG
-		printf("pblite_decode_element field %d skipped\n", index);
+		printf("pblite_decode_element field %d skipped null\n", index);
 #endif
 		if (field->default_value != NULL) {
 			*(const void **) STRUCT_MEMBER(void *, message, field->offset) = field->default_value;

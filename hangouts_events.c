@@ -604,7 +604,7 @@ hangouts_process_conversation_event(HangoutsAccount *ha, Conversation *conversat
 					if (g_strcmp0(purple_core_get_ui(), "BitlBee") == 0) {
 						// Bitlbee doesn't support images, so just plop a url to the image instead
 						if (g_hash_table_contains(ha->group_chats, conv_id)) {
-							purple_serv_got_chat_in(>pc, g_str_hash(conv_id), gaia_id, msg_flags, url, message_timestamp);
+							purple_serv_got_chat_in(pc, g_str_hash(conv_id), gaia_id, msg_flags, url, message_timestamp);
 						} else {
 							purple_serv_got_im(pc, gaia_id, url, msg_flags, message_timestamp);
 						}

@@ -368,8 +368,10 @@ hangouts_got_conversation_events(HangoutsAccount *ha, GetConversationResponse *r
 {
 	Conversation *conversation = response->conversation_state->conversation;
 	const gchar *conv_id;
+	PurpleConversation *conv;
 	PurpleChatConversation *chatconv;
 	guint i;
+	PurpleConversationUiOps *convuiops;
 	
 	g_return_if_fail(conversation);
 	conv_id = conversation->conversation_id->id;
@@ -382,14 +384,35 @@ hangouts_got_conversation_events(HangoutsAccount *ha, GetConversationResponse *r
 			chatconv = purple_serv_got_joined_chat(ha->pc, g_str_hash(conv_id), conv_id);
 			purple_conversation_set_data(PURPLE_CONVERSATION(chatconv), "conv_id", g_strdup(conv_id));
 		}
+		conv = PURPLE_CONVERSATION(chatconv);
+		convuiops = purple_conversation_get_ui_ops(conv);
 		
 		for (i = 0; i < conversation->n_participant_data; i++) {
 			ConversationParticipantData *participant_data = conversation->participant_data[i];
 			PurpleChatUserFlags cbflags = PURPLE_CHAT_USER_NONE;
-			purple_chat_conversation_add_user(chatconv, participant_data->id->gaia_id, NULL, cbflags, FALSE);
+			const gchar *gaia_id = participant_data->id->gaia_id;
+			PurpleChatUser *cb;
 			
-			//TODO alias with participant_data->fallback_name
-			//TODO alternatively: add to buddy list as a transient buddy
+			purple_chat_conversation_add_user(chatconv, gaia_id, NULL, cbflags, FALSE);
+			cb = purple_chat_conversation_find_user(chatconv, gaia_id);
+			purple_chat_user_set_alias(cb, participant_data->fallback_name);
+			
+			if (convuiops != NULL) {
+				// Horrible hack.  Don't try this at home!
+				if (convuiops->chat_rename_user != NULL) {
+#if PURPLE_VERSION_CHECK(3, 0, 0)
+					convuiops->chat_rename_user(chatconv, gaia_id, gaia_id, participant_data->fallback_name);
+#else
+					convuiops->chat_rename_user(conv, gaia_id, gaia_id, participant_data->fallback_name);
+#endif
+				} else {
+#if PURPLE_VERSION_CHECK(3, 0, 0)
+					convuiops->chat_update_user(cb);
+#else
+					convuiops->chat_update_user(conv, gaia_id);
+#endif
+				}
+			}
 		}
 	}
 

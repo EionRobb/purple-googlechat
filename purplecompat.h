@@ -18,6 +18,8 @@
 
 #define purple_protocol_action_get_connection(action)  ((action)->connection)
 
+#define purple_chat_user_set_alias(cb, alias)  g_object_set((cb), "alias", (alias), NULL)
+
 #else
 
 #include "connection.h"
@@ -107,6 +109,7 @@ purple_message_destroy(PurpleMessage *message)
 #define PurpleChatUser  PurpleConvChatBuddy
 #define purple_chat_user_get_flags(cb)     ((cb) == NULL ? PURPLE_CBFLAGS_NONE : (cb)->flags)
 #define purple_chat_user_set_flags(cb, f)  ((cb)->flags = (f))
+#define purple_chat_user_set_alias(cb, a)  ((cb)->alias = (a))
 
 #define PurpleIMTypingState	PurpleTypingState
 #define PURPLE_IM_NOT_TYPING	PURPLE_NOT_TYPING

@@ -22,8 +22,10 @@
 #include <stdio.h>
 #include <glib.h>
 
+#include "accountopt.h"
 #include "cmds.h"
 #include "debug.h"
+#include "mediamanager.h"
 #include "plugins.h"
 #include "request.h"
 #include "version.h"
@@ -50,6 +52,17 @@ hangouts_set_idle(PurpleConnection *pc, int time)
 		hangouts_set_active_client(pc);
 	}
 	ha->idle_time = time;
+}
+
+static GList *
+hangouts_add_account_options(GList *account_options)
+{
+	PurpleAccountOption *option;
+	
+	option = purple_account_option_bool_new(N_("Show call links in chat"), "show-call-links", !purple_media_manager_get());
+	account_options = g_list_append(account_options, option);
+	
+	return account_options;
 }
 
 static void
@@ -367,7 +380,7 @@ hangouts_protocol_init(PurpleProtocol *prpl_info)
 	info->name = "Hangouts";
 
 	prpl_info->options = OPT_PROTO_NO_PASSWORD;
-
+	prpl_info->account_options = hangouts_add_account_options(prpl_info->account_options);
 	
 	purple_signal_register(plugin, "hangouts-received-stateupdate",
 			purple_marshal_VOID__POINTER_POINTER, G_TYPE_NONE, 2,
@@ -566,7 +579,7 @@ init_plugin(PurplePlugin *plugin)
 	}
 	
 	prpl_info->options = OPT_PROTO_NO_PASSWORD | OPT_PROTO_IM_IMAGE;
-
+	prpl_info->protocol_options = hangouts_add_account_options(prpl_info->protocol_options);
 	
 	purple_signal_register(plugin, "hangouts-received-stateupdate",
 			purple_marshal_VOID__POINTER_POINTER, NULL, 2,

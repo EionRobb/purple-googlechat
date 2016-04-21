@@ -650,7 +650,7 @@ hangouts_process_conversation_event(HangoutsAccount *ha, Conversation *conversat
 			purple_serv_got_im(ha->pc, gaia_id, msg, PURPLE_MESSAGE_SYSTEM, message_timestamp);
 		}
 		if (hangout_event->event_type == HANGOUT_EVENT_TYPE__HANGOUT_EVENT_TYPE_START) {
-			if (!purple_media_manager_get()) {
+			if (purple_account_get_bool(ha->account, "show-call-links", !purple_media_manager_get())) {
 				//No voice/video support, display URL
 				gchar *join_message = g_strdup_printf("%s https://plus.google.com/hangouts/_/CONVERSATION/%s", _("To join the call, open "), conv_id);
 				if (g_hash_table_contains(ha->group_chats, conv_id)) {

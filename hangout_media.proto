@@ -296,7 +296,7 @@ message HangoutAddResponse {
 
 message HangoutQueryRequest {
   optional RequestHeader request_header = 1;
-  optional string  hangout_id = 2;
+  optional string hangout_id = 2;
   optional SyncMetadata sync_metadata = 3;
 }
 
@@ -399,7 +399,7 @@ message HangoutParticipantAddResponse {
 message HangoutParticipantQueryRequest {
   optional RequestHeader request_header = 1;
   optional string hangout_id = 2;
-  optional string  participant_id = 3;
+  optional string participant_id = 3;
   optional SyncMetadata sync_metadata = 4;
 }
 
@@ -552,7 +552,7 @@ message MediaSource {
 message MuteState {
   required bool muted = 1;
   optional string by_participant_id = 2;
-  optional uint64 play_level = 3; //TODO work out type
+  optional float play_level = 3;
 }
 
 message MuteRequest {
@@ -566,10 +566,10 @@ message VideoDetails {
 }
 
 message VideoDetailsRegion {
-  required uint64 x = 1; //TODO work out type
-  required uint64 y = 2; //TODO work out type
-  required uint64 width = 3; //TODO work out type
-  required uint64 height = 4; //TODO work out type
+  required float x = 1;
+  required float y = 2;
+  required float width = 3;
+  required float height = 4;
 }
 
 enum CaptureType {
@@ -579,7 +579,7 @@ enum CaptureType {
 
 message PlayLevelRequest {
   required string by_participant_id = 1;
-  optional uint64 play_level = 2; //TODO work out type
+  optional float play_level = 2;
 }
 
 enum DefaultSourceId {
@@ -656,7 +656,7 @@ message MediaCodecParam {
 message MediaCryptoParams {
   optional MediaCryptoSuite suite = 1;
   optional string key_params = 2;
-  optional string  session_params = 3;
+  optional string session_params = 3;
   optional int32 tag = 4;
 }
 
@@ -736,7 +736,7 @@ message SsrcGroup {
 
 message MediaSourceSearchRequest {
   optional RequestHeader request_header = 1;
-  optional string  hangout_id = 2;
+  optional string hangout_id = 2;
   optional string participant_id = 3;
   optional SyncMetadata sync_metadata = 4;
 }
@@ -804,7 +804,7 @@ message MediaSourceRemoveResponse {
 message MediaSessionSearchRequest {
   optional RequestHeader request_header = 1;
   optional SyncMetadata sync_metadata = 2;
-  optional string  hangout_id = 3;
+  optional string hangout_id = 3;
 }
 
 message MediaSessionSearchResponse {
@@ -829,7 +829,7 @@ message MediaSessionAddResponse {
 
 message MediaSessionQueryRequest {
   optional RequestHeader request_header = 1;
-  optional string  session_id = 2;
+  optional string session_id = 2;
   optional SyncMetadata sync_metadata = 3;
 }
 
@@ -952,23 +952,23 @@ message HangoutClientBatchNotification {
 }
 
 message HangoutIdentifier {
-  optional string  hangout_id = 1;
+  optional string hangout_id = 1;
 }
 
 message MediaSessionIdentifier {
-  optional string  session_id = 1;
+  optional string session_id = 1;
 }
 
 message MediaStreamIdentifier {
-  optional string  hangout_id = 1;
-  optional string  session_id = 2;
-  optional string  stream_id = 3;
+  optional string hangout_id = 1;
+  optional string session_id = 2;
+  optional string stream_id = 3;
   optional MediaStreamDirection direction = 4;
 }
 
 message CommonAnnouncementIdentifier {
-  optional string  hangout_id = 1;
-  optional string  announcement_id = 2;
+  optional string hangout_id = 1;
+  optional string announcement_id = 2;
 }
 
 message HangoutsPushNotification {
@@ -1075,7 +1075,7 @@ enum NotificationSent {
 }
 
 message HangoutInvitation {
-  optional string  hangout_id = 1;
+  optional string hangout_id = 1;
   optional NotificationType notification_type = 3 [default = RING];
   optional int64 invitation_id = 8 [default = 0];
   repeated HangoutInvitee invited_entity = 11;
@@ -1090,10 +1090,10 @@ enum NotificationType {
 
 message HangoutPhoneInvitation {
   optional int64 invitation_id = 1 [default = 0];
-  optional string  hangout_id = 2;
+  optional string hangout_id = 2;
   optional PhoneNumber phone = 3;
-  optional bool  is_emergency_call = 4;
-  optional bool  is_caller_id_blocked = 5;
+  optional bool is_emergency_call = 4;
+  optional bool is_caller_id_blocked = 5;
   optional EligibleCallerIdToken eligible_caller_id_token = 6;
 }
 
@@ -1327,7 +1327,7 @@ enum NetworkInfoNetworkType {
 message GeoLocationInfo {
   optional int32 latitude_e6 = 1;
   optional int32 longitude_e6 = 2;
-  optional float accuracy = 3;
+  optional double accuracy = 3;
 }
 
 message CellularNetworkInfo {
@@ -1349,7 +1349,7 @@ enum CellularNetworkInfoAccessType {
 
 message EligibleCallerIdToken {
   optional PhoneNumber caller_id_phone_number = 1;
-  optional uint64 signature = 2; //TODO work out type
+  optional bytes signature = 2;
   optional uint64 signature_ttl_usec = 3;
 }
 
@@ -1361,8 +1361,8 @@ message LogData {
 message HandoffLogEntry {
   optional HandoffType type = 1;
   optional CallStartupEventCode event_code = 2;
-  optional string  previous_session_id = 3;
-  optional string  next_session_id = 4;
+  optional string previous_session_id = 3;
+  optional string next_session_id = 4;
 }
 
 enum HandoffType {

@@ -10,13 +10,13 @@ message AnonymousDevice {
 
 message AnonymousDeviceAddRequest {
   optional RequestHeader request_header = 1;
-  optional AnonymousDevice device = 2;
+  repeated AnonymousDevice device = 2;
 }
 
 message AnonymousDeviceAddResponse {
   optional ResponseHeader response_header = 1;
   optional SyncMetadata sync_metadata = 2;
-  optional AnonymousDevice device = 3;
+  repeated AnonymousDevice device = 3;
 }
 
 message CommonAnnouncement {
@@ -25,7 +25,7 @@ message CommonAnnouncement {
   optional AnnouncementType announcement_type = 3;
   optional string sender_id = 4;
   optional string subject_id = 5;
-  optional string recipient_id = 6;
+  repeated string recipient_id = 6;
   optional string locale = 7;
   optional CommonAnnouncementAction action = 8;
   optional string title = 9;
@@ -49,14 +49,14 @@ message CommonAnnouncementAddRequest {
   optional RequestHeader request_header = 1;
   optional CommonAnnouncement announcement = 2;
   optional SyncMetadata sync_metadata = 3;
-  optional CommonAnnouncement resource = 4;
+  repeated CommonAnnouncement resource = 4;
 }
 
 message CommonAnnouncementAddResponse {
   optional ResponseHeader response_header = 1;
   optional CommonAnnouncement announcement = 2;
   optional SyncMetadata sync_metadata = 3;
-  optional CommonAnnouncement resource = 4;
+  repeated CommonAnnouncement resource = 4;
 }
 
 message CommonAnnouncementSearchRequest {
@@ -68,7 +68,7 @@ message CommonAnnouncementSearchRequest {
 
 message CommonAnnouncementSearchResponse {
   optional ResponseHeader response_header = 1;
-  optional CommonAnnouncement announcement = 2;
+  repeated CommonAnnouncement announcement = 2;
   optional SyncMetadata sync_metadata = 3;
 }
 
@@ -77,7 +77,7 @@ message CommonAnnouncementRemoveRequest {
   optional string hangout_id = 2;
   optional string announcement_id = 3;
   optional SyncMetadata sync_metadata = 4;
-  optional string resource_id = 5;
+  repeated string resource_id = 5;
 }
 
 message CommonAnnouncementRemoveResponse {
@@ -119,13 +119,13 @@ message HangoutBulkResponseEntry {
 
 message HangoutBulkRequest {
   optional RequestHeader request_header = 1;
-  optional HangoutBulkRequestEntry entry = 2;
+  repeated HangoutBulkRequestEntry entry = 2;
   optional SyncMetadata sync_metadata = 3;
 }
 
 message HangoutBulkResponse {
   optional ResponseHeader response_header = 1;
-  optional HangoutBulkResponseEntry entry = 2;
+  repeated HangoutBulkResponseEntry entry = 2;
   optional SyncMetadata sync_metadata = 3;
 }
 
@@ -161,7 +161,7 @@ message Hangout {
   //repeated {true/false, en-US} locale = 19;
   optional Tristate external_invited = 21;
   optional Tristate knocking_enabled = 25;
-  optional RecordingType active_recording = 26;
+  repeated RecordingType active_recording = 26;
   optional string company_title = 27;
   optional string meeting_room_name = 28;
   optional string meeting_domain = 29;
@@ -206,8 +206,8 @@ message HangoutParticipant {
   optional ClientType client_type = 13 [default = OTHER];
   optional PhoneCallId phone_call_id = 16;
   optional ParticipantState participant_state = 17 [default = PARTICIPANT_STATE_UNKNOWN];
-  optional HangoutParticipantPrivilege privilege = 19;
-  optional HangoutParticipantBlockedUser blocked_user = 20;
+  repeated HangoutParticipantPrivilege privilege = 19;
+  repeated HangoutParticipantBlockedUser blocked_user = 20;
   optional bool accepted_tos = 21 [default = false];
   optional E911UserLocationInfo e911_user_location_info = 22;
   optional int64 invitation_id = 23;
@@ -262,8 +262,8 @@ message NamedHangout {
 
 message HangoutSearchResult {
   optional Hangout hangout = 1;
-  optional HangoutParticipant participant = 2;
-  optional Broadcast broadcast = 3;
+  repeated HangoutParticipant participant = 2;
+  repeated Broadcast broadcast = 3;
 }
 
 message HangoutSearchRequest {
@@ -276,14 +276,14 @@ message HangoutSearchRequest {
 
 message HangoutSearchResponse {
   optional ResponseHeader response_header = 1;
-  optional HangoutSearchResult result = 2;
+  repeated HangoutSearchResult result = 2;
 }
 
 message HangoutAddRequest {
   optional RequestHeader request_header = 1;
   optional Hangout hangout = 2;
   optional SyncMetadata sync_metadata = 3;
-  optional Hangout resource = 4;
+  repeated Hangout resource = 4;
 }
 
 message HangoutAddResponse {
@@ -291,7 +291,7 @@ message HangoutAddResponse {
   optional Hangout hangout = 2;
   optional SyncMetadata sync_metadata = 3;
   optional string sharing_url = 4;
-  optional Hangout resource = 5;
+  repeated Hangout resource = 5;
 }
 
 message HangoutQueryRequest {
@@ -333,21 +333,21 @@ message HangoutModifyRequest {
   optional RequestHeader request_header = 1;
   optional Hangout hangout = 2;
   optional SyncMetadata sync_metadata = 3;
-  optional Hangout resource = 4;
+  repeated Hangout resource = 4;
 }
 
 message HangoutModifyResponse {
   optional ResponseHeader response_header = 1;
   optional Hangout hangout = 2;
   optional SyncMetadata sync_metadata = 3;
-  optional Hangout resource = 4;
+  repeated Hangout resource = 4;
 }
 
 message HangoutRemoveRequest {
   optional RequestHeader request_header = 1;
   optional string hangout_id = 2;
   optional SyncMetadata sync_metadata = 3;
-  optional string resource_id = 4 ;
+  repeated string resource_id = 4 ;
 }
 
 message HangoutRemoveResponse {
@@ -368,14 +368,14 @@ message RemovedParticipant {
 
 message HangoutParticipantSearchResponse {
   optional ResponseHeader response_header = 1;
-  optional HangoutParticipant participant = 2;
+  repeated HangoutParticipant participant = 2;
   optional SyncMetadata sync_metadata = 3;
-  optional RemovedParticipant removed = 4;
+  repeated RemovedParticipant removed = 4;
 }
 
 message HangoutParticipantAddPrerequisite {
   optional Hangout hangout = 1;
-  optional ParticipantId participant = 2;
+  repeated ParticipantId participant = 2;
   optional bool hoa_tos_accepted = 3 [default = false];
   optional bool customer_recording_tos_accepted = 4 [default = false];
 }
@@ -385,7 +385,7 @@ message HangoutParticipantAddRequest {
   optional HangoutParticipant participant = 2;
   optional HangoutParticipantAddPrerequisite prerequisite = 3;
   optional SyncMetadata sync_metadata = 5;
-  optional HangoutParticipant resource = 6;
+  repeated HangoutParticipant resource = 6;
 }
 
 message HangoutParticipantAddResponse {
@@ -393,7 +393,7 @@ message HangoutParticipantAddResponse {
   optional HangoutParticipant participant = 2;
   optional SyncMetadata sync_metadata = 3;
   optional HangoutParticipantAddErrorCode error_code = 4;
-  optional HangoutParticipant resource = 5;
+  repeated HangoutParticipant resource = 5;
 }
 
 message HangoutParticipantQueryRequest {
@@ -413,14 +413,14 @@ message HangoutParticipantModifyRequest {
   optional RequestHeader request_header = 1;
   optional HangoutParticipant participant = 2;
   optional SyncMetadata sync_metadata = 3;
-  optional HangoutParticipant resource = 4;
+  repeated HangoutParticipant resource = 4;
 }
 
 message HangoutParticipantModifyResponse {
   optional ResponseHeader response_header = 1;
   optional HangoutParticipant participant = 2;
   optional SyncMetadata sync_metadata = 3;
-  optional HangoutParticipant resource = 4;
+  repeated HangoutParticipant resource = 4;
 }
 
 message HangoutParticipantRemoveRequest {
@@ -429,8 +429,8 @@ message HangoutParticipantRemoveRequest {
   optional string participant_id = 3 ;
   optional EndCause end_cause = 5;
   optional SyncMetadata sync_metadata = 4;
-  optional string resource_id = 6;
-  optional HangoutParticipantIdentifier resource = 7;
+  repeated string resource_id = 6;
+  repeated HangoutParticipantIdentifier resource = 7;
 }
 
 message HangoutParticipantRemoveResponse {
@@ -466,7 +466,7 @@ message BroadcastIdentifier {
 }
 
 message DTMFEvent {
-  optional DTMF dtmf = 1;
+  repeated DTMF dtmf = 1;
 }
   
 message DTMF {
@@ -495,7 +495,7 @@ enum DTMFCode {
 message HangoutPushEvent {
   optional string hangout_id = 1;
   optional string sender_participant_id = 2;
-  optional string receiver_participant_id = 3;
+  repeated string receiver_participant_id = 3;
   optional PushEventType event_type = 4;
   optional DTMFEvent dtmf_event = 5;
   optional bool should_ack = 6;
@@ -504,14 +504,14 @@ message HangoutPushEvent {
 message HangoutPushEventAddRequest {
   optional RequestHeader request_header = 1;
   optional HangoutPushEvent event = 2;
-  optional HangoutPushEvent resource = 3;
+  repeated HangoutPushEvent resource = 3;
 }
 
 message HangoutPushEventAddResponse {
   optional ResponseHeader response_header = 1;
   optional HangoutPushEvent event = 2;
   optional SyncMetadata sync_metadata = 3;
-  optional HangoutPushEvent resource = 4;
+  repeated HangoutPushEvent resource = 4;
 }
 
 message HangoutPushEventAckRequest {
@@ -535,7 +535,7 @@ message StreamRequest {
   optional bool send = 2;
   optional VideoResolution resolution = 3;
   optional uint32 priority = 4;
-  optional int32 ssrc = 5;
+  repeated int32 ssrc = 5;
 }
 
 message MediaSource {
@@ -550,26 +550,26 @@ message MediaSource {
 }
 
 message MuteState {
-  optional bool muted = 1;
+  required bool muted = 1;
   optional string by_participant_id = 2;
   optional uint64 play_level = 3; //TODO work out type
 }
 
 message MuteRequest {
-  optional string by_participant_id = 1;
+  required string by_participant_id = 1;
 }
 
 message VideoDetails {
   optional CaptureType capture_type = 1;
   optional VideoResolution captured_resolution = 2;
-  optional VideoDetailsRegion interest_region = 3;
+  repeated VideoDetailsRegion interest_region = 3;
 }
 
 message VideoDetailsRegion {
-  optional uint64 x = 1; //TODO work out type
-  optional uint64 y = 2; //TODO work out type
-  optional uint64 width = 3; //TODO work out type
-  optional uint64 height = 4; //TODO work out type
+  required uint64 x = 1; //TODO work out type
+  required uint64 y = 2; //TODO work out type
+  required uint64 width = 3; //TODO work out type
+  required uint64 height = 4; //TODO work out type
 }
 
 enum CaptureType {
@@ -578,7 +578,7 @@ enum CaptureType {
 }
 
 message PlayLevelRequest {
-  optional string by_participant_id = 1;
+  required string by_participant_id = 1;
   optional uint64 play_level = 2; //TODO work out type
 }
 
@@ -621,10 +621,10 @@ enum MediaIceCandidateType {
 message MediaTransport {
   optional IceVersion ice_version = 1;
   optional SslFingerprint ssl_fingerprint = 2;
-  optional string option = 3 ;
+  repeated string option = 3 ;
   optional string username = 4 ;
   optional string password = 5 ;
-  optional MediaIceCandidate candidate = 6;
+  repeated MediaIceCandidate candidate = 6;
 }
 
 message SslFingerprint {
@@ -645,7 +645,7 @@ message MediaCodec {
   optional int32 bit_rate = 5;
   optional int32 sample_rate = 6;
   optional int32 channel_count = 7;
-  optional MediaCodecParam param = 8;
+  repeated MediaCodecParam param = 8;
 }
 
 message MediaCodecParam {
@@ -679,10 +679,10 @@ message MediaRequest {
 message MediaContent {
   optional MediaType media_type = 1 [default = MEDIA_TYPE_BUNDLE];
   optional MediaTransport transport = 2;
-  optional MediaCodec codec = 3;
-  optional MediaCryptoParams crypto_param = 4;
-  optional MediaRtpHeaderExtension rtp_header_extension = 5;
-  optional MediaRequest default_request = 6;
+  repeated MediaCodec codec = 3;
+  repeated MediaCryptoParams crypto_param = 4;
+  repeated MediaRtpHeaderExtension rtp_header_extension = 5;
+  repeated MediaRequest default_request = 6;
 }
 
 message PushChannel {
@@ -700,10 +700,10 @@ enum PushChannelFormat {
 
 message MediaSession {
   optional string session_id = 1;
-  optional MediaContent client_content = 3;
-  optional MediaContent server_content = 4;
-  optional PushChannel push_channel = 5;
-  optional string hangout_id = 6;
+  repeated MediaContent client_content = 3;
+  repeated MediaContent server_content = 4;
+  repeated PushChannel push_channel = 5;
+  repeated string hangout_id = 6;
   optional MediaSessionType type = 7;
 }
 
@@ -725,13 +725,13 @@ message MediaStream {
 }
 
 message MediaStreamOffer {
-  optional uint32 ssrc = 1;
-  optional SsrcGroup ssrc_group = 2;
+  repeated uint32 ssrc = 1;
+  repeated SsrcGroup ssrc_group = 2;
 }
 
 message SsrcGroup {
   optional string semantics = 1;
-  optional uint32 ssrc = 2;
+  repeated uint32 ssrc = 2;
 }
 
 message MediaSourceSearchRequest {
@@ -743,7 +743,7 @@ message MediaSourceSearchRequest {
 
 message MediaSourceSearchResponse {
   optional ResponseHeader response_header = 1;
-  optional MediaSource result = 2;
+  repeated MediaSource result = 2;
   optional SyncMetadata sync_metadata = 3;
 }
 
@@ -751,14 +751,14 @@ message MediaSourceAddRequest {
   optional RequestHeader request_header = 1;
   optional MediaSource source = 2;
   optional SyncMetadata sync_metadata = 3;
-  optional MediaSource resource = 4;
+  repeated MediaSource resource = 4;
 }
 
 message MediaSourceAddResponse {
   optional ResponseHeader response_header = 1;
   optional MediaSource source = 2;
   optional SyncMetadata sync_metadata = 3;
-  optional MediaSource resource = 4;
+  repeated MediaSource resource = 4;
 }
 
 message MediaSourceQueryRequest {
@@ -777,14 +777,14 @@ message MediaSourceModifyRequest {
   optional RequestHeader request_header = 1;
   optional MediaSource source = 2;
   optional SyncMetadata sync_metadata = 3;
-  optional MediaSource resource = 4;
+  repeated MediaSource resource = 4;
 }
 
 message MediaSourceModifyResponse {
   optional ResponseHeader response_header = 1;
   optional MediaSource source = 2;
   optional SyncMetadata sync_metadata = 3;
-  optional MediaSource resource = 4;
+  repeated MediaSource resource = 4;
 }
 
 message MediaSourceRemoveRequest {
@@ -793,7 +793,7 @@ message MediaSourceRemoveRequest {
   optional string participant_id = 3;
   optional string source_id = 4;
   optional SyncMetadata sync_metadata = 5;
-  optional string resource_id = 6;
+  repeated string resource_id = 6;
 }
 
 message MediaSourceRemoveResponse {
@@ -809,7 +809,7 @@ message MediaSessionSearchRequest {
 
 message MediaSessionSearchResponse {
   optional ResponseHeader response_header = 1;
-  optional MediaSession result = 2;
+  repeated MediaSession result = 2;
   optional SyncMetadata sync_metadata = 3;
 }
 
@@ -817,14 +817,14 @@ message MediaSessionAddRequest {
   optional RequestHeader request_header = 1;
   optional MediaSession session = 2;
   optional SyncMetadata sync_metadata = 3;
-  optional MediaSession resource = 4;
+  repeated MediaSession resource = 4;
 }
 
 message MediaSessionAddResponse {
   optional ResponseHeader response_header = 1;
   optional MediaSession session = 2;
   optional SyncMetadata sync_metadata = 3;
-  optional MediaSession resource = 4;
+  repeated MediaSession resource = 4;
 }
 
 message MediaSessionQueryRequest {
@@ -843,14 +843,14 @@ message MediaSessionModifyRequest {
   optional RequestHeader request_header = 1;
   optional MediaSession session = 2;
   optional SyncMetadata sync_metadata = 3;
-  optional MediaSession resource = 4;
+  repeated MediaSession resource = 4;
 }
 
 message MediaSessionModifyResponse {
   optional ResponseHeader response_header = 1;
   optional MediaSession session = 2;
   optional SyncMetadata sync_metadata = 3;
-  optional MediaSession resource = 4;
+  repeated MediaSession resource = 4;
 }
 
 message MediaSessionLogRequest {
@@ -869,7 +869,7 @@ message MediaSessionRemoveRequest {
   optional RequestHeader request_header = 1;
   optional string session_id = 2;
   optional SyncMetadata sync_metadata = 3;
-  optional string resource_id = 4;
+  repeated string resource_id = 4;
 }
 
 message MediaSessionRemoveResponse {
@@ -887,7 +887,7 @@ message MediaStreamSearchRequest {
 
 message MediaStreamSearchResponse {
   optional ResponseHeader response_header = 1;
-  optional MediaStream result = 2;
+  repeated MediaStream result = 2;
   optional SyncMetadata sync_metadata = 3;
 }
 
@@ -895,14 +895,14 @@ message MediaStreamAddRequest {
   optional RequestHeader request_header = 1;
   optional MediaStream stream = 2;
   optional SyncMetadata sync_metadata = 3;
-  optional MediaStream resource = 4;
+  repeated MediaStream resource = 4;
 }
 
 message MediaStreamAddResponse {
   optional ResponseHeader response_header = 1;
   optional MediaStream stream = 2;
   optional SyncMetadata sync_metadata = 3;
-  optional MediaStream resource = 4;
+  repeated MediaStream resource = 4;
 }
 
 message MediaStreamQueryRequest {
@@ -922,14 +922,14 @@ message MediaStreamModifyRequest {
   optional RequestHeader request_header = 1;
   optional MediaStream stream = 2;
   optional SyncMetadata sync_metadata = 3;
-  optional MediaStream resource = 4;
+  repeated MediaStream resource = 4;
 }
 
 message MediaStreamModifyResponse {
   optional ResponseHeader response_header = 1;
   optional MediaStream stream = 2;
   optional SyncMetadata sync_metadata = 3;
-  optional MediaStream resource = 4;
+  repeated MediaStream resource = 4;
 }
 
 message MediaStreamRemoveRequest {
@@ -939,7 +939,7 @@ message MediaStreamRemoveRequest {
   optional string stream_id = 4;
   optional string hangout_id = 5;
   optional SyncMetadata sync_metadata = 6;
-  optional string resource_id = 7;
+  repeated string resource_id = 7;
 }
 
 message MediaStreamRemoveResponse {
@@ -948,7 +948,7 @@ message MediaStreamRemoveResponse {
 }
 
 message HangoutClientBatchNotification {
-  optional HangoutClientPushNotification notification = 1;
+  repeated HangoutClientPushNotification notification = 1;
 }
 
 message HangoutIdentifier {
@@ -973,15 +973,15 @@ message CommonAnnouncementIdentifier {
 
 message HangoutsPushNotification {
   optional SyncMetadata sync_metadata = 1;
-  optional Hangout modified = 2;
-  optional HangoutIdentifier deleted = 3;
+  repeated Hangout modified = 2;
+  repeated HangoutIdentifier deleted = 3;
   optional HangoutIdentifier resync_collection = 4;
 }
 
 message HangoutParticipantsPushNotification {
   optional SyncMetadata sync_metadata = 1;
-  optional HangoutParticipant modified = 2;
-  optional HangoutParticipantIdentifier deleted = 3;
+  repeated HangoutParticipant modified = 2;
+  repeated HangoutParticipantIdentifier deleted = 3;
   optional EndCause end_cause = 4;
   optional HangoutParticipantIdentifier resync_collection = 5;
   optional RemovalReason removal_reason = 6;
@@ -989,36 +989,36 @@ message HangoutParticipantsPushNotification {
 
 message MediaSessionsPushNotification {
   optional SyncMetadata sync_metadata = 1;
-  optional MediaSession modified = 2;
-  optional MediaSessionIdentifier deleted = 3;
+  repeated MediaSession modified = 2;
+  repeated MediaSessionIdentifier deleted = 3;
   optional MediaSessionIdentifier resync_collection = 4;
 }
 
 message MediaSourcesPushNotification {
   optional SyncMetadata sync_metadata = 1;
-  optional MediaSource modified = 2;
-  optional MediaSourceIdentifier deleted = 3;
+  repeated MediaSource modified = 2;
+  repeated MediaSourceIdentifier deleted = 3;
   optional MediaSourceIdentifier resync_collection = 4;
 }
 
 message MediaStreamsPushNotification {
   optional SyncMetadata sync_metadata = 1;
-  optional MediaStream modified = 2;
-  optional MediaStreamIdentifier deleted = 3;
+  repeated MediaStream modified = 2;
+  repeated MediaStreamIdentifier deleted = 3;
   optional MediaStreamIdentifier resync_collection = 4;
 }
 
 message BroadcastsPushNotification {
   optional SyncMetadata sync_metadata = 1;
-  optional Broadcast modified = 2;
-  optional BroadcastIdentifier deleted = 3;
+  repeated Broadcast modified = 2;
+  repeated BroadcastIdentifier deleted = 3;
   optional BroadcastIdentifier resync_collection = 4;
 }
 
 message CommonAnnouncementsPushNotification {
   optional SyncMetadata sync_metadata = 1;
-  optional CommonAnnouncement modified = 2;
-  optional CommonAnnouncementIdentifier deleted = 3;
+  repeated CommonAnnouncement modified = 2;
+  repeated CommonAnnouncementIdentifier deleted = 3;
   optional CommonAnnouncementIdentifier resync_collection = 4;
 }
 
@@ -1038,7 +1038,7 @@ message HangoutClientPushNotification {
 
 message HangoutInvitee {
   optional HangoutSharingTargetId invitee = 1;
-  optional NotificationSent notifications_sent = 2;
+  repeated NotificationSent notifications_sent = 2;
   optional string display_name = 3;
   optional string avatar_url = 4;
 }
@@ -1046,7 +1046,7 @@ message HangoutInvitee {
 message HangoutSharingTargetId {
   optional PersonId person_id = 1;
   optional string circle_id = 2;
-  repeated SystemGroupType group_type = 3;
+  optional SystemGroupType group_type = 3;
 }
 
 message PersonId {
@@ -1078,7 +1078,7 @@ message HangoutInvitation {
   optional string  hangout_id = 1;
   optional NotificationType notification_type = 3 [default = RING];
   optional int64 invitation_id = 8 [default = 0];
-  optional HangoutInvitee invited_entity = 11;
+  repeated HangoutInvitee invited_entity = 11;
 }
 
 enum NotificationType {
@@ -1167,7 +1167,7 @@ message LiveStreamDetails {
   optional string topic = 2;
   optional bool enable_monitor_stream = 3 [default = true];
   optional PrivacyStatus privacy_status = 4;
-  optional string tag = 5;
+  repeated string tag = 5;
 }
 
 enum PrivacyStatus {
@@ -1228,14 +1228,14 @@ message BroadcastAddRequest {
   optional RequestHeader request_header = 1;
   optional Broadcast broadcast = 2;
   optional SyncMetadata sync_metadata = 3;
-  optional Broadcast resource = 4;
+  repeated Broadcast resource = 4;
 }
 
 message BroadcastAddResponse {
   optional ResponseHeader response_header = 1;
   optional Broadcast broadcast = 2;
   optional SyncMetadata sync_metadata = 3;
-  optional Broadcast resource = 4;
+  repeated Broadcast resource = 4;
 }
 
 message BroadcastRemoveRequest {
@@ -1244,8 +1244,8 @@ message BroadcastRemoveRequest {
   optional string broadcast_id = 3;
   optional SyncMetadata sync_metadata = 4;
   optional string on_behalf_of_participant_id = 5;
-  optional string resource_id = 6;
-  optional BroadcastIdentifier resource = 7;
+  repeated string resource_id = 6;
+  repeated BroadcastIdentifier resource = 7;
 }
 
 message BroadcastRemoveResponse {
@@ -1257,14 +1257,14 @@ message BroadcastModifyRequest {
   optional RequestHeader request_header = 1;
   optional Broadcast broadcast = 2;
   optional SyncMetadata sync_metadata = 3;
-  optional Broadcast resource = 4;
+  repeated Broadcast resource = 4;
 }
 
 message BroadcastModifyResponse {
   optional ResponseHeader response_header = 1;
   optional Broadcast broadcast = 2;
   optional SyncMetadata sync_metadata = 3;
-  optional Broadcast resource = 4;
+  repeated Broadcast resource = 4;
 }
 
 message BroadcastResolveRequest {
@@ -1293,13 +1293,13 @@ message BroadcastQueryResponse {
 
 message BroadcastSearchRequest {
   optional RequestHeader request_header = 1;
-  optional string  hangout_id = 2;
+  optional string hangout_id = 2;
   optional SyncMetadata sync_metadata = 3;
 }
 
 message BroadcastSearchResponse {
   optional ResponseHeader response_header = 1;
-  optional Broadcast broadcast = 2;
+  repeated Broadcast broadcast = 2;
   optional SyncMetadata sync_metadata = 3;
 }
 

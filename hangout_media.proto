@@ -2,6 +2,8 @@
 // proto2 is required because we need to be able to serialize default values:
 syntax = "proto2";
 
+import "hangouts.proto";
+
 message AnonymousDevice {
   optional string user_name = 1; 
 }
@@ -17,39 +19,6 @@ message AnonymousDeviceAddResponse {
   optional AnonymousDevice device = 3;
 }
 
-message ClientClientVersion {
-  optional ClientId client_id = 1;
-  optional ClientBuildType build_type = 2;
-  optional string  major_version = 3;
-  optional int64 version = 4;
-  optional string device_os_version = 5;
-  optional string device_hardware = 6;
-}
-
-enum ClientId {
-  CLIENT_ID_UNKNOWN = 0;
-  CLIENT_ID_ANDROID = 1;
-  CLIENT_ID_IOS = 2;
-  CLIENT_ID_QUASAR = 3;
-  CLIENT_ID_BOT = 7;
-  CLIENT_ID_GLASS_SERVER = 9;
-  CLIENT_ID_PSTN_BOT = 10;
-  CLIENT_ID_TEE = 11;
-  CLIENT_ID_ROOM_SERVER = 14;
-  CLIENT_ID_SPEAKEASY = 16;
-  CLIENT_ID_GOOGLE_VOICE = 17;
-  CLIENT_ID_PROBER = 18;
-  CLIENT_ID_ANDROID_PSTN_ONLY = 27;
-  CLIENT_ID_TEST_CLIENT = 35;
-}
-
-enum ClientBuildType {
-  CLIENT_BUILD_TYPE_UNKNOWN = 0;
-  CLIENT_BUILD_TYPE_DEVELOPER = 1;
-  CLIENT_BUILD_TYPE_DOGFOOD = 2;
-  CLIENT_BUILD_TYPE_PRODUCTION = 3;
-}
-
 message ClientClientIdentifier {
   optional string resource = 1;
   optional string client_id = 2;
@@ -57,7 +26,7 @@ message ClientClientIdentifier {
 }
 
 message MediaRequestHeader {
-  optional ClientClientVersion client_version = 1;
+  optional ClientVersion client_version = 1;
   optional ClientClientIdentifier client_identifier = 2;
   optional string language_code = 4;
   optional bool include_updated_conversation = 5 [default = false];
@@ -209,6 +178,7 @@ message Hangout {
   optional HangoutType type = 2;
   optional ExternalKey external_key = 3;
   optional bool active = 4;
+  optional bool is_public = 5;
   optional int64 created_ms = 6;
   optional int64 last_activity_ms = 7;
   optional string topic = 8;
@@ -219,14 +189,17 @@ message Hangout {
   optional string organizer_id = 13;
   optional HangoutMediaType media_type = 14;
   optional bool allows_minors = 16;
+  //repeated string tag = 15; ?
   optional Presenter presenter = 17;
   optional bool knockable = 18;
+  //repeated {true/false, en-US} locale = 19;
   optional Tristate external_invited = 21;
   optional Tristate knocking_enabled = 25;
   optional RecordingType active_recording = 26;
   optional string company_title = 27;
   optional string meeting_room_name = 28;
   optional string meeting_domain = 29;
+  optional string url = 30;
 }
 
 enum HangoutType {
@@ -238,11 +211,6 @@ enum HangoutType {
   HANGOUT_TYPE_SPEAKEASY = 6;
   HANGOUT_TYPE_EXPRESS_LANE = 7;
   HANGOUT_TYPE_HOT_LANE = 8;
-}
-
-enum HangoutMediaType {
-  HANGOUT_MEDIA_TYPE_AUDIO_VIDEO = 1;
-  HANGOUT_MEDIA_TYPE_AUDIO_ONLY = 2;
 }
 
 enum RecordingType {
@@ -264,6 +232,7 @@ message HangoutParticipant {
   optional string avatar_url = 5;
   optional bool recording = 6;
   optional bool presenting = 7;
+  //repeated string blocked_user_ids = 8;
   optional bool in_circles = 9;
   optional string given_name = 10;
   optional string family_name = 11;
@@ -698,8 +667,8 @@ message SslFingerprint {
 }
 
 enum IceVersion {
-  ICE_GOOGLE_DRAFT = 1;
-  ICE_RFC_5245 = 2;
+  ICE_GOOGLE_DRAFT = 1; //http://www.google.com/transport/p2p
+  ICE_RFC_5245 = 2; //urn:xmpp:jingle:transports:ice-udp:1
 }
 
 message MediaCodec {
@@ -1381,12 +1350,12 @@ message LocationNetworkInfo {
 }
 
 enum NetworkInfoNetworkType {
-  NETWORK_TYPE_UNKNOWN = 0;
-  NETWORK_TYPE_ETHERNET = 1;
-  NETWORK_TYPE_WIFI802_11A = 2;
-  NETWORK_TYPE_WIFI802_11B = 3;
-  NETWORK_TYPE_WIFI802_11G = 4;
-  NETWORK_TYPE_WIFI802_11N = 5;
+  NETWORK_INFO_TYPE_UNKNOWN = 0;
+  NETWORK_INFO_TYPE_ETHERNET = 1;
+  NETWORK_INFO_TYPE_WIFI802_11A = 2;
+  NETWORK_INFO_TYPE_WIFI802_11B = 3;
+  NETWORK_INFO_TYPE_WIFI802_11G = 4;
+  NETWORK_INFO_TYPE_WIFI802_11N = 5;
 }
 
 message GeoLocationInfo {
@@ -1410,10 +1379,6 @@ enum CellularNetworkInfoAccessType {
   ACCESS_TYPE_THREEGPP_CDMA2000 = 4;
   ACCESS_TYPE_THREEGPP_E_UTRAN_FDD = 5;
   ACCESS_TYPE_THREEGPP_E_UTRAN_TDD = 6;
-}
-
-message PhoneNumber {
-  optional string e164 = 1;
 }
 
 message EligibleCallerIdToken {

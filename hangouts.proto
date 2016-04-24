@@ -132,7 +132,8 @@ message ClientIdentifier {
   // (client_id in hangups).
   optional string resource = 1;
   // unknown (header_id in hangups).
-  optional string header_id = 2;
+  optional string client_id = 2;
+  optional string participant_log_id = 4;
 }
 
 enum ClientPresenceStateType {
@@ -351,9 +352,9 @@ enum HangoutEventType {
 }
 
 enum HangoutMediaType {
-  HANGOUT_EVENT_MEDIA_TYPE_UNKNOWN = 0;
-  HANGOUT_EVENT_MEDIA_TYPE_AUDIO_VIDEO = 1;
-  HANGOUT_EVENT_MEDIA_TYPE_AUDIO_ONLY = 2;
+  HANGOUT_MEDIA_TYPE_UNKNOWN = 0;
+  HANGOUT_MEDIA_TYPE_AUDIO_VIDEO = 1;
+  HANGOUT_MEDIA_TYPE_AUDIO_ONLY = 2;
 }
 
 message HangoutEvent {
@@ -639,11 +640,20 @@ enum ClientId {
   CLIENT_ID_WEB_GPLUS = 5;
   // Hangouts web interface in Gmail.
   CLIENT_ID_WEB_GMAIL = 6;
-  //CLIENT_ID_BOT = 7; ?
+  CLIENT_ID_BOT = 7;
+  CLIENT_ID_GLASS_SERVER = 9;
+  CLIENT_ID_PSTN_BOT = 10;
+  CLIENT_ID_TEE = 11;
   // Hangouts Chrome app ("ultraviolet").
   CLIENT_ID_ULTRAVIOLET = 13;
+  CLIENT_ID_ROOM_SERVER = 14;
+  CLIENT_ID_SPEAKEASY = 16;
+  CLIENT_ID_GOOGLE_VOICE = 17;
+  CLIENT_ID_PROBER = 18;
+  CLIENT_ID_ANDROID_PSTN_ONLY = 27;
   // TODO work out what this is
   CLIENT_ID_SOMETHING = 34;
+  CLIENT_ID_TEST_CLIENT = 35;
 }
 
 // Build type of the client.
@@ -651,7 +661,7 @@ enum ClientBuildType {
   BUILD_TYPE_UNKNOWN = 0;
   // Web app.
   BUILD_TYPE_PRODUCTION_WEB = 1;
-  //DOGFOOD?
+  BUILD_TYPE_DOGFOOD = 2;
   // Native app.
   BUILD_TYPE_PRODUCTION_APP = 3;
 }
@@ -704,6 +714,8 @@ message ResponseHeader {
   optional string debug_url = 3;
   optional string request_trace_id = 4;
   optional uint64 current_server_time = 5;
+  //optional unit64 backoff_duration_millis = 6;
+  //optional localized_user_visible_error_message = 8;
 }
 
 // A user that can participate in conversations.
@@ -1606,215 +1618,4 @@ message UpdateWatermarkRequest {
 
 message UpdateWatermarkResponse {
   optional ResponseHeader response_header = 1;
-}
-
-message ExternalKey {
-  required string service = 1;
-  optional string value = 2;
-}
-
-// hangouts/resolve
-message GetHangoutIdRequest {
-  optional RequestHeader request_header = 1;
-  optional ExternalKey external_key = 2;
-  repeated InviteeID invitee = 3;
-}
-
-message GetHangoutIdResponse {
-  optional ResponseHeader response_header = 1;
-  optional string hangout_id = 2;
-  optional string url = 4;
-}
-
-// hangouts/query
-message GetHangoutInfoRequest {
-  optional RequestHeader request_header = 1;
-  optional string hangout_id = 2;
-  //optional unknown = 3;
-}
-
-message GetHangoutInfoResponse {
-  optional ResponseHeader response_header = 1;
-  optional Hangout hangout = 2;
-}
-
-message HangoutParticipant {
-  optional string hangout_id = 1;
-  optional string participant_id = 2;
-  optional string user_id = 3;
-  optional string display_name = 4;
-  optional string avatar_url = 5;
-  optional bool recording = 6;
-  optional bool presenting = 7;
-  repeated string blocked_user_ids = 8;
-  optional bool in_circles = 9;
-  optional string given_name = 10;
-  optional string family_name = 11;
-  
-  //TODO
-  //optional bool unknown = 12;
-}
-
-// hangout_participants/search
-message GetHangoutParticipantsRequest {
-  optional RequestHeader request_header = 1;
-  optional string hangout_id = 2;
-  //optional SyncMetadata sync_metadata = 3;
-}
-
-message GetHangoutParticipantsResponse {
-  optional ResponseHeader response_header = 1;
-  repeated HangoutParticipant participants = 2;
-  //TODO
-  //optional SyncMetadata sync_metadata = 3;
-}
-
-enum HangoutType {
-	HANGOUT_TYPE_REGULAR = 0;
-	HANGOUT_TYPE_UNSUPPORTED = 1;
-}
-
-enum HangoutInviteNotificationStatus {
-	STATUS_RINGING = 0;
-	STATUS_ACCEPTED = 1;
-	STATUS_IGNORED = 2;
-	STATUS_TIMEOUT = 3;
-}
-
-enum HangoutNotificationType {
-	NOTIFICATION_RING = 0;
-	NOTIFICATION_DING = 1;
-	NOTIFICATION_NONE = 2;
-	NOTIFICATION_AMBIENT = 3;
-}
-
-message Hangout {
-  optional string hangout_id = 1;
-  optional HangoutType type = 2;
-  optional ExternalKey external_key = 3;
-  optional bool active = 4;
-  optional bool is_public = 5;
-  optional uint64 created_ms = 6;
-  optional uint64 last_activity_ms = 7;
-  optional string topic = 8;
-  optional ConversationId conversation_id = 9;
-  optional bool by_invitation_only = 10;
-  optional uint64 start_time_ms = 11;
-  optional uint64 duration_ms = 12;
-  optional string organizer_id = 13;
-  optional HangoutMediaType media_type = 14;
-  //repeated = 15; //tag?  //repeated string tag = ?
-  //repeated = 19; {true/false, en-US}
-  //repeated = 25;
-  optional string url = 30;
-}
-
-enum RTCMediaType {
-	RTC_MEDIA_TYPE_UNKNOWN = 0;
-	RTC_MEDIA_TYPE_AUDIO = 1;
-	RTC_MEDIA_TYPE_VIDEO = 2;
-	RTC_MEDIA_TYPE_DATA = 3;
-}
-
-enum RTCProtocolType {
-	RTC_PROTOCOL_TYPE_UNKNOWN = 0;
-	RTC_PROTOCOL_TYPE_UDP = 1;
-	RTC_PROTOCOL_TYPE_TCP = 2;
-	RTC_PROTOCOL_TYPE_SSLTCP = 3;
-}
-
-enum RTCCodecChannels {
-	RTC_CODEC_CHANNELS_UNKNOWN = 0;
-	RTC_CODEC_CHANNELS_MONO = 1;
-	RTC_CODEC_CHANNELS_STEREO = 2;
-}
-
-message RTCCandidate {
-  optional RTCMediaType media = 1;
-  optional RTCProtocolType protocol = 2;
-  optional string ip = 3;
-  optional uint64 port = 4;
-  optional uint64 component = 5;
-  optional uint64 priority = 6;
-  optional string type = 7;
-  optional uint64 generation = 8;
-}
-
-message RTCCodecAdditionalInfo {
-  required string key = 1;
-  required string value = 2;
-}
-
-message RTCCodec {
-  optional uint64 id = 1;
-  optional string name = 2;
-  optional RTCMediaType media_type = 3;
-  optional uint64 frequency = 5;
-  optional uint64 bitrate = 6;
-  optional RTCCodecChannels channels = 7;
-  repeated RTCCodecAdditionalInfo additional_info = 8;
-}
-
-enum RTCCryptoSuite {
-	RTC_CRYPTO_SUITE_AES_CM_128_HMAC_SHA1_80 = 1;
-	RTC_CRYPTO_SUITE_AES_CM_128_HMAC_SHA1_32 = 2;
-	RTC_CRYPTO_SUITE_F8_128_HMAC_SHA1_80 = 3;
-}
-
-message RTCCrypto {
-  optional RTCCryptoSuite crypto_suite = 1;
-  optional string key_param = 2;
-  //optional string unknown = 3;
-  optional uint64 tag = 4;
-}
-
-message RTCRTPHDREXT {
-  optional uint64 id = 1;
-  optional string uri = 2;
-  //optional uint64 unknown = 3;
-}
-
-enum RTCTransportType {
-	//TODO is this the right way around?
-	RTC_TRANSPORT_TYPE_ICE = 1; //urn:xmpp:jingle:transports:ice-udp:1
-	RTC_TRANSPORT_TYPE_GICE = 2; //http://www.google.com/transport/p2p
-}
-
-message RTCTransport {
-	optional RTCTransportType type = 1;
-	//optional unknown = 2;
-	//repeated unknown = 3;
-	optional string ufrag = 4;
-	optional string pwd = 5;
-	repeated RTCCandidate candidates = 6;
-}
-
-message RTCAddSessionRequest {
-	optional RequestHeader request_header = 1;
-	optional RTCCallInfo call_info = 4;
-}
-
-message RTCStream {
-	optional string groupid = 1;
-	optional string streamid = 3;
-}
-
-message RTCCallInfo {
-	optional string remote_session_id = 1;
-	//optional unknown = 2;
-	repeated RTCClientInfo client_info = 3;
-	repeated RTCClientInfo relay_info = 4;
-	repeated RTCStream streams = 5;
-	//repeated string jrpt_session_id = 6; + _hangout@groupchat.google.com
-	//optional uint64 unknown = 7;
-}
-
-message RTCClientInfo {
-	//optional unknown = 1;  //always a 4 - maybe means LOCAL ?
-	optional RTCTransport transport = 2;
-	repeated RTCCodec codecs = 3;
-	repeated RTCCrypto crypto = 4;
-	repeated RTCRTPHDREXT hdrext = 5;
-	//repeated unknown = 6;
-	//repeated unknown = 7;
 }

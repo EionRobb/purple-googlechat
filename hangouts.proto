@@ -682,6 +682,29 @@ message ClientVersion {
   optional string device_hardware = 6;
 }
 
+enum Device {
+  DEVICE_UNKNOWN = 0;
+  DEVICE_ANDROID_PHONE = 2;
+  DEVICE_ANDROID_TABLET = 3;
+  DEVICE_IOS_PHONE = 4;
+  DEVICE_IOS_TABLET = 5;
+}
+
+enum Application {
+  APPLICATION_BABEL = 407;
+}
+
+enum Platform {
+  PLATFORM_UNKNOWN = 0;
+  PLATFORM_NATIVE = 2;
+}
+
+message RtcClient {
+  optional Device device = 1;
+  optional Application application = 2;
+  optional Platform platform = 3;
+}
+
 // Header for requests from the client to the server.
 message RequestHeader {
   optional ClientVersion client_version = 1;
@@ -693,6 +716,7 @@ message RequestHeader {
   // TODO: incomplete
   //optional uint64 message_id = 3;
   //optional ClientInstrumentationInfo client_instrumentation_info = 3;
+  optional RtcClient rtc_client = 7;
 }
 
 // Status of the response from the server to the client.
@@ -705,6 +729,10 @@ enum ResponseStatus {
   RESPONSE_STATUS_ERROR_RETRY_LIMIT = 5;
   RESPONSE_STATUS_ERROR_FORWARDED = 6;
   RESPONSE_STATUS_ERROR_QUOTA_EXCEEDED = 7;
+  RESPONSE_STATUS_ERROR_INVALID_CONVERSATION = 8;
+  RESPONSE_STATUS_ERROR_VERSION_MISMATCH = 9;
+  RESPONSE_STATUS_ERROR_ACCESS_CHECK_FAILED = 10;
+  RESPONSE_STATUS_ERROR_NOT_FOUND = 11;
 }
 
 // Header for responses from the server to the client.
@@ -714,8 +742,8 @@ message ResponseHeader {
   optional string debug_url = 3;
   optional string request_trace_id = 4;
   optional uint64 current_server_time = 5;
-  //optional unit64 backoff_duration_millis = 6;
-  //optional localized_user_visible_error_message = 8;
+  optional uint64 backoff_duration_millis = 6;
+  optional string localized_user_visible_error_message = 8;
 }
 
 // A user that can participate in conversations.

@@ -599,7 +599,6 @@ hangouts_client6_request(HangoutsAccount *ha, const gchar *path, HangoutsContent
 void
 hangouts_pblite_request(HangoutsAccount *ha, const gchar *endpoint, ProtobufCMessage *request_message, HangoutsPbliteResponseFunc callback, ProtobufCMessage *response_message, gpointer user_data)
 {
-	gchar *endpoint_path;
 	gsize request_len;
 	gchar *request_data;
 	LazyPblistRequestStore *request_info = g_new0(LazyPblistRequestStore, 1);
@@ -610,16 +609,13 @@ hangouts_pblite_request(HangoutsAccount *ha, const gchar *endpoint, ProtobufCMes
 	request_data = json_encode(node, &request_len);
 	json_node_free(node);
 	
-	endpoint_path = g_strdup_printf("/chat/v1/%s", endpoint);
-	
 	request_info->ha = ha;
 	request_info->callback = callback;
 	request_info->response_message = response_message;
 	request_info->user_data = user_data;
 	
-	hangouts_client6_request(ha, endpoint_path, HANGOUTS_CONTENT_TYPE_PBLITE, request_data, request_len, HANGOUTS_CONTENT_TYPE_PBLITE, hangouts_pblite_request_cb, request_info);
+	hangouts_client6_request(ha, endpoint, HANGOUTS_CONTENT_TYPE_PBLITE, request_data, request_len, HANGOUTS_CONTENT_TYPE_PBLITE, hangouts_pblite_request_cb, request_info);
 	
-	g_free(endpoint_path);
 	g_free(request_data);
 }
 

@@ -41,6 +41,12 @@
 /*****************************************************************************/
 //TODO move to nicer place
 
+PurpleMediaCaps
+hangouts_get_media_caps(PurpleAccount *account, const char *who)
+{
+	return PURPLE_MEDIA_CAPS_AUDIO_VIDEO;
+}
+
 void
 hangouts_set_idle(PurpleConnection *pc, int time)
 {

@@ -23,10 +23,6 @@
 #include "hangouts_connection.h"
 #include "hangout_media.pb-c.h"
 
-typedef void(* HangoutsPbliteResponseFunc)(HangoutsAccount *ha, ProtobufCMessage *response, gpointer user_data);
-void hangouts_pblite_media_request(HangoutsAccount *ha, const gchar *endpoint, ProtobufCMessage *request, HangoutsPbliteResponseFunc callback, ProtobufCMessage *response_message, gpointer user_data);
-
-
 #define HANGOUTS_DEFINE_PBLITE_MEDIA_REQUEST_FUNC(name, type, url) \
 typedef void(* HangoutsPblite##type##ResponseFunc)(HangoutsAccount *ha, type##Response *response, gpointer user_data);\
 static inline void \
@@ -38,7 +34,10 @@ hangouts_pblite_media_##name(HangoutsAccount *ha, type##Request *request, Hangou
 	hangouts_pblite_request(ha, "/hangouts/v1/" #url, (ProtobufCMessage *)request, (HangoutsPbliteResponseFunc)callback, (ProtobufCMessage *)response, user_data);\
 }
 
-HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(hangout_resolve, HangoutResolve, "hangouts/resolve");
-HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(hangout_query, HangoutQuery, "hangouts/query");
+HANGOUTS_DEFINE_PBLITE_MEDIA_REQUEST_FUNC(hangout_resolve, HangoutResolve, "hangouts/resolve");
+HANGOUTS_DEFINE_PBLITE_MEDIA_REQUEST_FUNC(hangout_query, HangoutQuery, "hangouts/query");
+HANGOUTS_DEFINE_PBLITE_MEDIA_REQUEST_FUNC(media_session_add, MediaSessionAdd, "media_sessions/add");
+HANGOUTS_DEFINE_PBLITE_MEDIA_REQUEST_FUNC(media_session_modify, MediaSessionModify, "media_sessions/modify");
+HANGOUTS_DEFINE_PBLITE_MEDIA_REQUEST_FUNC(hangout_participant_add, HangoutParticipantAdd, "hangout_participants/add");
 
-#endif /*_HANGOUTS_CONNECTION_H_*/
+#endif /*_HANGOUTS_MEDIA_H_*/

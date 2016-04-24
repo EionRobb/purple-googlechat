@@ -1,0 +1,1681 @@
+
+// proto2 is required because we need to be able to serialize default values:
+syntax = "proto2";
+
+message AnonymousDevice {
+  optional string user_name = 1; 
+}
+
+message AnonymousDeviceAddRequest {
+  optional MediaRequestHeader request_header = 1;
+  optional AnonymousDevice device = 2;
+}
+
+message AnonymousDeviceAddResponse {
+  optional MediaResponseHeader response_header = 1;
+  optional SyncMetadata sync_metadata = 2;
+  optional AnonymousDevice device = 3;
+}
+
+message ClientClientVersion {
+  optional ClientId client_id = 1;
+  optional ClientBuildType build_type = 2;
+  optional string  major_version = 3;
+  optional int64 version = 4;
+  optional string device_os_version = 5;
+  optional string device_hardware = 6;
+}
+
+enum ClientId {
+  CLIENT_ID_UNKNOWN = 0;
+  CLIENT_ID_ANDROID = 1;
+  CLIENT_ID_IOS = 2;
+  CLIENT_ID_QUASAR = 3;
+  CLIENT_ID_BOT = 7;
+  CLIENT_ID_GLASS_SERVER = 9;
+  CLIENT_ID_PSTN_BOT = 10;
+  CLIENT_ID_TEE = 11;
+  CLIENT_ID_ROOM_SERVER = 14;
+  CLIENT_ID_SPEAKEASY = 16;
+  CLIENT_ID_GOOGLE_VOICE = 17;
+  CLIENT_ID_PROBER = 18;
+  CLIENT_ID_ANDROID_PSTN_ONLY = 27;
+  CLIENT_ID_TEST_CLIENT = 35;
+}
+
+enum ClientBuildType {
+  CLIENT_BUILD_TYPE_UNKNOWN = 0;
+  CLIENT_BUILD_TYPE_DEVELOPER = 1;
+  CLIENT_BUILD_TYPE_DOGFOOD = 2;
+  CLIENT_BUILD_TYPE_PRODUCTION = 3;
+}
+
+message ClientClientIdentifier {
+  optional string resource = 1;
+  optional string client_id = 2;
+  optional string participant_log_id = 4;
+}
+
+message MediaRequestHeader {
+  optional ClientClientVersion client_version = 1;
+  optional ClientClientIdentifier client_identifier = 2;
+  optional string language_code = 4;
+  optional bool include_updated_conversation = 5 [default = false];
+  optional uint32 retry_attempt = 6 [default = 0];
+  optional RtcClient rtc_client = 7;
+}
+
+message MediaResponseHeader {
+  optional ClientResponseStatus status = 1;
+  optional string error_description = 2;
+  optional string debug_url = 3;
+  optional uint64 request_trace_id = 4;
+  optional uint64 current_server_time = 5;
+  optional uint64 backoff_duration_millis = 6;
+  optional string localized_user_visible_error_message = 8;
+}
+
+message ClientParticipantId {
+  optional string gaia_id = 1;
+  optional string chat_id = 2;
+}
+
+message ClientConversationId {
+  optional string id = 1;
+}
+
+message CommonAnnouncement {
+  optional string hangout_id = 1;
+  optional string announcement_id = 2;
+  optional AnnouncementType announcement_type = 3;
+  optional string sender_id = 4;
+  optional string subject_id = 5;
+  optional string recipient_id = 6;
+  optional string locale = 7;
+  optional CommonAnnouncementAction action = 8;
+  optional string title = 9;
+  optional string body = 10;
+  optional LifeTime life_time = 11 [default = FIRE_AND_FORGET];
+}
+
+enum CommonAnnouncementAction {
+  FYI = 0;
+  CONFIRM = 1;
+  INTERRUPT = 2;
+}
+
+enum LifeTime {
+  UNKNOWN = 0;
+  FIRE_AND_FORGET = 1;
+  STICKY = 2;
+}
+
+message CommonAnnouncementAddRequest {
+  optional MediaRequestHeader request_header = 1;
+  optional CommonAnnouncement announcement = 2;
+  optional SyncMetadata sync_metadata = 3;
+  optional CommonAnnouncement resource = 4;
+}
+
+message CommonAnnouncementAddResponse {
+  optional MediaResponseHeader response_header = 1;
+  optional CommonAnnouncement announcement = 2;
+  optional SyncMetadata sync_metadata = 3;
+  optional CommonAnnouncement resource = 4;
+}
+
+message CommonAnnouncementSearchRequest {
+  optional MediaRequestHeader request_header = 1;
+  optional string hangout_id = 2;
+  optional SyncMetadata sync_metadata = 3;
+  optional string locale = 4;
+}
+
+message CommonAnnouncementSearchResponse {
+  optional MediaResponseHeader response_header = 1;
+  optional CommonAnnouncement announcement = 2;
+  optional SyncMetadata sync_metadata = 3;
+}
+
+message CommonAnnouncementRemoveRequest {
+  optional MediaRequestHeader request_header = 1;
+  optional string hangout_id = 2;
+  optional string announcement_id = 3;
+  optional SyncMetadata sync_metadata = 4;
+  optional string resource_id = 5;
+}
+
+message CommonAnnouncementRemoveResponse {
+  optional MediaResponseHeader response_header = 1;
+  optional SyncMetadata sync_metadata = 2;
+}
+
+message HangoutBulkRequestEntry {
+  optional HangoutParticipantAddRequest hangout_participant_add_request = 1;
+  optional MediaSessionAddRequest media_session_add_request = 2;
+  optional MediaStreamAddRequest media_stream_add_request = 3;
+  optional MediaStreamSearchRequest media_stream_search_request = 4;
+  optional MediaSourceAddRequest media_source_add_request = 5;
+  optional MediaSourceSearchRequest media_source_search_request = 6;
+  optional HangoutParticipantSearchRequest hangout_participant_search_request = 7;
+  optional HangoutQueryRequest hangout_query_request = 8;
+  optional HangoutAddRequest hangout_add_request = 9;
+  optional HangoutResolveRequest hangout_resolve_request = 10;
+  optional HangoutInvitationAddRequest hangout_invitation_add_request = 11;
+  optional HangoutInvitationAddPhoneRequest hangout_invitation_add_phone_request = 12;
+  optional MediaSessionQueryRequest media_session_query_request = 13;
+}
+
+message HangoutBulkResponseEntry {
+  optional HangoutParticipantAddResponse hangout_participant_add_response = 1;
+  optional MediaSessionAddResponse media_session_add_response = 2;
+  optional MediaStreamAddResponse media_stream_add_response = 3;
+  optional MediaStreamSearchResponse media_stream_search_response = 4;
+  optional MediaSourceAddResponse media_source_add_response = 5;
+  optional MediaSourceSearchResponse media_source_search_response = 6;
+  optional HangoutParticipantSearchResponse hangout_participant_search_response = 7;
+  optional HangoutQueryResponse hangout_query_response = 8;
+  optional HangoutAddResponse hangout_add_response = 9;
+  optional HangoutResolveResponse hangout_resolve_response = 10;
+  optional HangoutInvitationAddResponse hangout_invitation_add_response = 11;
+  optional HangoutInvitationAddPhoneResponse hangout_invitation_add_phone_response = 12;
+  optional MediaSessionQueryResponse media_session_query_response = 13;
+}
+
+message HangoutBulkRequest {
+  optional MediaRequestHeader request_header = 1;
+  optional HangoutBulkRequestEntry entry = 2;
+  optional SyncMetadata sync_metadata = 3;
+}
+
+message HangoutBulkResponse {
+  optional MediaResponseHeader response_header = 1;
+  optional HangoutBulkResponseEntry entry = 2;
+  optional SyncMetadata sync_metadata = 3;
+}
+
+message ExternalKey {
+  optional string service = 1;
+  optional string value = 2;
+}
+
+message Presenter {
+  optional string presenter_participant_id = 1;
+  optional string by_participant_id = 2;
+}
+
+message Hangout {
+  optional string hangout_id = 1;
+  optional HangoutType type = 2;
+  optional ExternalKey external_key = 3;
+  optional bool active = 4;
+  optional int64 created_ms = 6;
+  optional int64 last_activity_ms = 7;
+  optional string topic = 8;
+  optional ClientConversationId conversation_id = 9;
+  optional bool by_invitation_only = 10;
+  optional int64 start_time_ms = 11;
+  optional int64 duration_ms = 12;
+  optional string organizer_id = 13;
+  optional HangoutMediaType media_type = 14;
+  optional bool allows_minors = 16;
+  optional Presenter presenter = 17;
+  optional bool knockable = 18;
+  optional Tristate external_invited = 21;
+  optional Tristate knocking_enabled = 25;
+  optional RecordingType active_recording = 26;
+  optional string company_title = 27;
+  optional string meeting_room_name = 28;
+  optional string meeting_domain = 29;
+}
+
+enum HangoutType {
+  HANGOUT_TYPE_CONSUMER = 1;
+  HANGOUT_TYPE_BUSINESS = 2;
+  HANGOUT_TYPE_BROADCAST = 3;
+  HANGOUT_TYPE_LITE = 4;
+  HANGOUT_TYPE_SINGLE_PARTICIPANT_BROADCAST = 5;
+  HANGOUT_TYPE_SPEAKEASY = 6;
+  HANGOUT_TYPE_EXPRESS_LANE = 7;
+  HANGOUT_TYPE_HOT_LANE = 8;
+}
+
+enum HangoutMediaType {
+  HANGOUT_MEDIA_TYPE_AUDIO_VIDEO = 1;
+  HANGOUT_MEDIA_TYPE_AUDIO_ONLY = 2;
+}
+
+enum RecordingType {
+  RECORDING_TYPE_UNKNOWN = 0;
+  RECORDING_TYPE_CONSUMER = 1;
+  RECORDING_TYPE_GVC = 2;
+}
+
+message PhoneCallId {
+  optional PhoneNumber from_number = 1;
+  optional PhoneNumber to_number = 2;
+}
+
+message HangoutParticipant {
+  optional string hangout_id = 1;
+  optional string participant_id = 2;
+  optional string user_id = 3;
+  optional string display_name = 4;
+  optional string avatar_url = 5;
+  optional bool recording = 6;
+  optional bool presenting = 7;
+  optional bool in_circles = 9;
+  optional string given_name = 10;
+  optional string family_name = 11;
+  optional MediaRole role = 12;
+  optional ClientType client_type = 13 [default = OTHER];
+  optional PhoneCallId phone_call_id = 16;
+  optional ParticipantState participant_state = 17 [default = PARTICIPANT_STATE_UNKNOWN];
+  optional HangoutParticipantPrivilege privilege = 19;
+  optional HangoutParticipantBlockedUser blocked_user = 20;
+  optional bool accepted_tos = 21 [default = false];
+  optional E911UserLocationInfo e911_user_location_info = 22;
+  optional int64 invitation_id = 23;
+  optional string user_message = 25;
+}
+
+message HangoutParticipantBlockedUser {
+  optional string user_id = 1;
+  optional BlockType block_type = 2 [default = HANGOUT_IGNORE];
+}
+
+enum BlockType {
+  HANGOUT_IGNORE = 1;
+  GPLUS_BLOCK = 2;
+}
+
+enum ClientType {
+  OTHER = 1;
+  DESKTOP = 2;
+  MOBILE = 3;
+  TABLET = 4;
+  PHONE = 5;
+  VC_ROOM = 6;
+}
+
+enum ParticipantState {
+  PARTICIPANT_STATE_UNKNOWN = 0;
+  PARTICIPANT_STATE_JOINED = 1;
+  PARTICIPANT_STATE_RINGING = 2;
+  PARTICIPANT_STATE_KNOCKING = 10;
+  PARTICIPANT_STATE_KNOCKING_DENIED = 11;
+  PARTICIPANT_STATE_KNOCKING_ACCEPTED = 12;
+  PARTICIPANT_STATE_RINGING_CONNECTING = 20;
+  PARTICIPANT_STATE_RINGING_NOEARLYMEDIA = 21;
+  PARTICIPANT_STATE_RINGING_EARLYMEDIA = 22;
+}
+
+enum HangoutParticipantPrivilege {
+  PARTICIPANT_PRIVILEGE_UNKNOWN = 0;
+  PARTICIPANT_PRIVILEGE_MAY_ACCEPT_KNOCK = 1;
+  PARTICIPANT_PRIVILEGE_MAY_SET_PRESENTER = 2;
+  PARTICIPANT_PRIVILEGE_MAY_INVITE = 3;
+  PARTICIPANT_PRIVILEGE_MAY_KICK = 4;
+}
+
+message NamedHangout {
+  optional string name = 1;
+  optional string domain = 2;
+  optional string calendar_id = 3;
+  optional string event_id = 4;
+}
+
+message HangoutSearchResult {
+  optional Hangout hangout = 1;
+  optional HangoutParticipant participant = 2;
+  optional Broadcast broadcast = 3;
+}
+
+message HangoutSearchRequest {
+  optional MediaRequestHeader request_header = 1;
+  optional bool active_only = 2;
+  optional bool is_public = 3;
+  optional int32 limit = 4 [default = 10];
+  optional int64 oldest_timestamp = 6;
+}
+
+message HangoutSearchResponse {
+  optional MediaResponseHeader response_header = 1;
+  optional HangoutSearchResult result = 2;
+}
+
+message HangoutAddRequest {
+  optional MediaRequestHeader request_header = 1;
+  optional Hangout hangout = 2;
+  optional SyncMetadata sync_metadata = 3;
+  optional Hangout resource = 4;
+}
+
+message HangoutAddResponse {
+  optional MediaResponseHeader response_header = 1;
+  optional Hangout hangout = 2;
+  optional SyncMetadata sync_metadata = 3;
+  optional string sharing_url = 4;
+  optional Hangout resource = 5;
+}
+
+message HangoutQueryRequest {
+  optional MediaRequestHeader request_header = 1;
+  optional string  hangout_id = 2;
+  optional SyncMetadata sync_metadata = 3;
+}
+
+message HangoutQueryResponse {
+  optional MediaResponseHeader response_header = 1;
+  optional Hangout hangout = 2;
+  optional SyncMetadata sync_metadata = 3;
+}
+
+message HangoutResolveRequest {
+  optional MediaRequestHeader request_header = 1;
+  optional ExternalKey external_key = 2;
+  optional NamedHangout named_hangout = 4;
+  optional bool is_joining = 5 [default = false];
+  optional HangoutMediaType media_type = 6[default = HANGOUT_MEDIA_TYPE_AUDIO_VIDEO];
+  optional string sharing_url = 7;
+  optional SyncMetadata sync_metadata = 8;
+}
+
+message HangoutResolveResponse {
+  optional MediaResponseHeader response_header = 1;
+  optional string hangout_id = 2;
+  optional HangoutResolveError error_code = 3;
+  optional string sharing_url = 4;
+  optional SyncMetadata sync_metadata = 5;
+}
+
+enum HangoutResolveError {
+  INVALID_ROOM_NAME = 0;
+  HANGOUT_NOT_FOUND = 1;
+}
+
+message HangoutModifyRequest {
+  optional MediaRequestHeader request_header = 1;
+  optional Hangout hangout = 2;
+  optional SyncMetadata sync_metadata = 3;
+  optional Hangout resource = 4;
+}
+
+message HangoutModifyResponse {
+  optional MediaResponseHeader response_header = 1;
+  optional Hangout hangout = 2;
+  optional SyncMetadata sync_metadata = 3;
+  optional Hangout resource = 4;
+}
+
+message HangoutRemoveRequest {
+  optional MediaRequestHeader request_header = 1;
+  optional string hangout_id = 2;
+  optional SyncMetadata sync_metadata = 3;
+  optional string resource_id = 4 ;
+}
+
+message HangoutRemoveResponse {
+  optional MediaResponseHeader response_header = 1;
+  optional SyncMetadata sync_metadata = 2;
+}
+
+message HangoutParticipantSearchRequest {
+  optional MediaRequestHeader request_header = 1;
+  optional string hangout_id = 2;
+  optional SyncMetadata sync_metadata = 3;
+}
+
+message RemovedParticipant {
+  optional string participant_id = 1;
+  optional RemovalReason removal_reason = 2 [default = UNKNOWN_REASON];
+}
+
+message HangoutParticipantSearchResponse {
+  optional MediaResponseHeader response_header = 1;
+  optional HangoutParticipant participant = 2;
+  optional SyncMetadata sync_metadata = 3;
+  optional RemovedParticipant removed = 4;
+}
+
+message HangoutParticipantAddPrerequisite {
+  optional Hangout hangout = 1;
+  optional ClientParticipantId participant = 2;
+  optional bool hoa_tos_accepted = 3 [default = false];
+  optional bool customer_recording_tos_accepted = 4 [default = false];
+}
+
+message HangoutParticipantAddRequest {
+  optional MediaRequestHeader request_header = 1;
+  optional HangoutParticipant participant = 2;
+  optional HangoutParticipantAddPrerequisite prerequisite = 3;
+  optional SyncMetadata sync_metadata = 5;
+  optional HangoutParticipant resource = 6;
+}
+
+message HangoutParticipantAddResponse {
+  optional MediaResponseHeader response_header = 1;
+  optional HangoutParticipant participant = 2;
+  optional SyncMetadata sync_metadata = 3;
+  optional HangoutParticipantAddErrorCode error_code = 4;
+  optional HangoutParticipant resource = 5;
+}
+
+message HangoutParticipantQueryRequest {
+  optional MediaRequestHeader request_header = 1;
+  optional string hangout_id = 2;
+  optional string  participant_id = 3;
+  optional SyncMetadata sync_metadata = 4;
+}
+
+message HangoutParticipantQueryResponse {
+  optional MediaResponseHeader response_header = 1;
+  optional HangoutParticipant participant = 2;
+  optional SyncMetadata sync_metadata = 3;
+}
+
+message HangoutParticipantModifyRequest {
+  optional MediaRequestHeader request_header = 1;
+  optional HangoutParticipant participant = 2;
+  optional SyncMetadata sync_metadata = 3;
+  optional HangoutParticipant resource = 4;
+}
+
+message HangoutParticipantModifyResponse {
+  optional MediaResponseHeader response_header = 1;
+  optional HangoutParticipant participant = 2;
+  optional SyncMetadata sync_metadata = 3;
+  optional HangoutParticipant resource = 4;
+}
+
+message HangoutParticipantRemoveRequest {
+  optional MediaRequestHeader request_header = 1;
+  optional string hangout_id = 2;
+  optional string participant_id = 3 ;
+  optional EndCause end_cause = 5;
+  optional SyncMetadata sync_metadata = 4;
+  optional string resource_id = 6;
+  optional HangoutParticipantIdentifier resource = 7;
+}
+
+message HangoutParticipantRemoveResponse {
+  optional MediaResponseHeader response_header = 1;
+  optional SyncMetadata sync_metadata = 2;
+}
+
+message SyncMetadata {
+  optional int64 version = 1;
+  optional string changed_by = 2;
+  optional HangoutCookie hangout_cookie = 3;
+}
+  
+message HangoutCookie {
+  optional string cookie = 1;
+  optional int64 timestamp = 2;
+}
+
+message HangoutParticipantIdentifier {
+  optional string hangout_id = 1;
+  optional string participant_id = 2;
+}
+
+message MediaSourceIdentifier {
+  optional string hangout_id = 1;
+  optional string participant_id = 2;
+  optional string source_id = 3;
+}
+
+message BroadcastIdentifier {
+  optional string hangout_id = 1;
+  optional string broadcast_id = 2;
+}
+
+message DTMFEvent {
+  optional DTMF dtmf = 1;
+}
+  
+message DTMF {
+  optional DTMFCode code = 1;
+}
+
+enum DTMFCode {
+  ZERO = 0;
+  ONE = 1;
+  TWO = 2;
+  THREE = 3;
+  FOUR = 4;
+  FIVE = 5;
+  SIX = 6;
+  SEVEN = 7;
+  EIGHT = 8;
+  NINE = 9;
+  ASTERISK = 10;
+  POUND = 11;
+  A = 12;
+  B = 13;
+  C = 14;
+  D = 15;
+}
+
+message HangoutPushEvent {
+  optional string hangout_id = 1;
+  optional string sender_participant_id = 2;
+  optional string receiver_participant_id = 3;
+  optional PushEventType event_type = 4;
+  optional DTMFEvent dtmf_event = 5;
+  optional bool should_ack = 6;
+}
+
+message HangoutPushEventAddRequest {
+  optional MediaRequestHeader request_header = 1;
+  optional HangoutPushEvent event = 2;
+  optional HangoutPushEvent resource = 3;
+}
+
+message HangoutPushEventAddResponse {
+  optional MediaResponseHeader response_header = 1;
+  optional HangoutPushEvent event = 2;
+  optional SyncMetadata sync_metadata = 3;
+  optional HangoutPushEvent resource = 4;
+}
+
+message HangoutPushEventAckRequest {
+  optional MediaRequestHeader request_header = 1;
+  optional string hangout_id = 2;
+  optional SyncMetadata sync_metadata = 3;
+}
+
+message HangoutPushEventAckResponse {
+  optional MediaResponseHeader response_header = 1;
+}
+
+message VideoResolution {
+  optional int32 height = 1;
+  optional int32 width = 2;
+  optional int32 frame_rate = 3;
+}
+
+message StreamRequest {
+  optional bool ssrcs_known = 1;
+  optional bool send = 2;
+  optional VideoResolution resolution = 3;
+  optional uint32 priority = 4;
+  optional int32 ssrc = 5;
+}
+
+message MediaSource {
+  optional string hangout_id = 1  ;
+  optional string participant_id = 2  ;
+  optional string source_id = 3  ;
+  optional MediaType media_type = 4;
+  optional MuteState mute_state = 5;
+  optional MuteRequest mute_request = 6;
+  optional VideoDetails video_details = 7;
+  optional PlayLevelRequest play_level_request = 8;
+}
+
+message MuteState {
+  optional bool muted = 1;
+  optional string by_participant_id = 2;
+  optional uint64 play_level = 3; //TODO work out type
+}
+
+message MuteRequest {
+  optional string by_participant_id = 1;
+}
+
+message VideoDetails {
+  optional CaptureType capture_type = 1;
+  optional VideoResolution captured_resolution = 2;
+  optional VideoDetailsRegion interest_region = 3;
+}
+
+message VideoDetailsRegion {
+  optional uint64 x = 1; //TODO work out type
+  optional uint64 y = 2; //TODO work out type
+  optional uint64 width = 3; //TODO work out type
+  optional uint64 height = 4; //TODO work out type
+}
+
+enum CaptureType {
+  CAMERA = 1;
+  SCREENCAST = 2;
+}
+
+message PlayLevelRequest {
+  optional string by_participant_id = 1;
+  optional uint64 play_level = 2; //TODO work out type
+}
+
+enum DefaultSourceId {
+  AUDIO = 1;
+  VIDEO = 2;
+  DATA = 3;
+}
+
+message MediaIceCandidate {
+  optional Component component = 1;
+  optional Protocol protocol = 2;
+  optional string ip = 3;
+  optional int32 port = 4;
+  optional MediaIceCandidateType type = 5;
+  optional int32 priority = 6;
+  optional string network = 7;
+  optional int32 generation = 8;
+  optional MediaType media_type = 9;
+}
+
+enum Component {
+  RTP = 1;
+  RTCP = 2;
+}
+
+enum Protocol {
+  UDP = 1;
+  TCP = 2;
+  SSLTCP = 3;
+}
+
+enum MediaIceCandidateType {
+  HOST = 1;
+  PEER_REFLEXIVE = 2;
+  SERVER_REFLEXIVE = 3;
+  RELAY = 4;
+}
+
+message MediaTransport {
+  optional IceVersion ice_version = 1;
+  optional SslFingerprint ssl_fingerprint = 2;
+  optional string option = 3 ;
+  optional string username = 4 ;
+  optional string password = 5 ;
+  optional MediaIceCandidate candidate = 6;
+}
+
+message SslFingerprint {
+  optional string algorithm = 1;
+  optional string fingerprint = 2;
+}
+
+enum IceVersion {
+  ICE_GOOGLE_DRAFT = 1;
+  ICE_RFC_5245 = 2;
+}
+
+message MediaCodec {
+  optional int32 payload_id = 1;
+  optional string name = 2;
+  optional MediaType media_type = 3;
+  optional int32 preference = 4;
+  optional int32 bit_rate = 5;
+  optional int32 sample_rate = 6;
+  optional int32 channel_count = 7;
+  optional MediaCodecParam param = 8;
+}
+
+message MediaCodecParam {
+  optional string key = 1;
+  optional string value = 2;
+}
+
+message MediaCryptoParams {
+  optional MediaCryptoSuite suite = 1;
+  optional string key_params = 2;
+  optional string  session_params = 3;
+  optional int32 tag = 4;
+}
+
+enum MediaCryptoSuite {
+  AES_CM_128_HMAC_SHA1_80 = 1;
+  AES_CM_128_HMAC_SHA1_32 = 2;
+}
+
+message MediaRtpHeaderExtension {
+  optional int32 id = 1;
+  optional string uri = 2 ;
+  optional MediaType media_type = 3;
+}
+
+message MediaRequest {
+  optional MediaType media_type = 1;
+  optional StreamRequest stream_request = 2;
+}
+
+message MediaContent {
+  optional MediaType media_type = 1 [default = MEDIA_TYPE_BUNDLE];
+  optional MediaTransport transport = 2;
+  optional MediaCodec codec = 3;
+  optional MediaCryptoParams crypto_param = 4;
+  optional MediaRtpHeaderExtension rtp_header_extension = 5;
+  optional MediaRequest default_request = 6;
+}
+
+message PushChannel {
+  optional string channel_id = 1;
+  optional PushChannelFormat format = 2;
+  optional int32 ssrc = 3;
+  optional string label = 4;
+}
+
+enum PushChannelFormat {
+  FORMAT_PROTOJSON = 1;
+  FORMAT_PROTOTEXT = 2;
+  FORMAT_PROTOBUF = 3;
+}
+
+message MediaSession {
+  optional string session_id = 1;
+  optional MediaContent client_content = 3;
+  optional MediaContent server_content = 4;
+  optional PushChannel push_channel = 5;
+  optional string hangout_id = 6;
+  optional MediaSessionType type = 7;
+}
+
+enum MediaSessionType {
+  TYPE_CLOUD = 1;
+  TYPE_P2P = 2;
+}
+
+message MediaStream {
+  optional MediaStreamDirection direction = 1;
+  optional MediaType media_type = 2;
+  optional string session_id = 3;
+  optional string stream_id = 4;
+  optional string hangout_id = 5;
+  optional string participant_id = 6;
+  optional string source_id = 7;
+  optional MediaStreamOffer offer = 8;
+  optional StreamRequest request = 9;
+}
+
+message MediaStreamOffer {
+  optional uint32 ssrc = 1;
+  optional SsrcGroup ssrc_group = 2;
+}
+
+message SsrcGroup {
+  optional string semantics = 1;
+  optional uint32 ssrc = 2;
+}
+
+message MediaSourceSearchRequest {
+  optional MediaRequestHeader request_header = 1;
+  optional string  hangout_id = 2;
+  optional string participant_id = 3;
+  optional SyncMetadata sync_metadata = 4;
+}
+
+message MediaSourceSearchResponse {
+  optional MediaResponseHeader response_header = 1;
+  optional MediaSource result = 2;
+  optional SyncMetadata sync_metadata = 3;
+}
+
+message MediaSourceAddRequest {
+  optional MediaRequestHeader request_header = 1;
+  optional MediaSource source = 2;
+  optional SyncMetadata sync_metadata = 3;
+  optional MediaSource resource = 4;
+}
+
+message MediaSourceAddResponse {
+  optional MediaResponseHeader response_header = 1;
+  optional MediaSource source = 2;
+  optional SyncMetadata sync_metadata = 3;
+  optional MediaSource resource = 4;
+}
+
+message MediaSourceQueryRequest {
+  optional MediaRequestHeader request_header = 1;
+  optional string hangout_id = 2;
+  optional string participant_id = 3;
+  optional string source_id = 4;
+}
+
+message MediaSourceQueryResponse {
+  optional MediaResponseHeader response_header = 1;
+  optional MediaSource source = 2;
+}
+
+message MediaSourceModifyRequest {
+  optional MediaRequestHeader request_header = 1;
+  optional MediaSource source = 2;
+  optional SyncMetadata sync_metadata = 3;
+  optional MediaSource resource = 4;
+}
+
+message MediaSourceModifyResponse {
+  optional MediaResponseHeader response_header = 1;
+  optional MediaSource source = 2;
+  optional SyncMetadata sync_metadata = 3;
+  optional MediaSource resource = 4;
+}
+
+message MediaSourceRemoveRequest {
+  optional MediaRequestHeader request_header = 1;
+  optional string hangout_id = 2;
+  optional string participant_id = 3;
+  optional string source_id = 4;
+  optional SyncMetadata sync_metadata = 5;
+  optional string resource_id = 6;
+}
+
+message MediaSourceRemoveResponse {
+  optional MediaResponseHeader response_header = 1;
+  optional SyncMetadata sync_metadata = 2;
+}
+
+message MediaSessionSearchRequest {
+  optional MediaRequestHeader request_header = 1;
+  optional SyncMetadata sync_metadata = 2;
+  optional string  hangout_id = 3;
+}
+
+message MediaSessionSearchResponse {
+  optional MediaResponseHeader response_header = 1;
+  optional MediaSession result = 2;
+  optional SyncMetadata sync_metadata = 3;
+}
+
+message MediaSessionAddRequest {
+  optional MediaRequestHeader request_header = 1;
+  optional MediaSession session = 2;
+  optional SyncMetadata sync_metadata = 3;
+  optional MediaSession resource = 4;
+}
+
+message MediaSessionAddResponse {
+  optional MediaResponseHeader response_header = 1;
+  optional MediaSession session = 2;
+  optional SyncMetadata sync_metadata = 3;
+  optional MediaSession resource = 4;
+}
+
+message MediaSessionQueryRequest {
+  optional MediaRequestHeader request_header = 1;
+  optional string  session_id = 2;
+  optional SyncMetadata sync_metadata = 3;
+}
+
+message MediaSessionQueryResponse {
+  optional MediaResponseHeader response_header = 1;
+  optional MediaSession session = 2;
+  optional SyncMetadata sync_metadata = 3;
+}
+
+message MediaSessionModifyRequest {
+  optional MediaRequestHeader request_header = 1;
+  optional MediaSession session = 2;
+  optional SyncMetadata sync_metadata = 3;
+  optional MediaSession resource = 4;
+}
+
+message MediaSessionModifyResponse {
+  optional MediaResponseHeader response_header = 1;
+  optional MediaSession session = 2;
+  optional SyncMetadata sync_metadata = 3;
+  optional MediaSession resource = 4;
+}
+
+message MediaSessionLogRequest {
+  optional MediaRequestHeader request_header = 1;
+  optional string session_id = 2;
+  optional LogData log_data = 3;
+  optional SyncMetadata sync_metadata = 4;
+}
+
+message MediaSessionLogResponse {
+  optional MediaResponseHeader response_header = 1;
+  optional SyncMetadata sync_metadata = 2;
+}
+
+message MediaSessionRemoveRequest {
+  optional MediaRequestHeader request_header = 1;
+  optional string session_id = 2;
+  optional SyncMetadata sync_metadata = 3;
+  optional string resource_id = 4;
+}
+
+message MediaSessionRemoveResponse {
+  optional MediaResponseHeader response_header = 1;
+  optional SyncMetadata sync_metadata = 2;
+}
+
+message MediaStreamSearchRequest {
+  optional MediaRequestHeader request_header = 1;
+  optional MediaStreamDirection direction = 2;
+  optional string session_id = 3;
+  optional string hangout_id = 4;
+  optional SyncMetadata sync_metadata = 5;
+}
+
+message MediaStreamSearchResponse {
+  optional MediaResponseHeader response_header = 1;
+  optional MediaStream result = 2;
+  optional SyncMetadata sync_metadata = 3;
+}
+
+message MediaStreamAddRequest {
+  optional MediaRequestHeader request_header = 1;
+  optional MediaStream stream = 2;
+  optional SyncMetadata sync_metadata = 3;
+  optional MediaStream resource = 4;
+}
+
+message MediaStreamAddResponse {
+  optional MediaResponseHeader response_header = 1;
+  optional MediaStream stream = 2;
+  optional SyncMetadata sync_metadata = 3;
+  optional MediaStream resource = 4;
+}
+
+message MediaStreamQueryRequest {
+  optional MediaRequestHeader request_header = 1;
+  optional MediaStreamDirection direction = 2;
+  optional string session_id = 3;
+  optional string stream_id = 4;
+  optional string hangout_id = 5;
+}
+
+message MediaStreamQueryResponse {
+  optional MediaResponseHeader response_header = 1;
+  optional MediaStream stream = 2;
+}
+
+message MediaStreamModifyRequest {
+  optional MediaRequestHeader request_header = 1;
+  optional MediaStream stream = 2;
+  optional SyncMetadata sync_metadata = 3;
+  optional MediaStream resource = 4;
+}
+
+message MediaStreamModifyResponse {
+  optional MediaResponseHeader response_header = 1;
+  optional MediaStream stream = 2;
+  optional SyncMetadata sync_metadata = 3;
+  optional MediaStream resource = 4;
+}
+
+message MediaStreamRemoveRequest {
+  optional MediaRequestHeader request_header = 1;
+  optional MediaStreamDirection direction = 2;
+  optional string session_id = 3;
+  optional string stream_id = 4;
+  optional string hangout_id = 5;
+  optional SyncMetadata sync_metadata = 6;
+  optional string resource_id = 7;
+}
+
+message MediaStreamRemoveResponse {
+  optional MediaResponseHeader response_header = 1;
+  optional SyncMetadata sync_metadata = 2;
+}
+
+message HangoutClientBatchNotification {
+  optional HangoutClientPushNotification notification = 1;
+}
+
+message HangoutIdentifier {
+  optional string  hangout_id = 1;
+}
+
+message MediaSessionIdentifier {
+  optional string  session_id = 1;
+}
+
+message MediaStreamIdentifier {
+  optional string  hangout_id = 1;
+  optional string  session_id = 2;
+  optional string  stream_id = 3;
+  optional MediaStreamDirection direction = 4;
+}
+
+message CommonAnnouncementIdentifier {
+  optional string  hangout_id = 1;
+  optional string  announcement_id = 2;
+}
+
+message HangoutsPushNotification {
+  optional SyncMetadata sync_metadata = 1;
+  optional Hangout modified = 2;
+  optional HangoutIdentifier deleted = 3;
+  optional HangoutIdentifier resync_collection = 4;
+}
+
+message HangoutParticipantsPushNotification {
+  optional SyncMetadata sync_metadata = 1;
+  optional HangoutParticipant modified = 2;
+  optional HangoutParticipantIdentifier deleted = 3;
+  optional EndCause end_cause = 4;
+  optional HangoutParticipantIdentifier resync_collection = 5;
+  optional RemovalReason removal_reason = 6;
+}
+
+message MediaSessionsPushNotification {
+  optional SyncMetadata sync_metadata = 1;
+  optional MediaSession modified = 2;
+  optional MediaSessionIdentifier deleted = 3;
+  optional MediaSessionIdentifier resync_collection = 4;
+}
+
+message MediaSourcesPushNotification {
+  optional SyncMetadata sync_metadata = 1;
+  optional MediaSource modified = 2;
+  optional MediaSourceIdentifier deleted = 3;
+  optional MediaSourceIdentifier resync_collection = 4;
+}
+
+message MediaStreamsPushNotification {
+  optional SyncMetadata sync_metadata = 1;
+  optional MediaStream modified = 2;
+  optional MediaStreamIdentifier deleted = 3;
+  optional MediaStreamIdentifier resync_collection = 4;
+}
+
+message BroadcastsPushNotification {
+  optional SyncMetadata sync_metadata = 1;
+  optional Broadcast modified = 2;
+  optional BroadcastIdentifier deleted = 3;
+  optional BroadcastIdentifier resync_collection = 4;
+}
+
+message CommonAnnouncementsPushNotification {
+  optional SyncMetadata sync_metadata = 1;
+  optional CommonAnnouncement modified = 2;
+  optional CommonAnnouncementIdentifier deleted = 3;
+  optional CommonAnnouncementIdentifier resync_collection = 4;
+}
+
+message PushNotification {
+  optional HangoutParticipantsPushNotification hangout_participants_update = 1;
+  optional MediaSessionsPushNotification media_sessions_update = 2;
+  optional MediaStreamsPushNotification media_streams_update = 3;
+  optional MediaSourcesPushNotification media_sources_update = 5;
+  optional BroadcastsPushNotification hangout_broadcasts_update = 7;
+  optional HangoutsPushNotification hangouts_update = 8;
+  optional CommonAnnouncementsPushNotification common_announcements_update = 9;
+}
+
+message HangoutClientPushNotification {
+  optional PushNotification notification = 2;
+}
+
+message HangoutInvitee {
+  optional HangoutSharingTargetId invitee = 1;
+  optional NotificationSent notifications_sent = 2;
+  optional string display_name = 3;
+  optional string avatar_url = 4;
+}
+
+message HangoutSharingTargetId {
+  optional PersonId person_id = 1;
+  optional string circle_id = 2;
+  repeated SystemGroupType group_type = 3;
+}
+
+message PersonId {
+  optional string email = 1;
+  optional string user_id = 2;
+}
+
+enum SystemGroupType {
+  SYSTEM_GROUP_TYPE_PUBLIC = 1;
+  SYSTEM_GROUP_TYPE_DASHER_DOMAIN = 2;
+  SYSTEM_GROUP_TYPE_YOUR_CIRCLES = 3;
+  SYSTEM_GROUP_TYPE_EXTENDED_CIRCLES = 4;
+}
+
+enum NotificationSent {
+  NOTIFICATION_SENT_UNKNOWN = 0;
+  NOTIFICATION_SENT_EMAIL = 1;
+  NOTIFICATION_SENT_JINGLE = 2;
+  NOTIFICATION_SENT_RING = 3;
+  NOTIFICATION_SENT_DING = 4;
+  NOTIFICATION_SENT_STREAM_POST = 5;
+  NOTIFICATION_SENT_QUIET = 6;
+  NOTIFICATION_SENT_INVITE = 7;
+  NOTIFICATION_SENT_CALENDAR = 8;
+  NOTIFICATION_SENT_NONE = 9;
+}
+
+message HangoutInvitation {
+  optional string  hangout_id = 1;
+  optional NotificationType notification_type = 3 [default = RING];
+  optional int64 invitation_id = 8 [default = 0];
+  optional HangoutInvitee invited_entity = 11;
+}
+
+enum NotificationType {
+  RING = 1;
+  DING = 2;
+  NONE = 3;
+  AMBIENT = 4;
+}
+
+message HangoutPhoneInvitation {
+  optional int64 invitation_id = 1 [default = 0];
+  optional string  hangout_id = 2;
+  optional PhoneNumber phone = 3;
+  optional bool  is_emergency_call = 4;
+  optional bool  is_caller_id_blocked = 5;
+  optional EligibleCallerIdToken eligible_caller_id_token = 6;
+}
+
+message HangoutInvitationAddRequest {
+  optional MediaRequestHeader request_header = 1;
+  optional HangoutInvitation invitation = 2;
+  optional SyncMetadata sync_metadata = 3;
+}
+
+message HangoutInvitationAddResponse {
+  optional MediaResponseHeader response_header = 1;
+  optional HangoutInvitation invitation = 2;
+  optional HangoutInvitationAddErrorCode error_code = 3;
+  optional SyncMetadata sync_metadata = 4;
+}
+
+enum HangoutInvitationAddErrorCode {
+  PUBLIC_OR_EXTENDED_BLOCKED = 1;
+}
+
+message HangoutInvitationAddPhoneRequest {
+  optional MediaRequestHeader request_header = 1;
+  optional HangoutPhoneInvitation invitation = 2;
+  optional SyncMetadata sync_metadata = 3;
+}
+
+message HangoutInvitationAddPhoneResponse {
+  optional MediaResponseHeader response_header = 1;
+  optional HangoutPhoneInvitation invitation = 2;
+  optional SyncMetadata sync_metadata = 3;
+}
+
+message BroadcastRecordingDetailsExtension {
+}
+
+message Broadcast {
+  optional string hangout_id = 1;
+  optional string broadcast_id = 2;
+  optional string project_id = 3;
+  optional string producer_participant_id = 5;
+  optional RecordingDetails recording_details = 8;
+  optional LiveStreamDetails live_stream_details = 9;
+  optional string owner_profile_id = 10;
+  optional LiveStreamStatus live_stream_status = 11;
+  optional RecordingStatus recording_status = 12;
+  optional BroadcastUseCase use_case = 13;
+}
+
+message RecordingDetails {
+  optional int64 start_time_ms = 1;
+  optional TimeSpan stop_time = 2;
+  optional string fixed_main_screen_participant_id = 3;
+  optional GooglePlusRecordingDetails gplus_recording = 5;
+  optional AbuseRecordingDetails abuse_recording = 6;
+  optional BroadcastRecordingDetailsExtension details_extension = 7;
+}
+
+message TimeSpan {
+  optional int64 walltime_ms = 1;
+  optional int64 offset_ms = 2;
+}
+
+message GooglePlusRecordingDetails {
+  optional string owner_id = 1;
+  optional int64 album_id = 2;
+  optional string title = 3;
+}
+
+message LiveStreamDetails {
+  optional string youtube_live_id = 1;
+  optional string topic = 2;
+  optional bool enable_monitor_stream = 3 [default = true];
+  optional PrivacyStatus privacy_status = 4;
+  optional string tag = 5;
+}
+
+enum PrivacyStatus {
+  PRIVACY_STATUS_PUBLIC = 0;
+  PRIVACY_STATUS_UNLISTED = 1;
+  PRIVACY_STATUS_PRIVATE = 2;
+}
+
+message AbuseRecordingDetails {
+  optional AbuseRecordingDetailsStatus status = 1 [default = ABUSE_RECORDING_DETAILS_STATUS_UNKNOWN];
+  optional string defendant_participant_id = 2;
+  optional string user_comments = 3;
+}
+
+enum AbuseRecordingDetailsStatus {
+  ABUSE_RECORDING_DETAILS_STATUS_UNKNOWN = 0;
+  ABUSE_RECORDING_DETAILS_STATUS_INITIALIZE = 1;
+  ABUSE_RECORDING_DETAILS_STATUS_CONFIRM = 2;
+}
+
+message LiveStreamStatus {
+  optional LiveStreamStatusStatus current_state = 3;
+  optional int64 live_start_time_ms = 4;
+  optional bool should_go_live = 5 [default = false];
+}
+
+enum LiveStreamStatusStatus {
+  LIVE_STREAM_STATUS_UNKNOWN = 0;
+  LIVE_STREAM_STATUS_INITIALIZING = 1;
+  LIVE_STREAM_STATUS_PREVIEW_AVAILABLE = 2;
+  LIVE_STREAM_STATUS_PREPARING_LIVE = 3;
+  LIVE_STREAM_STATUS_LIVE = 4;
+  LIVE_STREAM_STATUS_FINISHED = 5;
+}
+
+message RecordingStatus {
+  optional RecordingStatusStatus current_status = 1;
+}
+
+enum RecordingStatusStatus {
+  RECORDING_STATUS_UNKNOWN = 0;
+  RECORDING_STATUS_INITIALIZING = 1;
+  RECORDING_STATUS_STOPPED = 3;
+  RECORDING_STATUS_STARTED = 2;
+  RECORDING_STATUS_STARTING = 4;
+  RECORDING_STATUS_STOPPING = 5;
+  RECORDING_STATUS_READY = 6;
+}
+
+enum FullScreen {
+  FULLSCREEN_UNKNOWN = 0;
+  FULLSCREEN_ON = 1;
+  FULLSCREEN_OFF = 2;
+  FULLSCREEN_AUTO = 3;
+}
+
+message BroadcastAddRequest {
+  optional MediaRequestHeader request_header = 1;
+  optional Broadcast broadcast = 2;
+  optional SyncMetadata sync_metadata = 3;
+  optional Broadcast resource = 4;
+}
+
+message BroadcastAddResponse {
+  optional MediaResponseHeader response_header = 1;
+  optional Broadcast broadcast = 2;
+  optional SyncMetadata sync_metadata = 3;
+  optional Broadcast resource = 4;
+}
+
+message BroadcastRemoveRequest {
+  optional MediaRequestHeader request_header = 1;
+  optional string hangout_id = 2;
+  optional string broadcast_id = 3;
+  optional SyncMetadata sync_metadata = 4;
+  optional string on_behalf_of_participant_id = 5;
+  optional string resource_id = 6;
+  optional BroadcastIdentifier resource = 7;
+}
+
+message BroadcastRemoveResponse {
+  optional MediaResponseHeader response_header = 1;
+  optional SyncMetadata sync_metadata = 2;
+}
+
+message BroadcastModifyRequest {
+  optional MediaRequestHeader request_header = 1;
+  optional Broadcast broadcast = 2;
+  optional SyncMetadata sync_metadata = 3;
+  optional Broadcast resource = 4;
+}
+
+message BroadcastModifyResponse {
+  optional MediaResponseHeader response_header = 1;
+  optional Broadcast broadcast = 2;
+  optional SyncMetadata sync_metadata = 3;
+  optional Broadcast resource = 4;
+}
+
+message BroadcastResolveRequest {
+  optional MediaRequestHeader request_header = 1;
+  optional string hangout_id = 2;
+}
+
+message BroadcastResolveResponse {
+  optional MediaResponseHeader response_header = 1;
+  optional string broadcast_id = 2;
+  optional bool is_owner = 3;
+}
+
+message BroadcastQueryRequest {
+  optional MediaRequestHeader request_header = 1;
+  optional string hangout_id = 2;
+  optional string broadcast_id = 3;
+  optional SyncMetadata sync_metadata = 4;
+}
+
+message BroadcastQueryResponse {
+  optional MediaResponseHeader response_header = 1;
+  optional Broadcast broadcast = 2;
+  optional SyncMetadata sync_metadata = 3;
+}
+
+message BroadcastSearchRequest {
+  optional MediaRequestHeader request_header = 1;
+  optional string  hangout_id = 2;
+  optional SyncMetadata sync_metadata = 3;
+}
+
+message BroadcastSearchResponse {
+  optional MediaResponseHeader response_header = 1;
+  optional Broadcast broadcast = 2;
+  optional SyncMetadata sync_metadata = 3;
+}
+
+message E911UserLocationInfo {
+  optional LocationNetworkInfo network_info = 1;
+  optional GeoLocationInfo device_location = 2;
+  optional GeoLocationInfo emergency_address_location = 3;
+  optional CellularNetworkInfo last_cellular_network_info = 4;
+}
+
+message LocationNetworkInfo {
+  optional string bssid = 1;
+  optional NetworkInfoNetworkType network_type = 2;
+}
+
+enum NetworkInfoNetworkType {
+  NETWORK_TYPE_UNKNOWN = 0;
+  NETWORK_TYPE_ETHERNET = 1;
+  NETWORK_TYPE_WIFI802_11A = 2;
+  NETWORK_TYPE_WIFI802_11B = 3;
+  NETWORK_TYPE_WIFI802_11G = 4;
+  NETWORK_TYPE_WIFI802_11N = 5;
+}
+
+message GeoLocationInfo {
+  optional int32 latitude_e6 = 1;
+  optional int32 longitude_e6 = 2;
+  optional float accuracy = 3;
+}
+
+message CellularNetworkInfo {
+  optional CellularNetworkInfoAccessType access_type = 1;
+  optional string access_info = 2;
+  optional int64 p_lani_timestamp_ms = 3;
+  optional int64 registration_timestamp_ms = 4;
+}
+
+enum CellularNetworkInfoAccessType {
+  ACCESS_TYPE_UNKNOWN = 0;
+  ACCESS_TYPE_THREEGPP_GERAN = 1;
+  ACCESS_TYPE_THREEGPP_UTRAN_FDD = 2;
+  ACCESS_TYPE_THREEGPP_UTRAN_TDD = 3;
+  ACCESS_TYPE_THREEGPP_CDMA2000 = 4;
+  ACCESS_TYPE_THREEGPP_E_UTRAN_FDD = 5;
+  ACCESS_TYPE_THREEGPP_E_UTRAN_TDD = 6;
+}
+
+message PhoneNumber {
+  optional string e164 = 1;
+}
+
+message EligibleCallerIdToken {
+  optional PhoneNumber caller_id_phone_number = 1;
+  optional uint64 signature = 2; //TODO work out type
+  optional uint64 signature_ttl_usec = 3;
+}
+
+message RtcClient {
+  optional Device device = 1;
+  optional Application application = 2;
+  optional Platform platform = 3;
+}
+
+message LogData {
+  optional string participant_log_id = 14;
+  optional HandoffLogEntry handoff_log_entry = 15;
+}
+
+message HandoffLogEntry {
+  optional HandoffType type = 1;
+  optional CallStartupEventCode event_code = 2;
+  optional string  previous_session_id = 3;
+  optional string  next_session_id = 4;
+}
+
+enum HandoffType {
+  HANDOFF_TYPE_NO_HANDOFF = 0;
+  HANDOFF_TYPE_NOVA_WIFI_TO_PSTN = 1;
+  HANDOFF_TYPE_NOVA_PSTN_TO_WIFI = 2;
+  HANDOFF_TYPE_UNKNOWN = 3;
+  HANDOFF_TYPE_HANGOUT_CLOUD_P2P = 4;
+  HANDOFF_TYPE_HANGOUT_P2P_CLOUD = 5;
+}
+
+enum ClientResponseStatus {
+  CLIENT_RESPONSE_STATUS_UNKNOWN = 0;
+  CLIENT_RESPONSE_STATUS_OK = 1;
+  CLIENT_RESPONSE_STATUS_ERROR_BUSY = 2;
+  CLIENT_RESPONSE_STATUS_ERROR_UNEXPECTED = 3;
+  CLIENT_RESPONSE_STATUS_ERROR_INVALID_REQUEST = 4;
+  CLIENT_RESPONSE_STATUS_ERROR_RETRY_LIMIT = 5;
+  CLIENT_RESPONSE_STATUS_ERROR_FORWARDED = 6;
+  CLIENT_RESPONSE_STATUS_ERROR_QUOTA_EXCEEDED = 7;
+  CLIENT_RESPONSE_STATUS_ERROR_INVALID_CONVERSATION = 8;
+  CLIENT_RESPONSE_STATUS_ERROR_VERSION_MISMATCH = 9;
+  CLIENT_RESPONSE_STATUS_ERROR_ACCESS_CHECK_FAILED = 10;
+  CLIENT_RESPONSE_STATUS_ERROR_NOT_FOUND = 11;
+}
+
+enum AnnouncementType {
+  UNKNOWN_ANNOUNCEMENT = 0;
+  ANNOUNCEMENT_TYPE_CAMERA_APP_ON = 1;
+  ANNOUNCEMENT_TYPE_ABUSE_RECORDING = 2;
+}
+
+enum EndCause {
+  END_CAUSE_USER_ENDED = 0;
+  END_CAUSE_DECLINE = 1;
+  END_CAUSE_TIMEOUT = 2;
+  END_CAUSE_ERROR = 3;
+  END_CAUSE_LAPTOP_SLEEPING = 4;
+  END_CAUSE_BUSY = 5;
+  END_CAUSE_FLUTE_NOT_ENABLED = 7;
+  END_CAUSE_CLIENT_GONE = 8;
+  END_CAUSE_BLOCKED = 9;
+  END_CAUSE_CONNECTIVITY_LOST = 10;
+  END_CAUSE_RETRYING = 11;
+  END_CAUSE_TIE_BREAK = 12;
+  END_CAUSE_PLAYER_ERROR = 13;
+  END_CAUSE_ADMIN_ENDED = 14;
+  END_CAUSE_FATAL_RESPONSE = 15;
+  END_CAUSE_INITIATE_FAILED = 16;
+  END_CAUSE_UNKNOWN_SESSION = 17;
+  END_CAUSE_ANOTHER_CLIENT_ACCEPTED = 18;
+  END_CAUSE_INCOMPATIBLE_PARAMETERS = 19;
+  END_CAUSE_SECURITY_ERROR = 20;
+  END_CAUSE_MUC_DROPOUT = 21;
+  END_CAUSE_COMMUNICATION_CHANNEL = 22;
+  END_CAUSE_FAILED_TRANSPORT = 23;
+  END_CAUSE_NO_CANDIDATES = 24;
+  END_CAUSE_SESSION_EXPIRED = 25;
+  END_CAUSE_SERVER_GONE = 26;
+  END_CAUSE_NO_CONNECTIVITY = 27;
+  END_CAUSE_INTERNAL_SERVER_ERROR = 28;
+  END_CAUSE_UNDEFINED_CONDITION = 29;
+  END_CAUSE_RESOURCE_CONSTRAINT = 30;
+  END_CAUSE_NETWORK_GONE = 31;
+  END_CAUSE_BROWSER_CHANNEL_FAILED = 32;
+  END_CAUSE_BAD_REQUEST = 33;
+  END_CAUSE_UNEXPECTED_CODEPATH = 34;
+  END_CAUSE_PAYMENT_REQUIRED = 35;
+  END_CAUSE_WCS_DRAINED = 36;
+  END_CAUSE_USER_AUTO_KICKED = 37;
+  END_CAUSE_HOA_COPYRIGHT_VIOLATION = 38;
+  END_CAUSE_HOA_ABUSE_VIOLATION = 39;
+  END_CAUSE_HOA_FINGERPRINT_VIOLATION = 40;
+  END_CAUSE_USER_TAKE_OVER = 41;
+  END_CAUSE_PLUGIN_CONNECTIVITY_LOST = 42;
+  END_CAUSE_EJECTED_BY_MODERATOR = 43;
+  END_CAUSE_FAILOVER_FAILED = 44;
+  END_CAUSE_USER_RTCP_BYE = 45;
+  END_CAUSE_AUTH_EXPIRED = 46;
+  END_CAUSE_NEVER_STARTED = 47;
+  END_CAUSE_PARTIAL_FAILED_TRANSPORT = 48;
+  END_CAUSE_NEVER_CONNECTED = 49;
+  END_CAUSE_PARTIAL_NEVER_CONNECTED = 50;
+  END_CAUSE_P2P_3RD_PARTY_JOINED = 51;
+  END_CAUSE_P2P_OTHER_SIDE_ENDED = 52;
+  END_CAUSE_P2P_JID_MISMATCH = 53;
+  END_CAUSE_P2P_STATE_MISMATCH = 54;
+  END_CAUSE_P2P_SETUP_FAILED = 55;
+  END_CAUSE_SESSION_SERVER_UNBIND = 56;
+  END_CAUSE_FLUTE_CRASH = 57;
+  END_CAUSE_WEBRTC_DENIED = 58;
+  END_CAUSE_LEFT_CONVERSATION = 59;
+  END_CAUSE_JOIN_CALL_NOT_IN_PROGRESS = 60;
+  END_CAUSE_AUTO_EXIT_ON_EMPTY = 61;
+  END_CAUSE_ANOTHER_CALL_ANSWERED = 62;
+  END_CAUSE_CLIENT_CLOSE_OR_REFRESH = 63;
+  END_CAUSE_KNOCKING_DENIED = 64;
+  END_CAUSE_HANDOFF_TO_PSTN = 65;
+  END_CAUSE_HANDOFF_FROM_PSTN = 66;
+}
+
+enum MediaRole {
+  MEDIA_ROLE_UNKNOWN = 0;
+  MEDIA_ROLE_DEFAULT = 1;
+  MEDIA_ROLE_ORGANIZER = 2;
+  MEDIA_ROLE_MODERATOR = 3;
+  MEDIA_ROLE_GUEST = 4;
+}
+
+enum PushEventType {
+  PUSH_EVENT_UNKNOWN = 0;
+  PUSH_EVENT_DTMF_EVENT = 1;
+  PUSH_EVENT_INVITATION_EVENT = 2;
+}
+
+enum MediaType {
+  MEDIA_TYPE_AUDIO = 1;
+  MEDIA_TYPE_VIDEO = 2;
+  MEDIA_TYPE_DATA = 3;
+  MEDIA_TYPE_BUNDLE = 4;
+}
+
+enum MediaStreamDirection {
+  MEDIA_STREAM_DIRECTION_DOWN = 1;
+  MEDIA_STREAM_DIRECTION_UP = 2;
+}
+
+enum BroadcastUseCase {
+  BROADCAST_USE_CASE_HANGOUTS_ON_AIR = 0;
+  BROADCAST_USE_CASE_CONSUMER_RECORDING = 1;
+  BROADCAST_USE_CASE_VIDEO_VOICEMAIL = 2;
+  BROADCAST_USE_CASE_ENTERPRISE_RECORDING = 3;
+  BROADCAST_USE_CASE_ENTERPRISE_STREAMING = 4;
+  BROADCAST_USE_CASE_HANGOUT_ABUSE_RECORDING = 5;
+  BROADCAST_USE_CASE_SPEAKEASY = 8;
+}
+
+enum Tristate {
+  TRISTATE_UNKNOWN = 0;
+  TRISTATE_FALSE = 1;
+  TRISTATE_TRUE = 2;
+}
+
+enum RemovalReason {
+  UNKNOWN_REASON = 0;
+  REMOVED_HANGUP = 1;
+  REMOVED_EJECTED = 2;
+  REMOVED_ERROR = 3;
+  REMOVED_INSUFFICIENT_FUNDS = 4;
+  REMOVED_BUSY = 5;
+  REMOVED_CONNECTION_FAILED = 6;
+  REMOVED_CANNOT_CALL_YOURSELF = 7;
+  REMOVED_USER_ALREADY_IN_CALL = 8;
+  REMOVED_OTHER_ERROR = 9;
+}
+
+enum HangoutParticipantAddErrorCode {
+  HPA_UNKNOWN_ERROR_CODE = 0;
+  HPA_USER_ABUSE_BLOCKED = 1;
+  HPA_BLOCKED = 2;
+  HPA_BLOCKING = 3;
+  HPA_MINORS_NOT_ALLOWED = 4;
+  HPA_MINORS_NOT_SUPPORTED = 5;
+  HPA_NOT_ALLOWED = 6;
+  HPA_CALL_IS_FULL = 7;
+  HPA_HANGOUTS_ON_AIR_TOS_NOT_ACCEPTED = 8;
+  HPA_CUSTOMER_RECORDING_TOS_NOT_ACCEPTED = 9;
+  HPA_ABUSE_RECORDING_TOS_NOT_ACCEPTED = 10;
+  HPA_UNICORN_CHILD_NOT_ALLOWED = 11;
+}
+
+enum Device {
+  ANDROID_PHONE = 2;
+  ANDROID_TABLET = 3;
+  IOS_PHONE = 4;
+  IOS_TABLET = 5;
+}
+
+enum Application {
+  BABEL = 407;
+}
+
+enum Platform {
+  NATIVE = 2;
+}
+
+enum CallStartupEventCode {
+  SUCCESS = 0;
+  OTHER_DEVICE_RESPONDED = 101;
+  RING_TIMEOUT_CLIENT = 102;
+  RING_TIMEOUT_SERVER = 103;
+  ABUSE_BLOCKED = 200;
+  ALREADY_IN_CALL = 221;
+  BLOCKING = 202;
+  BROWSER_NOT_SUPPORTED = 203;
+  GEO_BLOCKED = 204;
+  GOOGLE_PLUS_DISABLED = 205;
+  MINORS_NOT_ALLOWED = 206;
+  MINORS_NOT_SUPPORTED = 207;
+  MOBILE_DATA_NOT_SUPPORTED = 208;
+  NOT_ALLOWED = 209;
+  NO_PLUGIN = 211;
+  NON_GPLUS_NOT_ALLOWED = 222;
+  UNICORN_CHILD_BLOCKED = 223;
+  OBSOLETE_CLIENT_VERSION = 212;
+  PLUSSPAGE_NOT_IN_CIRCLE = 213;
+  PLUSPAGE_NO_ACCESS = 214;
+  PROFILE_SUSPENDED = 215;
+  ROOM_FULL = 216;
+  ROOM_NOT_FOUND_LINK = 217;
+  UNAUTHORIZED_HOA = 218;
+  USER_CANCELED = 219;
+  VIDEO_CHAT_DISABLED = 220;
+  DISALLOWED_BY_CONFIG = 224;
+  NO_LOCAL_PHONE_ACCOUNT = 225;
+  NO_HANGOUT_TO_JOIN = 226;
+  UNABLE_TO_HANDOFF_INACTIVE_CALL = 227;
+  CONFERENCE_CALL_NOT_SUPPORTED = 228;
+  AUTHENTICATION_FAILURE = 300;
+  BROKEN_PLUGIN = 301;
+  CLIENT_ERROR = 302;
+  JOIN_ERROR = 303;
+  JOIN_TIMEOUT = 304;
+  NETWORK_ERROR = 305;
+  ROOM_NOT_FOUND_ERROR = 306;
+  SERVICE_UNAVAILBLE = 307;
+  CREATE_CONV_TIMEOUT = 308;
+  SIGN_IN_TIMEOUT = 309;
+  JID_LOOKUP_TIMEOUT = 310;
+  DOWNLOADING_CODE_TIMEOUT = 311;
+  ROOM_DISCOVERY_TIMEOUT = 312;
+  ROOM_CONFIG_TIMEOUT = 313;
+  JOIN_MUC_TIMEOUT = 314;
+  INITIATE_SESSION_TIMEOUT = 315;
+  CREATE_HANGOUT_ID_TIMEOUT = 316;
+  HANDOFF_TO_CELLULAR_DUE_TO_ERROR = 317;
+  CALL_COULD_NOT_START = 318;
+  ANDROID_TELEPHONY_API_ERROR = 319;
+  NO_HANDOFF_NUMBER = 320;
+  NO_TELECOMM_CONNECTION = 321;
+}

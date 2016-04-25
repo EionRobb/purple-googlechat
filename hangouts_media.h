@@ -31,7 +31,7 @@ hangouts_pblite_media_##name(HangoutsAccount *ha, type##Request *request, Hangou
 	type##Response *response = g_new0(type##Response, 1);\
 	\
 	name##_response__init(response);\
-	hangouts_pblite_request(ha, "/hangouts/v1/" #url, (ProtobufCMessage *)request, (HangoutsPbliteResponseFunc)callback, (ProtobufCMessage *)response, user_data);\
+	hangouts_pblite_request(ha, "/hangouts/v1/" url, (ProtobufCMessage *)request, (HangoutsPbliteResponseFunc)callback, (ProtobufCMessage *)response, user_data);\
 }
 
 HANGOUTS_DEFINE_PBLITE_MEDIA_REQUEST_FUNC(hangout_resolve, HangoutResolve, "hangouts/resolve");

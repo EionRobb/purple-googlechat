@@ -66,7 +66,7 @@ hangouts_pblite_##name(HangoutsAccount *ha, type##Request *request, HangoutsPbli
 	type##Response *response = g_new0(type##Response, 1);\
 	\
 	name##_response__init(response);\
-	hangouts_pblite_request(ha, "/chat/v1/" #url, (ProtobufCMessage *)request, (HangoutsPbliteResponseFunc)callback, (ProtobufCMessage *)response, user_data);\
+	hangouts_pblite_request(ha, "/chat/v1/" url, (ProtobufCMessage *)request, (HangoutsPbliteResponseFunc)callback, (ProtobufCMessage *)response, user_data);\
 }
 
 HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(send_chat_message, SendChatMessage, "conversations/sendchatmessage");

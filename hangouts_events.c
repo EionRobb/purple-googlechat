@@ -444,6 +444,7 @@ hangouts_process_conversation_event(HangoutsAccount *ha, Conversation *conversat
 	const gchar *client_generated_id;
 	ChatMessage *chat_message;
 	PurpleMessageFlags msg_flags;
+	PurpleConversation *pconv = NULL;
 	
 	if (conversation && (conv_id = conversation->conversation_id->id) &&
 			!g_hash_table_contains(ha->one_to_ones, conv_id) && 
@@ -551,11 +552,9 @@ hangouts_process_conversation_event(HangoutsAccount *ha, Conversation *conversat
 					}
 				}
 			}
+			pconv = PURPLE_CONVERSATION(chatconv);
 			purple_serv_got_chat_in(pc, g_str_hash(conv_id), gaia_id, msg_flags, msg, message_timestamp);
 			
-			if (purple_conversation_has_focus(PURPLE_CONVERSATION(chatconv))) {
-				hangouts_mark_conversation_seen(PURPLE_CONVERSATION(chatconv), PURPLE_CONVERSATION_UPDATE_UNSEEN);
-			}
 		} else {
 			PurpleIMConversation *imconv = NULL;
 			// It's most likely a one-to-one message
@@ -579,9 +578,11 @@ hangouts_process_conversation_event(HangoutsAccount *ha, Conversation *conversat
 			if (imconv == NULL) {
 				imconv = purple_conversations_find_im_with_account(gaia_id, ha->account);
 			}
-			if (purple_conversation_has_focus(PURPLE_CONVERSATION(imconv))) {
-				hangouts_mark_conversation_seen(PURPLE_CONVERSATION(imconv), PURPLE_CONVERSATION_UPDATE_UNSEEN);
-			}
+			pconv = PURPLE_CONVERSATION(imconv);
+		}
+		
+		if (purple_conversation_has_focus(pconv)) {
+			hangouts_mark_conversation_seen(pconv, PURPLE_CONVERSATION_UPDATE_UNSEEN);
 		}
 		
 		g_free(msg);
@@ -609,10 +610,9 @@ hangouts_process_conversation_event(HangoutsAccount *ha, Conversation *conversat
 							if (msg_flags & PURPLE_MESSAGE_RECV) {
 								purple_serv_got_im(pc, gaia_id, url, msg_flags, message_timestamp);
 							} else {
-								//imconv should be not-NULL by the time we get here
 								PurpleMessage *img_message = purple_message_new_outgoing(gaia_id, url, msg_flags);
 								purple_message_set_time(img_message, message_timestamp);
-								purple_conversation_write_message(PURPLE_CONVERSATION(imconv), img_message);
+								purple_conversation_write_message(pconv, img_message);
 								purple_message_destroy(img_message);
 							}
 						}
@@ -672,20 +672,21 @@ hangouts_process_conversation_event(HangoutsAccount *ha, Conversation *conversat
 	}
 	
 	if (timestamp && conv_id) {
-		PurpleConversation *conv = NULL;
-		if (g_hash_table_contains(ha->one_to_ones, conv_id)) {
-			conv = PURPLE_CONVERSATION(purple_conversations_find_im_with_account(g_hash_table_lookup(ha->one_to_ones, conv_id), ha->account));
-		} else if (g_hash_table_contains(ha->group_chats, conv_id)) {
-			conv = PURPLE_CONVERSATION(purple_conversations_find_chat_with_account(conv_id, ha->account));
+		if (pconv == NULL) {
+			if (g_hash_table_contains(ha->one_to_ones, conv_id)) {
+				pconv = PURPLE_CONVERSATION(purple_conversations_find_im_with_account(g_hash_table_lookup(ha->one_to_ones, conv_id), ha->account));
+			} else if (g_hash_table_contains(ha->group_chats, conv_id)) {
+				pconv = PURPLE_CONVERSATION(purple_conversations_find_chat_with_account(conv_id, ha->account));
+			}
 		}
-		if (conv != NULL) {
-			gint64 *last_event_timestamp_ptr = (gint64 *)purple_conversation_get_data(conv, "last_event_timestamp");
+		if (pconv != NULL) {
+			gint64 *last_event_timestamp_ptr = (gint64 *)purple_conversation_get_data(pconv, "last_event_timestamp");
 			if (last_event_timestamp_ptr == NULL) {
 				last_event_timestamp_ptr = g_new0(gint64, 1);
 			}
 			if (timestamp > *last_event_timestamp_ptr) {
 				*last_event_timestamp_ptr = timestamp;
-				purple_conversation_set_data(conv, "last_event_timestamp", last_event_timestamp_ptr);
+				purple_conversation_set_data(pconv, "last_event_timestamp", last_event_timestamp_ptr);
 			}
 		}
 	}

@@ -606,7 +606,15 @@ hangouts_process_conversation_event(HangoutsAccount *ha, Conversation *conversat
 						if (g_hash_table_contains(ha->group_chats, conv_id)) {
 							purple_serv_got_chat_in(pc, g_str_hash(conv_id), gaia_id, msg_flags, url, message_timestamp);
 						} else {
-							purple_serv_got_im(pc, gaia_id, url, msg_flags, message_timestamp);
+							if (msg_flags & PURPLE_MESSAGE_RECV) {
+								purple_serv_got_im(pc, gaia_id, url, msg_flags, message_timestamp);
+							} else {
+								//imconv should be not-NULL by the time we get here
+								PurpleMessage *img_message = purple_message_new_outgoing(gaia_id, url, msg_flags);
+								purple_message_set_time(img_message, message_timestamp);
+								purple_conversation_write_message(PURPLE_CONVERSATION(imconv), img_message);
+								purple_message_destroy(img_message);
+							}
 						}
 					} else {
 						connection = purple_http_get(ha->pc, hangouts_got_http_image_for_conv, ha, image_url);

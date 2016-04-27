@@ -116,6 +116,8 @@ purple_message_destroy(PurpleMessage *message)
 #define PURPLE_IM_TYPING	PURPLE_TYPING
 #define PURPLE_IM_TYPED		PURPLE_TYPED
 
+#define purple_media_set_protocol_data  purple_media_set_prpl_data
+
 #undef purple_notify_error
 #define purple_notify_error(handle, title, primary, secondary, cpar)   \
 	purple_notify_message((handle), PURPLE_NOTIFY_MSG_ERROR, (title), \

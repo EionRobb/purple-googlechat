@@ -44,7 +44,7 @@
 PurpleMediaCaps
 hangouts_get_media_caps(PurpleAccount *account, const char *who)
 {
-	return PURPLE_MEDIA_CAPS_AUDIO_VIDEO;
+	return PURPLE_MEDIA_CAPS_AUDIO | PURPLE_MEDIA_CAPS_AUDIO_VIDEO | PURPLE_MEDIA_CAPS_MODIFY_SESSION;
 }
 
 void
@@ -447,6 +447,12 @@ hangouts_protocol_chat_iface_init(PurpleProtocolChatIface *prpl_info)
 	prpl_info->invite = hangouts_chat_invite;
 }
 
+static void 
+hangouts_protocol_media_iface_init(PurpleProtocolMediaIface *prpl_info)
+{
+	prpl_info->get_caps = hangouts_get_media_caps;
+}
+
 static PurpleProtocol *hangouts_protocol;
 
 PURPLE_DEFINE_TYPE_EXTENDED(
@@ -466,6 +472,9 @@ PURPLE_DEFINE_TYPE_EXTENDED(
 
 	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_PRIVACY_IFACE,
 	                                  hangouts_protocol_privacy_iface_init)
+
+	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_MEDIA_IFACE,
+	                                  hangouts_protocol_media_iface_init)
 );
 
 static gboolean
@@ -615,6 +624,8 @@ init_plugin(PurplePlugin *plugin)
 	prpl_info->join_chat = hangouts_join_chat;
 	prpl_info->get_chat_name = hangouts_get_chat_name;
 	prpl_info->chat_invite = hangouts_chat_invite;
+	
+	prpl_info->get_media_caps = hangouts_get_media_caps;
 	
 	prpl_info->add_deny = hangouts_block_user;
 	prpl_info->rem_deny = hangouts_unblock_user;

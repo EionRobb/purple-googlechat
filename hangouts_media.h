@@ -23,6 +23,10 @@
 #include "hangouts_connection.h"
 #include "hangout_media.pb-c.h"
 
+
+gboolean hangouts_initiate_media(PurpleAccount *account, const gchar *who, PurpleMediaSessionType type);
+
+
 #define HANGOUTS_DEFINE_PBLITE_MEDIA_REQUEST_FUNC(name, type, url) \
 typedef void(* HangoutsPblite##type##ResponseFunc)(HangoutsAccount *ha, type##Response *response, gpointer user_data);\
 static inline void \

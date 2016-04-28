@@ -36,6 +36,7 @@
 #include "hangouts_events.h"
 #include "hangouts_connection.h"
 #include "hangouts_conversation.h"
+#include "hangouts_media.h"
 
 
 /*****************************************************************************/
@@ -451,6 +452,7 @@ static void
 hangouts_protocol_media_iface_init(PurpleProtocolMediaIface *prpl_info)
 {
 	prpl_info->get_caps = hangouts_get_media_caps;
+	prpl_info->initiate_session = hangouts_initiate_media;
 }
 
 static PurpleProtocol *hangouts_protocol;
@@ -626,6 +628,7 @@ init_plugin(PurplePlugin *plugin)
 	prpl_info->chat_invite = hangouts_chat_invite;
 	
 	prpl_info->get_media_caps = hangouts_get_media_caps;
+	prpl_info->initiate_media = hangouts_initiate_media;
 	
 	prpl_info->add_deny = hangouts_block_user;
 	prpl_info->rem_deny = hangouts_unblock_user;

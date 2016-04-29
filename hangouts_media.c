@@ -181,67 +181,67 @@ hangouts_media_candidates_prepared_cb(PurpleMedia *media, gchar *sid, gchar *nam
 	ice_candidates = g_new0(MediaIceCandidate, n_ice_candidates);
 	for(i = 0; purple_candidates; purple_candidates = g_list_next(purple_candidates), i++) {
 		PurpleMediaCandidate *purple_candidate = purple_candidates->data;
-		MediaIceCandidate ice_candidate = ice_candidates[i];
-		media_ice_candidate__init(&ice_candidate);
+		MediaIceCandidate *ice_candidate = &ice_candidates[i];
+		media_ice_candidate__init(ice_candidate);
 		
 		//TODO multiple passwords needed?
 		transport.username = _purple_media_candidate_get_username(purple_candidate);
 		transport.password = _purple_media_candidate_get_password(purple_candidate);
 		
-		ice_candidate.has_component = TRUE;
+		ice_candidate->has_component = TRUE;
 		switch(_purple_media_candidate_get_component_id(purple_candidate)) {
 			case PURPLE_MEDIA_COMPONENT_RTP:
-				ice_candidate.component = COMPONENT__RTP;
+				ice_candidate->component = COMPONENT__RTP;
 				break;
 			case PURPLE_MEDIA_COMPONENT_RTCP:
-				ice_candidate.component = COMPONENT__RTCP;
+				ice_candidate->component = COMPONENT__RTCP;
 				break;
 			default:
-				ice_candidate.has_component = FALSE;
+				ice_candidate->has_component = FALSE;
 				break;
 		}
 		
-		ice_candidate.has_protocol = TRUE;
+		ice_candidate->has_protocol = TRUE;
 		switch(_purple_media_candidate_get_protocol(purple_candidate)) {
 			case PURPLE_MEDIA_NETWORK_PROTOCOL_UDP:
-				ice_candidate.protocol = PROTOCOL__UDP;
+				ice_candidate->protocol = PROTOCOL__UDP;
 				break;
 			case PURPLE_MEDIA_NETWORK_PROTOCOL_TCP_PASSIVE:
 			case PURPLE_MEDIA_NETWORK_PROTOCOL_TCP_ACTIVE:
 			case PURPLE_MEDIA_NETWORK_PROTOCOL_TCP_SO:
-				ice_candidate.protocol = PROTOCOL__TCP;
+				ice_candidate->protocol = PROTOCOL__TCP;
 				break;
 			default:
-				ice_candidate.has_protocol = FALSE;
+				ice_candidate->has_protocol = FALSE;
 				break;
 		}
 		
-		ice_candidate.ip = _purple_media_candidate_get_ip(purple_candidate);
-		ice_candidate.has_port = TRUE;
-		ice_candidate.port = _purple_media_candidate_get_port(purple_candidate);
+		ice_candidate->ip = _purple_media_candidate_get_ip(purple_candidate);
+		ice_candidate->has_port = TRUE;
+		ice_candidate->port = _purple_media_candidate_get_port(purple_candidate);
 		
-		ice_candidate.has_type = TRUE;
+		ice_candidate->has_type = TRUE;
 		switch(_purple_media_candidate_get_candidate_type(purple_candidate)) {
 			case PURPLE_MEDIA_CANDIDATE_TYPE_HOST:
-				ice_candidate.type = MEDIA_ICE_CANDIDATE_TYPE__HOST;
+				ice_candidate->type = MEDIA_ICE_CANDIDATE_TYPE__HOST;
 				break;
 			case PURPLE_MEDIA_CANDIDATE_TYPE_SRFLX:
-				ice_candidate.type = MEDIA_ICE_CANDIDATE_TYPE__SERVER_REFLEXIVE;
+				ice_candidate->type = MEDIA_ICE_CANDIDATE_TYPE__SERVER_REFLEXIVE;
 				break;
 			case PURPLE_MEDIA_CANDIDATE_TYPE_PRFLX:
-				ice_candidate.type = MEDIA_ICE_CANDIDATE_TYPE__PEER_REFLEXIVE;
+				ice_candidate->type = MEDIA_ICE_CANDIDATE_TYPE__PEER_REFLEXIVE;
 				break;
 			case PURPLE_MEDIA_CANDIDATE_TYPE_RELAY:
-				ice_candidate.type = MEDIA_ICE_CANDIDATE_TYPE__RELAY;
+				ice_candidate->type = MEDIA_ICE_CANDIDATE_TYPE__RELAY;
 				break;
 			default:
 			case PURPLE_MEDIA_CANDIDATE_TYPE_MULTICAST:
-				ice_candidate.has_type = FALSE;
+				ice_candidate->has_type = FALSE;
 				break;
 		}
 		
-		ice_candidate.priority = _purple_media_candidate_get_priority(purple_candidate);
-		ice_candidate.has_priority = TRUE;
+		ice_candidate->priority = _purple_media_candidate_get_priority(purple_candidate);
+		ice_candidate->has_priority = TRUE;
 	}
 	transport.candidate = &ice_candidates;
 	transport.n_candidate = n_ice_candidates;
@@ -302,45 +302,45 @@ hangouts_media_codecs_changed_cb(PurpleMedia *media, gchar *sid, HangoutsMedia *
 	codecs = g_new0(MediaCodec, n_codecs);
 	for(i = 0; purple_codecs; purple_codecs = g_list_next(purple_codecs), i++) {
 		PurpleMediaCodec *purple_codec = purple_codecs->data;
-		MediaCodec codec = codecs[i];
-		media_codec__init(&codec);
+		MediaCodec *codec = &codecs[i];
+		media_codec__init(codec);
 		
-		codec.has_payload_id = TRUE;
-		codec.payload_id = _purple_media_codec_get_id(purple_codec);
+		codec->has_payload_id = TRUE;
+		codec->payload_id = _purple_media_codec_get_id(purple_codec);
 		
-		codec.name = _purple_media_codec_get_encoding_name(purple_codec);
+		codec->name = _purple_media_codec_get_encoding_name(purple_codec);
 		
-		codec.has_media_type = TRUE;
-		codec.media_type = media_type;
+		codec->has_media_type = TRUE;
+		codec->media_type = media_type;
 		
 		//codec.preference = ; not set
 		
-		codec.has_sample_rate = TRUE;
-		codec.sample_rate = _purple_media_codec_get_clock_rate(purple_codec);
+		codec->has_sample_rate = TRUE;
+		codec->sample_rate = _purple_media_codec_get_clock_rate(purple_codec);
 		
-		if (g_strcmp0(codec.name, "PCMA") == 0 ||
-			g_strcmp0(codec.name, "PCMU") == 0) {
+		if (g_strcmp0(codec->name, "PCMA") == 0 ||
+			g_strcmp0(codec->name, "PCMU") == 0) {
 			
-			codec.has_bit_rate = TRUE;
-			codec.bit_rate = 48000;
+			codec->has_bit_rate = TRUE;
+			codec->bit_rate = 48000;
 		}
 		
-		codec.has_channel_count = TRUE;
-		codec.channel_count = _purple_media_codec_get_channels(purple_codec);
+		codec->has_channel_count = TRUE;
+		codec->channel_count = _purple_media_codec_get_channels(purple_codec);
 		
 		purple_codec_params = _purple_media_codec_get_optional_parameters(purple_codec);
 		n_params = g_list_length(purple_codec_params);
 		params = g_new0(MediaCodecParam, n_params);
 		for(j = 0; purple_codec_params; purple_codec_params = g_list_next(purple_codec_params), j++) {
 			PurpleKeyValuePair *param_info = purple_codec_params->data;
-			MediaCodecParam param = params[i];
-			media_codec_param__init(&param);
+			MediaCodecParam *param = &params[i];
+			media_codec_param__init(param);
 			
-			param.key = param_info->key;
-			param.value = param_info->value;
+			param->key = param_info->key;
+			param->value = param_info->value;
 		}
-		codec.n_param = n_params;
-		codec.param = &params;
+		codec->n_param = n_params;
+		codec->param = &params;
 	}
 	
 	client_content.n_codec = n_codecs;

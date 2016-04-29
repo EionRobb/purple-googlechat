@@ -18,11 +18,77 @@
 
 #include "hangouts_auth.h"
 
+#include "core.h"
 #include "debug.h"
 #include "http.h"
 #include "hangouts_json.h"
 #include "hangouts_connection.h"
 #include "hangouts_conversation.h"
+
+
+typedef struct {
+	gpointer unused1;
+	gpointer unused2;
+	gpointer unused3;
+	gpointer unused4;
+	gpointer unused5;
+	int unused6;
+	int unused7;
+	int unused8;
+	int unused9;
+	
+	gpointer set;
+} bitlbee_account_t;
+
+typedef struct {
+	bitlbee_account_t *acc;
+} bitlbee_im_connection;
+
+static gpointer bitlbee_module;
+static bitlbee_im_connection *(*bitlbee_purple_ic_by_pa)(PurpleAccount *);
+static int (*bitlbee_set_setstr)(gpointer *, const char *, const char *);
+static gboolean bitlbee_password_funcs_loaded = FALSE;
+
+#ifdef _WIN32
+#	include <windows.h>
+#	define dlopen(filename, flag)  GetModuleHandleA(filename)
+#	define dlsym(handle, symbol)   GetProcAddress(handle, symbol)
+#	define dlclose(handle)         FreeLibrary(handle)
+#else
+#	include <dlfcn.h>
+#endif
+
+static void
+save_bitlbee_password(PurpleAccount *account, const gchar *password)
+{
+	bitlbee_account_t *acc;
+	bitlbee_im_connection *imconn;
+	
+	if (bitlbee_password_funcs_loaded == FALSE) {
+		bitlbee_module = dlopen(NULL, 0);
+		g_return_if_fail(bitlbee_module);
+		
+		bitlbee_purple_ic_by_pa = (gpointer) dlsym(bitlbee_module, "purple_ic_by_pa");
+		bitlbee_set_setstr = (gpointer) dlsym(bitlbee_module, "set_setstr");
+		
+		bitlbee_password_funcs_loaded = TRUE;
+	}
+	
+	imconn = bitlbee_purple_ic_by_pa(account);
+	acc = imconn->acc;
+	bitlbee_set_setstr(&acc->set, "password", password ? password : "");
+}
+
+static void
+hangouts_save_refresh_token_password(PurpleAccount *account, const gchar *password)
+{
+	purple_account_set_password(account, password, NULL, NULL);
+	
+	if (g_strcmp0(purple_core_get_ui(), "BitlBee") == 0) {
+		save_bitlbee_password(account, password);
+	}
+}
+
 
 static void
 hangouts_oauth_refresh_token_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse *response, gpointer user_data)
@@ -43,7 +109,7 @@ hangouts_oauth_refresh_token_cb(PurpleHttpConnection *http_conn, PurpleHttpRespo
 		if (obj != NULL) {
 			if (json_object_has_member(obj, "error")) {
 				if (g_strcmp0(json_object_get_string_member(obj, "error"), "invalid_grant") == 0) {
-					purple_account_set_password(ha->account, NULL, NULL, NULL);
+					hangouts_save_refresh_token_password(ha->account, NULL);
 					purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
 						json_object_get_string_member(obj, "error_description"));
 				} else {
@@ -109,14 +175,14 @@ hangouts_oauth_with_code_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse 
 		ha->refresh_token = g_strdup(json_object_get_string_member(obj, "refresh_token"));
 		
 		purple_account_set_remember_password(account, TRUE);
-		purple_account_set_password(account, ha->refresh_token, NULL, NULL);
+		hangouts_save_refresh_token_password(account, ha->refresh_token);
 		
 		hangouts_auth_get_session_cookies(ha);
 	} else {
 		if (obj != NULL) {
 			if (json_object_has_member(obj, "error")) {
 				if (g_strcmp0(json_object_get_string_member(obj, "error"), "invalid_grant") == 0) {
-					purple_account_set_password(ha->account, NULL, NULL, NULL);
+					hangouts_save_refresh_token_password(ha->account, NULL);
 					purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
 						json_object_get_string_member(obj, "error_description"));
 				} else {

@@ -34,10 +34,13 @@
 #include "mediamanager.h"
 #include "media.h"
 
+
+#if !PURPLE_VERSION_CHECK(3, 0, 0)
 /** This is a bit of a hack; 
 		if libpurple isn't compiled with USE_VV then a bunch of functions don't end up being exported, so we'll try load them in at runtime so we dont have to have a million and one different versions of the .so
 */
 static gboolean purple_media_functions_initaliased = FALSE;
+static gpointer libpurple_module;
 // media/candidates.h
 static gchar *(*_purple_media_candidate_get_username)(PurpleMediaCandidate *candidate);
 static gchar *(*_purple_media_candidate_get_password)(PurpleMediaCandidate *candidate);
@@ -66,9 +69,7 @@ static GList *(*_purple_media_codec_get_optional_parameters)(PurpleMediaCodec *c
 
 static void
 hangouts_init_media_functions()
-{
-	gpointer libpurple_module;
-	
+{	
 	if (purple_media_functions_initaliased == FALSE) {
 		libpurple_module = dlopen(NULL, 0);
 		if (libpurple_module != NULL) {
@@ -93,6 +94,29 @@ hangouts_init_media_functions()
 		}
 	}
 }
+#else /*PURPLE_VERSION_CHECK*/
+
+#define _purple_media_candidate_get_username         purple_media_candidate_get_username
+#define _purple_media_candidate_get_password         purple_media_candidate_get_password 
+#define _purple_media_candidate_get_protocol         purple_media_candidate_get_protocol 
+#define _purple_media_candidate_get_component_id     purple_media_candidate_get_component_id 
+#define _purple_media_candidate_get_ip               purple_media_candidate_get_ip 
+#define _purple_media_candidate_get_port             purple_media_candidate_get_port 
+#define _purple_media_candidate_get_candidate_type   purple_media_candidate_get_candidate_type 
+#define _purple_media_candidate_get_priority         purple_media_candidate_get_priority 
+#define _purple_media_codec_get_id                   purple_media_codec_get_id 
+#define _purple_media_codec_get_encoding_name        purple_media_codec_get_encoding_name 
+#define _purple_media_codec_get_clock_rate           purple_media_codec_get_clock_rate 
+#define _purple_media_codec_get_channels             purple_media_codec_get_channels 
+#define _purple_media_codec_get_optional_parameters  purple_media_codec_get_optional_parameters
+
+static void
+hangouts_init_media_functions()
+{
+	
+}
+
+#endif /*PURPLE_VERSION_CHECK*/
 
 typedef struct {
 	HangoutsAccount *ha;

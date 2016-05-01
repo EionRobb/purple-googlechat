@@ -29,6 +29,7 @@
 #include "hangouts_json.h"
 #include "hangout_media.pb-c.h"
 #include "hangouts_connection.h"
+#include "hangouts_conversation.h" //just for hangouts_get_request_header()
 
 #include "debug.h"
 #include "mediamanager.h"
@@ -163,7 +164,7 @@ hangouts_media_candidates_prepared_cb(PurpleMedia *media, gchar *sid, gchar *nam
 	// MediaCryptoParams crypto_param;
 	// MediaCryptoParams *crypto_params;
 	MediaTransport transport;
-	MediaIceCandidate *ice_candidates;
+	MediaIceCandidate **ice_candidates;
 	gint n_ice_candidates;
 	GList *purple_candidates;
 	gint i;
@@ -178,10 +179,10 @@ hangouts_media_candidates_prepared_cb(PurpleMedia *media, gchar *sid, gchar *nam
 	
 	purple_candidates = purple_media_get_local_candidates(media, sid, name);
 	n_ice_candidates = g_list_length(purple_candidates);
-	ice_candidates = g_new0(MediaIceCandidate, n_ice_candidates);
+	ice_candidates = g_new0(MediaIceCandidate *, n_ice_candidates);
 	for(i = 0; purple_candidates; purple_candidates = g_list_next(purple_candidates), i++) {
 		PurpleMediaCandidate *purple_candidate = purple_candidates->data;
-		MediaIceCandidate *ice_candidate = &ice_candidates[i];
+		MediaIceCandidate *ice_candidate = ice_candidates[i] = g_new0(MediaIceCandidate, 1);
 		media_ice_candidate__init(ice_candidate);
 		
 		//TODO multiple passwords needed?
@@ -243,7 +244,7 @@ hangouts_media_candidates_prepared_cb(PurpleMedia *media, gchar *sid, gchar *nam
 		ice_candidate->priority = _purple_media_candidate_get_priority(purple_candidate);
 		ice_candidate->has_priority = TRUE;
 	}
-	transport.candidate = &ice_candidates;
+	transport.candidate = ice_candidates;
 	transport.n_candidate = n_ice_candidates;
 	
 	client_content.transport = &transport;
@@ -266,10 +267,14 @@ hangouts_media_candidates_prepared_cb(PurpleMedia *media, gchar *sid, gchar *nam
 	media_sessions = &media_session;
 	request.n_resource = 1;
 	request.resource = &media_sessions;
-	
+	request.request_header = hangouts_get_request_header(hangouts_media->ha);
 	
 	hangouts_pblite_media_media_session_add(hangouts_media->ha, &request, hangouts_pblite_media_media_session_add_cb, hangouts_media);
 	
+	hangouts_request_header_free(request.request_header);
+	for(i = 0; i < n_ice_candidates; i++) {
+		g_free(ice_candidates[i]);
+	}
 	g_free(ice_candidates);
 }
 
@@ -283,12 +288,12 @@ hangouts_media_codecs_changed_cb(PurpleMedia *media, gchar *sid, HangoutsMedia *
 	MediaContent *client_contents;
 	
 	GList *purple_codecs;
-	MediaCodec *codecs;
+	MediaCodec **codecs;
 	guint n_codecs;
 	guint i, j;
 	MediaType media_type;
 	GList *purple_codec_params;
-	MediaCodecParam *params;
+	MediaCodecParam **params;
 	guint n_params;
 	
 	media_session_add_request__init(&request);
@@ -299,10 +304,10 @@ hangouts_media_codecs_changed_cb(PurpleMedia *media, gchar *sid, HangoutsMedia *
 	
 	purple_codecs = purple_media_get_codecs(media, sid);
 	n_codecs = g_list_length(purple_codecs);
-	codecs = g_new0(MediaCodec, n_codecs);
+	codecs = g_new0(MediaCodec *, n_codecs);
 	for(i = 0; purple_codecs; purple_codecs = g_list_next(purple_codecs), i++) {
 		PurpleMediaCodec *purple_codec = purple_codecs->data;
-		MediaCodec *codec = &codecs[i];
+		MediaCodec *codec = codecs[i] = g_new0(MediaCodec, 1);
 		media_codec__init(codec);
 		
 		codec->has_payload_id = TRUE;
@@ -330,24 +335,24 @@ hangouts_media_codecs_changed_cb(PurpleMedia *media, gchar *sid, HangoutsMedia *
 		
 		purple_codec_params = _purple_media_codec_get_optional_parameters(purple_codec);
 		n_params = g_list_length(purple_codec_params);
-		params = g_new0(MediaCodecParam, n_params);
+		params = g_new0(MediaCodecParam *, n_params);
 		for(j = 0; purple_codec_params; purple_codec_params = g_list_next(purple_codec_params), j++) {
 			PurpleKeyValuePair *param_info = purple_codec_params->data;
-			MediaCodecParam *param = &params[i];
+			MediaCodecParam *param = params[i] = g_new0(MediaCodecParam, 1);
 			media_codec_param__init(param);
 			
 			param->key = param_info->key;
 			param->value = param_info->value;
 		}
 		codec->n_param = n_params;
-		codec->param = &params;
+		codec->param = params;
 	}
 	
 	client_content.n_codec = n_codecs;
-	client_content.codec = &codecs;
+	client_content.codec = codecs;
 	
 	//TODO is this correct?
-	media_session.session_id = sid;
+	//media_session.session_id = sid;
 	
 	client_contents = &client_content;
 	media_session.n_client_content = 1;
@@ -359,12 +364,17 @@ hangouts_media_codecs_changed_cb(PurpleMedia *media, gchar *sid, HangoutsMedia *
 	media_sessions = &media_session;
 	request.n_resource = 1;
 	request.resource = &media_sessions;
+	request.request_header = hangouts_get_request_header(hangouts_media->ha);
 	
 	hangouts_pblite_media_media_session_add(hangouts_media->ha, &request, hangouts_pblite_media_media_session_add_cb, hangouts_media);
 	
-	
+	hangouts_request_header_free(request.request_header);
 	for(i = 0; i < n_codecs; i++) {
-		g_free(codecs[i].param);
+		for(j = 0; j < codecs[i]->n_param; j++) {
+			g_free(codecs[i]->param[j]);
+		}
+		g_free(codecs[i]->param);
+		g_free(codecs[i]);
 	}
 	g_free(codecs);
 }
@@ -390,8 +400,11 @@ hangouts_pblite_media_hangout_resolve_cb(HangoutsAccount *ha, HangoutResolveResp
 		participant.hangout_id = response->hangout_id;
 		participant_request.n_resource = 1;
 		participant_request.resource = &participant_ptr;
+		participant_request.request_header = hangouts_get_request_header(ha);
 		
 		hangouts_pblite_media_hangout_participant_add(ha, &participant_request, (HangoutsPbliteHangoutParticipantAddResponseFunc)hangouts_default_response_dump, NULL);
+		
+		hangouts_request_header_free(participant_request.request_header);
 	}
 	
 	//Add remote to hangout
@@ -414,8 +427,11 @@ hangouts_pblite_media_hangout_resolve_cb(HangoutsAccount *ha, HangoutResolveResp
 		invitee.invitee = &sharing_target_id;
 		invitation.n_invited_entity = 1;
 		invitation.invited_entity = &invitee_ptr;
+		invitation_request.request_header = hangouts_get_request_header(ha);
 		
 		hangouts_pblite_media_hangout_invitation_add(ha, &invitation_request, (HangoutsPbliteHangoutInvitationAddResponseFunc)hangouts_default_response_dump, NULL);
+		
+		hangouts_request_header_free(invitation_request.request_header);
 	}
 }
 
@@ -480,7 +496,9 @@ hangouts_initiate_media(PurpleAccount *account, const gchar *who, PurpleMediaSes
 	external_key.service = "CONVERSATION";
 	external_key.value = g_hash_table_lookup(ha->one_to_ones_rev, who);
 	request.external_key = &external_key;
+	request.request_header = hangouts_get_request_header(hangouts_media->ha);
 	hangouts_pblite_media_hangout_resolve(ha, &request, hangouts_pblite_media_hangout_resolve_cb, hangouts_media);
+	hangouts_request_header_free(request.request_header);
 	
 	return TRUE;
 }

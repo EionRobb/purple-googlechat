@@ -634,8 +634,16 @@ hangouts_set_active_client(PurpleConnection *pc)
 	HangoutsAccount *ha;
 	SetActiveClientRequest request;
 	
-	if (!PURPLE_CONNECTION_IS_CONNECTED(pc))
-		return FALSE;
+	switch(purple_connection_get_state(pc)) {
+		case PURPLE_CONNECTION_DISCONNECTED:
+			// I couldn't eat another bite
+			return FALSE;
+		case PURPLE_CONNECTION_CONNECTING:
+			// Come back for more later
+			return TRUE;
+		default:
+			break;
+	}
 	
 	ha = purple_connection_get_protocol_data(pc);
 	

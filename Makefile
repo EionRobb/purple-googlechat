@@ -15,6 +15,7 @@ PKG_CONFIG ?= pkg-config
 ifeq ($(OS),Windows_NT)
   HANGOUTS_TARGET = libhangouts.dll
   HANGOUTS_DEST = "$(PROGRAMFILES)/Pidgin/plugins"
+  HANGOUTS_ICONS_DEST = "$(PROGRAMFILES)/Pidgin/pixmaps/pidgin/protocols"
 else
 
   UNAME_S := $(shell uname -s)
@@ -45,13 +46,16 @@ else
     ifeq ($(shell $(PKG_CONFIG) --exists purple 2>/dev/null && echo "true"),)
       HANGOUTS_TARGET = FAILNOPURPLE
       HANGOUTS_DEST =
+	  HANGOUTS_ICONS_DEST =
     else
       HANGOUTS_TARGET = libhangouts.so
       HANGOUTS_DEST = $(DESTDIR)`$(PKG_CONFIG) --variable=plugindir purple`
+	  HANGOUTS_ICONS_DEST = $(DESTDIR)`$(PKG_CONFIG) --variable=datadir purple`/pixmaps/pidgin/protocols
     endif
   else
     HANGOUTS_TARGET = libhangouts3.so
     HANGOUTS_DEST = $(DESTDIR)`$(PKG_CONFIG) --variable=plugindir purple-3`
+	HANGOUTS_ICONS_DEST = $(DESTDIR)`$(PKG_CONFIG) --variable=datadir purple`/pixmaps/pidgin/protocols
   endif
 endif
 
@@ -69,7 +73,7 @@ TEST_C_FILES := hangouts_test.c $(C_FILES)
 
 
 
-.PHONY:	all install install-windows FAILNOPURPLE clean
+.PHONY:	all install FAILNOPURPLE clean
 
 all: $(HANGOUTS_TARGET)
 
@@ -94,11 +98,13 @@ libhangouts3.dll: $(PURPLE_C_FILES) $(PURPLE_COMPAT_FILES)
 hangouts-test.exe: $(TEST_C_FILES) $(PURPLE_COMPAT_FILES)
 	$(WIN32_CC) -o $@ -DDEBUG $^ $(WIN32_PIDGIN2_CFLAGS) $(WIN32_PIDGIN2_LDFLAGS) -Ipurple2compat
 
-install: $(HANGOUTS_TARGET)
-	cp $^ $(HANGOUTS_DEST)
+install: $(HANGOUTS_TARGET) install-icons
+	cp $(HANGOUTS_TARGET) $(HANGOUTS_DEST)
 
-install-windows: libhangouts.dll
-	cp $^ "$(PROGRAMFILES)/Pidgin/plugins"
+install-icons: hangouts16.png hangouts22.png hangouts48.png
+	cp hangouts16.png $(HANGOUTS_ICONS_DEST)/16/hangouts.png
+	cp hangouts22.png $(HANGOUTS_ICONS_DEST)/22/hangouts.png
+	cp hangouts48.png $(HANGOUTS_ICONS_DEST)/48/hangouts.png
 
 FAILNOPURPLE:
 	echo "You need libpurple development headers installed to be able to compile this plugin"

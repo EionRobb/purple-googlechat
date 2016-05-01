@@ -73,7 +73,7 @@ Section "MainSection" SEC01
     ;Check for pidgin installation
     Call GetPidginInstPath
     
-    SetOverwrite off
+    SetOverwrite ifnewer
 	
 	SetOutPath "$PidginDir"
 	File "${JSON_GLIB_DLL}"

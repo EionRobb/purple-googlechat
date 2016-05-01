@@ -338,7 +338,7 @@ hangouts_media_codecs_changed_cb(PurpleMedia *media, gchar *sid, HangoutsMedia *
 		params = g_new0(MediaCodecParam *, n_params);
 		for(j = 0; purple_codec_params; purple_codec_params = g_list_next(purple_codec_params), j++) {
 			PurpleKeyValuePair *param_info = purple_codec_params->data;
-			MediaCodecParam *param = params[i] = g_new0(MediaCodecParam, 1);
+			MediaCodecParam *param = params[j] = g_new0(MediaCodecParam, 1);
 			media_codec_param__init(param);
 			
 			param->key = param_info->key;

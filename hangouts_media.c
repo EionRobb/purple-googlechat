@@ -138,8 +138,10 @@ hangout_get_session_media_type(PurpleMedia *media, gchar *sid) {
 		}
 	} else if (purple_session_type & PURPLE_MEDIA_VIDEO) {
 		return MEDIA_TYPE__MEDIA_TYPE_VIDEO;
+#if PURPLE_VERSION_CHECK(2, 10, 12)
 	} else if (purple_session_type & PURPLE_MEDIA_APPLICATION) {
 		return MEDIA_TYPE__MEDIA_TYPE_DATA;
+#endif
 	} else {
 		return 0;
 	}
@@ -207,9 +209,13 @@ hangouts_media_candidates_prepared_cb(PurpleMedia *media, gchar *sid, gchar *nam
 			case PURPLE_MEDIA_NETWORK_PROTOCOL_UDP:
 				ice_candidate->protocol = PROTOCOL__UDP;
 				break;
+#if PURPLE_VERSION_CHECK(2, 10, 12)
 			case PURPLE_MEDIA_NETWORK_PROTOCOL_TCP_PASSIVE:
 			case PURPLE_MEDIA_NETWORK_PROTOCOL_TCP_ACTIVE:
 			case PURPLE_MEDIA_NETWORK_PROTOCOL_TCP_SO:
+#else
+			case PURPLE_MEDIA_NETWORK_PROTOCOL_TCP:
+#endif
 				ice_candidate->protocol = PROTOCOL__TCP;
 				break;
 			default:

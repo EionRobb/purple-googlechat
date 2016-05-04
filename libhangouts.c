@@ -231,7 +231,7 @@ hangouts_login(PurpleAccount *account)
 	purple_signal_connect(purple_blist_get_handle(), "blist-node-removed", account, PURPLE_CALLBACK(hangouts_blist_node_removed), NULL);
 	purple_signal_connect(purple_conversations_get_handle(), "conversation-updated", account, PURPLE_CALLBACK(hangouts_mark_conversation_seen), NULL);
 	
-	purple_timeout_add_seconds(HANGOUTS_ACTIVE_CLIENT_TIMEOUT, ((GSourceFunc) hangouts_set_active_client), pc);
+	ha->active_client_timeout = purple_timeout_add_seconds(HANGOUTS_ACTIVE_CLIENT_TIMEOUT, ((GSourceFunc) hangouts_set_active_client), pc);
 }
 
 static void
@@ -241,6 +241,9 @@ hangouts_close(PurpleConnection *pc)
 	
 	ha = purple_connection_get_protocol_data(pc);
 	purple_signals_disconnect_by_handle(ha->account);
+	
+	purple_timeout_remove(ha->active_client_timeout);
+	purple_timeout_remove(ha->channel_watchdog);
 	
 	purple_http_conn_cancel_all(pc);
 	

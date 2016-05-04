@@ -430,6 +430,7 @@ hangouts_get_conversation_events(HangoutsAccount *ha, const gchar *conv_id, gint
 	GetConversationRequest request;
 	ConversationId conversation_id;
 	ConversationSpec conversation_spec;
+	EventContinuationToken event_continuation_token;
 	
 	get_conversation_request__init(&request);
 	request.request_header = hangouts_get_request_header(ha);
@@ -442,8 +443,6 @@ hangouts_get_conversation_events(HangoutsAccount *ha, const gchar *conv_id, gint
 	conversation_spec.conversation_id = &conversation_id;
 	
 	if (since_timestamp > 0) {
-		EventContinuationToken event_continuation_token;
-		
 		request.has_include_event = TRUE;
 		request.include_event = TRUE;
 		request.has_max_events_per_conversation = TRUE;
@@ -1687,14 +1686,17 @@ hangouts_set_status(PurpleAccount *account, PurpleStatus *status)
 	Segment **segments = NULL;
 	const gchar *message;
 	DndSetting dnd_setting;
+	PresenceStateSetting presence_state_setting;
+	MoodSetting mood_setting;
+	MoodMessage mood_message;
+	MoodContent mood_content;
+	guint n_segments;
 
 	set_presence_request__init(&request);
 	request.request_header = hangouts_get_request_header(ha);
 	
 	//available:
 	if (purple_status_type_get_primitive(purple_status_get_status_type(status)) == PURPLE_STATUS_AVAILABLE) {
-		PresenceStateSetting presence_state_setting;
-		
 		presence_state_setting__init(&presence_state_setting);
 		presence_state_setting.has_timeout_secs = TRUE;
 		presence_state_setting.timeout_secs = 720;
@@ -1705,8 +1707,6 @@ hangouts_set_status(PurpleAccount *account, PurpleStatus *status)
 	
 	//away
 	if (purple_status_type_get_primitive(purple_status_get_status_type(status)) == PURPLE_STATUS_AWAY) {
-		PresenceStateSetting presence_state_setting;
-		
 		presence_state_setting__init(&presence_state_setting);
 		presence_state_setting.has_timeout_secs = TRUE;
 		presence_state_setting.timeout_secs = 720;
@@ -1731,11 +1731,6 @@ hangouts_set_status(PurpleAccount *account, PurpleStatus *status)
 	//has message?
 	message = purple_status_get_attr_string(status, "message");
 	if (message && *message) {
-		MoodSetting mood_setting;
-		MoodMessage mood_message;
-		MoodContent mood_content;
-		guint n_segments;
-		
 		mood_setting__init(&mood_setting);
 		mood_message__init(&mood_message);
 		mood_content__init(&mood_content);

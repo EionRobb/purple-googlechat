@@ -646,6 +646,10 @@ hangouts_set_active_client(PurpleConnection *pc)
 	}
 	
 	ha = purple_connection_get_protocol_data(pc);
+	if (ha == NULL) {
+		g_warn_if_reached();
+		return TRUE;
+	}
 	
 	if (ha->active_client_state == ACTIVE_CLIENT_STATE__ACTIVE_CLIENT_STATE_IS_ACTIVE) {
 		//We're already the active client

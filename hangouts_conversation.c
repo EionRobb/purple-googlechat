@@ -1005,16 +1005,9 @@ hangouts_convert_html_to_segments(HangoutsAccount *ha, const gchar *html_message
 				if (opening) {
 					while (*c != '>') {
 						//Grab HREF for the A
-/*
-    Maiku R: I've seen -1 with pointer math, but not in square brackets
-    Eion Robb: should it stay?
-    Eion Robb: I'm thinking it should stay for the cute-factor
-    Maiku R: I feel like since neither of us has seen it before, there's probably a reason we haven't  :-P
-    Eion Robb: that's the perfect reason to keep it
-*/
-						if (c[-1]==' '&&c[0]=='h'&&c[1]=='r'&&c[2]=='e'&&c[3]=='f'&&c[4]=='=') {
+						if (g_ascii_strcasecmp(tag->str, " HREF=")) {
 							gchar *href_end;
-							c += 5;
+							c += 6;
 							if (*c == '"' || *c == '\'') {
 								href_end = strchr(c + 1, *c);
 								c++;
@@ -1027,7 +1020,10 @@ hangouts_convert_html_to_segments(HangoutsAccount *ha, const gchar *html_message
 							g_free(last_link);
 							
 							if (href_end > c) {
-								last_link = g_strndup(c, href_end - c);
+								gchar *attrib = g_strndup(c, href_end - c);
+								last_link = purple_unescape_text(attrib);
+								g_free(attrib);
+								
 								c = href_end;
 								break;
 							}

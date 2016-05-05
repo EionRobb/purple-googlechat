@@ -1674,6 +1674,9 @@ hangouts_mark_conversation_seen(PurpleConversation *conv, PurpleConversationUpda
 {
 	PurpleConnection *pc = purple_conversation_get_connection(conv);
 	
+	if (!purple_conversation_has_focus(conv))
+		return;
+	
 	if (!PURPLE_CONNECTION_IS_CONNECTED(pc))
 		return;
 	

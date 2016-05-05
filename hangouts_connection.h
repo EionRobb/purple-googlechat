@@ -79,6 +79,7 @@ HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(query_presence, QueryPresence, "presence/que
 HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(get_conversation, GetConversation, "conversations/getconversation");
 HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(create_conversation, CreateConversation, "conversations/createconversation");
 HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(delete_conversation, DeleteConversation, "conversations/deleteconversation");
+HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(modify_conversation_view, ModifyConversationView, "conversations/modifyconversationview");
 HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(add_user, AddUser, "conversations/adduser");
 HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(remove_user, RemoveUser, "conversations/removeuser");
 HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(update_watermark, UpdateWatermark, "conversations/updatewatermark");

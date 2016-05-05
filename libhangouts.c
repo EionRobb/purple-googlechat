@@ -75,27 +75,44 @@ hangouts_add_account_options(GList *account_options)
 static void
 hangouts_blist_node_removed(PurpleBlistNode *node)
 {
-	PurpleChat *chat;
+	PurpleChat *chat = NULL;
+	PurpleBuddy *buddy = NULL;
 	PurpleAccount *account;
+	PurpleConnection *pc;
 	const gchar *conv_id;
+	GHashTable *components;
 	
-	if (!PURPLE_IS_CHAT(node)) {
-		return;
+	if (PURPLE_IS_CHAT(node)) {
+		chat = PURPLE_CHAT(node);
+		account = purple_chat_get_account(chat);
+	} else if (PURPLE_IS_BUDDY(node)) {
+		buddy = PURPLE_BUDDY(node);
+		account = purple_buddy_get_account(buddy);
 	}
-	chat = PURPLE_CHAT(node);
-	account = purple_chat_get_account(chat);
 	
 	if (g_strcmp0(purple_account_get_protocol_id(account), HANGOUTS_PLUGIN_ID)) {
 		return;
 	}
 	
-    GHashTable *components = purple_chat_get_components(chat);
-	conv_id = g_hash_table_lookup(components, "conv_id");
-	if (conv_id == NULL) {
-		conv_id = purple_chat_get_name_only(chat);
+	pc = purple_account_get_connection(account);
+	if (pc == NULL) {
+		return;
 	}
 	
-	hangouts_chat_leave_by_conv_id(purple_account_get_connection(account), conv_id);
+	if (chat != NULL) {
+		components = purple_chat_get_components(chat);
+		conv_id = g_hash_table_lookup(components, "conv_id");
+		if (conv_id == NULL) {
+			conv_id = purple_chat_get_name_only(chat);
+		}
+		
+		hangouts_chat_leave_by_conv_id(pc, conv_id);
+	} else {
+		HangoutsAccount *ha = purple_connection_get_protocol_data(pc);
+		conv_id = g_hash_table_lookup(ha->one_to_ones_rev, purple_buddy_get_name(buddy));
+		
+		hangouts_archive_conversation(ha, conv_id);
+	}
 }
 
 static PurpleCmdRet

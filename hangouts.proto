@@ -1437,6 +1437,17 @@ message GetSelfInfoResponse {
   // unknown = 22;
 }
 
+message ModifyConversationViewRequest {
+  optional RequestHeader request_header = 1;
+  optional ConversationId conversation_id = 2;
+  optional ConversationView new_view = 3;
+  optional uint64 last_event_timestamp = 4;
+}
+
+message ModifyConversationViewResponse {
+  optional ResponseHeader response_header = 1;
+}
+
 message QueryPresenceRequest {
   optional RequestHeader request_header = 1;
   repeated ParticipantId participant_id = 2;

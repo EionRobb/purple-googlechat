@@ -68,6 +68,7 @@ void hangouts_chat_leave_by_conv_id(PurpleConnection *pc, const gchar *conv_id);
 void hangouts_chat_leave(PurpleConnection *pc, int id);
 void hangouts_chat_invite(PurpleConnection *pc, int id, const char *message, const char *who);
 void hangouts_create_conversation(HangoutsAccount *ha, gboolean is_one_to_one, const char *who, const gchar *optional_message);
+void hangouts_archive_conversation(HangoutsAccount *ha, const gchar *conv_id);
 void hangouts_initiate_chat_from_node(PurpleBlistNode *node, gpointer userdata);
 
 void hangouts_mark_conversation_seen(PurpleConversation *conv, PurpleConversationUpdateType type);

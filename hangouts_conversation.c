@@ -1515,6 +1515,28 @@ hangouts_create_conversation(HangoutsAccount *ha, gboolean is_one_to_one, const 
 	hangouts_request_header_free(request.request_header);
 }
 
+void
+hangouts_archive_conversation(HangoutsAccount *ha, const gchar *conv_id)
+{
+	ModifyConversationViewRequest request;
+	ConversationId conversation_id;
+	
+	modify_conversation_view_request__init(&request);
+	conversation_id__init(&conversation_id);
+	
+	conversation_id.id = (gchar *)conv_id;
+	
+	request.request_header = hangouts_get_request_header(ha);
+	request.conversation_id = &conversation_id;
+	request.has_new_view = TRUE;
+	request.new_view = CONVERSATION_VIEW__CONVERSATION_VIEW_ARCHIVED;
+	request.has_last_event_timestamp = TRUE;
+	request.last_event_timestamp = ha->last_event_timestamp;
+	
+	hangouts_pblite_modify_conversation_view(ha, &request, NULL, NULL);
+	
+	hangouts_request_header_free(request.request_header);
+}
 
 void
 hangouts_initiate_chat_from_node(PurpleBlistNode *node, gpointer userdata)

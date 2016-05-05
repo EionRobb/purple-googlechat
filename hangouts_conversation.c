@@ -1726,14 +1726,16 @@ hangouts_set_status(PurpleAccount *account, PurpleStatus *status)
 	
 	//has message?
 	message = purple_status_get_attr_string(status, "message");
-	if (message && *message) {
+	if (message != NULL) {
 		mood_setting__init(&mood_setting);
 		mood_message__init(&mood_message);
 		mood_content__init(&mood_content);
 		
-		segments = hangouts_convert_html_to_segments(ha, message, &n_segments);
-		mood_content.segment = segments;
-		mood_content.n_segment = n_segments;
+		if (*message) {
+			segments = hangouts_convert_html_to_segments(ha, message, &n_segments);
+			mood_content.segment = segments;
+			mood_content.n_segment = n_segments;
+		}
 		
 		mood_message.mood_content = &mood_content;
 		mood_setting.mood_message = &mood_message;

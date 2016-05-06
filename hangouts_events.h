@@ -31,6 +31,8 @@ void hangouts_received_presence_notification(PurpleConnection *pc, StateUpdate *
 void hangouts_received_typing_notification(PurpleConnection *pc, StateUpdate *state_update);
 void hangouts_received_watermark_notification(PurpleConnection *pc, StateUpdate *state_update);
 void hangouts_received_block_notification(PurpleConnection *pc, StateUpdate *state_update);
+void hangouts_received_view_modification(PurpleConnection *pc, StateUpdate *state_update);
+void hangouts_received_delete_notification(PurpleConnection *pc, StateUpdate *state_update);
 void hangouts_received_state_update(PurpleConnection *pc, StateUpdate *state_update);
 
 

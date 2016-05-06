@@ -41,6 +41,8 @@ hangouts_register_events(gpointer plugin)
 	purple_signal_connect(plugin, "hangouts-received-stateupdate", plugin, PURPLE_CALLBACK(hangouts_received_presence_notification), NULL);
 	purple_signal_connect(plugin, "hangouts-received-stateupdate", plugin, PURPLE_CALLBACK(hangouts_received_watermark_notification), NULL);
 	purple_signal_connect(plugin, "hangouts-received-stateupdate", plugin, PURPLE_CALLBACK(hangouts_received_state_update), NULL);
+	purple_signal_connect(plugin, "hangouts-received-stateupdate", plugin, PURPLE_CALLBACK(hangouts_received_view_modification), NULL);
+	purple_signal_connect(plugin, "hangouts-received-stateupdate", plugin, PURPLE_CALLBACK(hangouts_received_delete_notification), NULL);
 	purple_signal_connect(plugin, "hangouts-received-stateupdate", plugin, PURPLE_CALLBACK(hangouts_received_block_notification), NULL);
 	purple_signal_connect(plugin, "hangouts-received-stateupdate", plugin, PURPLE_CALLBACK(hangouts_received_other_notification), NULL);
 }
@@ -82,6 +84,65 @@ hangouts_received_state_update(PurpleConnection *pc, StateUpdate *state_update)
 		purple_account_set_int(ha->account, "last_event_timestamp_high", current_server_time >> 32);
 		purple_account_set_int(ha->account, "last_event_timestamp_low", current_server_time & 0xFFFFFFFF);
 	}
+}
+
+static void
+hangouts_remove_conversation(HangoutsAccount *ha, const gchar *conv_id)
+{
+	if (g_hash_table_contains(ha->one_to_ones, conv_id)) {
+		const gchar *buddy_id = g_hash_table_lookup(ha->one_to_ones, conv_id);
+		PurpleBuddy *buddy = purple_blist_find_buddy(ha->account, buddy_id);
+		
+		purple_blist_remove_buddy(buddy);
+		g_hash_table_remove(ha->one_to_ones, conv_id);
+		g_hash_table_remove(ha->one_to_ones_rev, buddy_id);
+		
+	} else if (g_hash_table_contains(ha->group_chats, conv_id)) {
+		PurpleChat *chat = purple_blist_find_chat(ha->account, conv_id);
+		purple_blist_remove_chat(chat);
+		
+		g_hash_table_remove(ha->group_chats, conv_id);
+		
+	} else {
+		// Unknown conversation!
+		return;
+	}
+}
+
+void
+hangouts_received_view_modification(PurpleConnection *pc, StateUpdate *state_update)
+{
+	HangoutsAccount *ha;
+	ConversationViewModification *view_modification = state_update->view_modification;
+	const gchar *conv_id;
+	
+	if (view_modification == NULL) {
+		return;
+	}
+	
+	if (view_modification->new_view == CONVERSATION_VIEW__CONVERSATION_VIEW_ARCHIVED) {
+		ha = purple_connection_get_protocol_data(pc);
+		conv_id = view_modification->conversation_id->id;
+	
+		hangouts_remove_conversation(ha, conv_id);
+	}
+}
+
+void
+hangouts_received_delete_notification(PurpleConnection *pc, StateUpdate *state_update)
+{
+	HangoutsAccount *ha;
+	DeleteActionNotification *delete_notification = state_update->delete_notification;
+	const gchar *conv_id;
+	
+	if (delete_notification == NULL) {
+		return;
+	}
+	
+	ha = purple_connection_get_protocol_data(pc);
+	conv_id = delete_notification->conversation_id->id;
+
+	hangouts_remove_conversation(ha, conv_id);
 }
 
 void

@@ -638,6 +638,12 @@ hangouts_add_conversation_to_blist(HangoutsAccount *ha, Conversation *conversati
 		} else {
 			purple_serv_got_alias(ha->pc, other_person, other_person_alias);
 		}
+		
+		if (unique_user_ids == NULL) {
+			GList *user_list = g_list_prepend(NULL, other_person);
+			hangouts_get_users_presence(ha, user_list);
+			g_list_free(user_list);
+		}
 	} else {
 		PurpleChat *chat = purple_blist_find_chat(ha->account, conv_id);
 		gchar *name = conversation->name;

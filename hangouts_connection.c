@@ -747,14 +747,14 @@ hangouts_search_users_text_cb(PurpleHttpConnection *connection, PurpleHttpRespon
 	
 	for(index = 0; index < length; index++)
 	{
-		JsonObject *result = json_array_get_object_element(resultsarray, index);
-		// Maybe this is better using hangouts_json_path_query_string() ?
-		const gchar *id = json_object_get_string_member(json_object_get_object_member(result, "person"), "personId");
-		const gchar *displayname = json_object_get_string_member(json_object_get_object_member(result, "name"), "displayName");
+		JsonNode *result = json_array_get_element(resultsarray, index);
+		
+		gchar *id = hangouts_json_path_query_string(result, "$.person.personId", NULL);
+		gchar *displayname = hangouts_json_path_query_string(result, "$.person.name[*].displayName", NULL);
 		GList *row = NULL;
 		
-		row = g_list_append(row, g_strdup(id));
-		row = g_list_append(row, g_strdup(displayname));
+		row = g_list_append(row, id);
+		row = g_list_append(row, displayname);
 		
 		purple_notify_searchresults_row_add(results, row);
 	}

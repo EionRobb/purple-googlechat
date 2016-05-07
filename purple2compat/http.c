@@ -1744,7 +1744,7 @@ void purple_http_conn_cancel_all(PurpleConnection *gc)
 
 	gc_list = g_hash_table_lookup(purple_http_hc_by_gc, gc);
 
-	g_hash_table_insert(purple_http_cancelling_gc, gc, GINT_TO_POINTER(TRUE));
+	g_hash_table_insert(purple_http_cancelling_gc, gc, GINT_TO_POINTER(1));
 
 	while (gc_list) {
 		PurpleHttpConnection *hc = gc_list->data;
@@ -2424,7 +2424,7 @@ purple_http_connection_set_add(PurpleHttpConnectionSet *set,
 		purple_http_connection_set_remove(http_conn->connection_set,
 			http_conn);
 	}
-	g_hash_table_insert(set->connections, http_conn, (gpointer)TRUE);
+	g_hash_table_insert(set->connections, http_conn, GINT_TO_POINTER(1));
 	http_conn->connection_set = set;
 }
 

@@ -51,12 +51,15 @@ static gchar *(*_purple_media_candidate_get_ip)(PurpleMediaCandidate *candidate)
 static guint16 (*_purple_media_candidate_get_port)(PurpleMediaCandidate *candidate);
 static PurpleMediaCandidateType (*_purple_media_candidate_get_candidate_type)(PurpleMediaCandidate *candidate);
 static guint32 (*_purple_media_candidate_get_priority)(PurpleMediaCandidate *candidate);
+static PurpleMediaCandidate *(*_purple_media_candidate_new)(const gchar *foundation, guint component_id, PurpleMediaCandidateType type, PurpleMediaNetworkProtocol proto, const gchar *ip, guint port);
 // media/codecs.h
 static guint (*_purple_media_codec_get_id)(PurpleMediaCodec *codec);
 static gchar *(*_purple_media_codec_get_encoding_name)(PurpleMediaCodec *codec);
 static guint (*_purple_media_codec_get_clock_rate)(PurpleMediaCodec *codec);
 static guint (*_purple_media_codec_get_channels)(PurpleMediaCodec *codec);
 static GList *(*_purple_media_codec_get_optional_parameters)(PurpleMediaCodec *codec);
+static PurpleMediaCodec *(*_purple_media_codec_new)(int id, const char *encoding_name, PurpleMediaSessionType media_type, guint clock_rate);
+static void (*_purple_media_codec_add_optional_parameter)(PurpleMediaCodec *codec, const gchar *name, const gchar *value);
 
 // Using dlopen() instead of GModule because I don't want another dep
 #ifdef _WIN32
@@ -83,6 +86,7 @@ hangouts_init_media_functions()
 			_purple_media_candidate_get_port = (gpointer) dlsym(libpurple_module, "purple_media_candidate_get_port");
 			_purple_media_candidate_get_candidate_type = (gpointer) dlsym(libpurple_module, "purple_media_candidate_get_candidate_type");
 			_purple_media_candidate_get_priority = (gpointer) dlsym(libpurple_module, "purple_media_candidate_get_priority");
+			_purple_media_candidate_new = (gpointer) dlsym(libpurple_module, "purple_media_candidate_new");
 			
 			// media/codecs.h
 			_purple_media_codec_get_id = (gpointer) dlsym(libpurple_module, "purple_media_codec_get_id");
@@ -90,6 +94,8 @@ hangouts_init_media_functions()
 			_purple_media_codec_get_clock_rate = (gpointer) dlsym(libpurple_module, "purple_media_codec_get_clock_rate");
 			_purple_media_codec_get_channels = (gpointer) dlsym(libpurple_module, "purple_media_codec_get_channels");
 			_purple_media_codec_get_optional_parameters = (gpointer) dlsym(libpurple_module, "purple_media_codec_get_optional_parameters");
+			_purple_media_codec_new = (gpointer) dlsym(libpurple_module, "purple_media_codec_new");
+			_purple_media_codec_add_optional_parameter = (gpointer) dlsym(libpurple_module, "purple_media_codec_add_optional_parameter");
 			
 			purple_media_functions_initaliased = TRUE;
 		}
@@ -105,11 +111,14 @@ hangouts_init_media_functions()
 #define _purple_media_candidate_get_port             purple_media_candidate_get_port 
 #define _purple_media_candidate_get_candidate_type   purple_media_candidate_get_candidate_type 
 #define _purple_media_candidate_get_priority         purple_media_candidate_get_priority 
+#define _purple_media_candidate_new                  purple_media_candidate_new 
 #define _purple_media_codec_get_id                   purple_media_codec_get_id 
 #define _purple_media_codec_get_encoding_name        purple_media_codec_get_encoding_name 
 #define _purple_media_codec_get_clock_rate           purple_media_codec_get_clock_rate 
 #define _purple_media_codec_get_channels             purple_media_codec_get_channels 
 #define _purple_media_codec_get_optional_parameters  purple_media_codec_get_optional_parameters
+#define _purple_media_codec_new                      purple_media_codec_new
+#define _purple_media_codec_add_optional_parameter   purple_media_codec_add_optional_parameter
 
 static void
 hangouts_init_media_functions()
@@ -150,8 +159,126 @@ hangout_get_session_media_type(PurpleMedia *media, gchar *sid) {
 static void
 hangouts_pblite_media_media_session_add_cb(HangoutsAccount *ha, MediaSessionAddResponse *response, gpointer user_data)
 {
+	HangoutsMedia *hangouts_media = user_data;
+	guint i, j, k, l;
+	
 	purple_debug_info("hangouts", "hangouts_pblite_media_media_session_add_cb: ");
 	hangouts_default_response_dump(ha, &response->base, user_data);
+	
+	for (i = 0; i < response->n_resource; i++) {
+		MediaSession *resource = response->resource[i];
+		for (j = 0; j < resource->n_server_content; j++) {
+			MediaContent *server_content = resource->server_content[j];
+			GList *remote_candidates_list = NULL;
+			GList *remote_codecs_list = NULL;
+			
+			for (k = 0; k < server_content->transport->n_candidate; k++) {
+				MediaIceCandidate *candidate = server_content->transport->candidate[k];
+				PurpleMediaCandidate *purple_candidate;
+				guint component_id;
+				PurpleMediaCandidateType candidate_type;
+				PurpleMediaNetworkProtocol network_protocol;
+				
+				switch(candidate->component) {
+					case COMPONENT__RTP:
+						component_id = PURPLE_MEDIA_COMPONENT_RTP;
+						break;
+					case COMPONENT__RTCP:
+						component_id = PURPLE_MEDIA_COMPONENT_RTCP;
+						break;
+					default:
+						continue;
+				}
+				
+				switch(candidate->type) {
+					case MEDIA_ICE_CANDIDATE_TYPE__HOST:
+						candidate_type = PURPLE_MEDIA_CANDIDATE_TYPE_HOST;
+						break;
+					case MEDIA_ICE_CANDIDATE_TYPE__SERVER_REFLEXIVE:
+						candidate_type = PURPLE_MEDIA_CANDIDATE_TYPE_SRFLX;
+						break;
+					case MEDIA_ICE_CANDIDATE_TYPE__PEER_REFLEXIVE:
+						candidate_type = PURPLE_MEDIA_CANDIDATE_TYPE_PRFLX;
+						break;
+					case MEDIA_ICE_CANDIDATE_TYPE__RELAY:
+						candidate_type = PURPLE_MEDIA_CANDIDATE_TYPE_RELAY;
+						break;
+					default:
+						continue;
+				}
+				
+				switch(candidate->protocol) {
+					case PROTOCOL__UDP:
+						network_protocol = PURPLE_MEDIA_NETWORK_PROTOCOL_UDP;
+						break;
+					case PROTOCOL__TCP:
+					case PROTOCOL__SSLTCP:
+#if PURPLE_VERSION_CHECK(2, 10, 12) || PURPLE_VERSION_CHECK(3, 0, 0)
+						network_protocol = PURPLE_MEDIA_NETWORK_PROTOCOL_TCP_ACTIVE;
+#else
+						network_protocol = PURPLE_MEDIA_NETWORK_PROTOCOL_TCP;
+#endif
+						break;
+					default:
+						continue;
+				}
+
+				purple_candidate = _purple_media_candidate_new(
+					"", component_id, candidate_type,
+					network_protocol, candidate->ip, candidate->port);
+				g_object_set(purple_candidate,
+						"username", server_content->transport->username,
+						"password", server_content->transport->password,
+						"priority", candidate->priority, NULL);
+				
+				remote_candidates_list = g_list_append(remote_candidates_list, purple_candidate);
+			}
+			purple_media_add_remote_candidates(hangouts_media->media, "", hangouts_media->who, remote_candidates_list);
+			
+			for (k = 0; k < server_content->n_codec; k++) {
+				MediaCodec *codec = server_content->codec[k];
+				PurpleMediaCodec *purple_codec;
+				PurpleMediaSessionType type;
+				
+				switch(codec->media_type) {
+					case MEDIA_TYPE__MEDIA_TYPE_VIDEO:
+						type = PURPLE_MEDIA_VIDEO;
+						break;
+					case MEDIA_TYPE__MEDIA_TYPE_AUDIO:
+						type = PURPLE_MEDIA_AUDIO;
+						break;
+					case MEDIA_TYPE__MEDIA_TYPE_BUNDLE:
+						type = PURPLE_MEDIA_VIDEO | PURPLE_MEDIA_AUDIO;
+						break;
+#if PURPLE_VERSION_CHECK(2, 10, 12) || PURPLE_VERSION_CHECK(3, 0, 0)
+					case MEDIA_TYPE__MEDIA_TYPE_DATA:
+						type = PURPLE_MEDIA_APPLICATION;
+						break;
+#endif
+					default:
+						continue;
+				}
+				
+				purple_codec = _purple_media_codec_new(
+					codec->payload_id, codec->name,
+					type, codec->sample_rate);
+
+				for (l = 0; l < codec->n_param; l++) {
+					MediaCodecParam *param = codec->param[l];
+					_purple_media_codec_add_optional_parameter(purple_codec,
+							param->key, param->value);
+				}
+				g_object_set(purple_codec,
+						"channels", codec->channel_count, NULL);
+				
+				remote_codecs_list = g_list_append(remote_codecs_list, purple_codec);
+			}
+			purple_media_set_remote_codecs(hangouts_media->media, "", hangouts_media->who, remote_codecs_list);
+		}
+	}
+	
+	//response->resource[0]->server_content[0]->transport->candidate[]
+	//response->resource[0]->server_content[0]->codec[]
 }
 
 static void

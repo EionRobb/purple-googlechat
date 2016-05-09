@@ -29,7 +29,10 @@
 #include "hangouts_pblite.h"
 #include "hangouts.pb-c.h"
 
-#define HANGOUTS_PBLITE_XORIGIN_URL "https://talkgadget.google.com"
+#define HANGOUTS_PBLITE_XORIGIN_URL "https://hangouts.google.com"
+//#define HANGOUTS_PBLITE_XORIGIN_URL "https://talkgadget.google.com"
+#define HANGOUTS_PBLITE_API_URL "https://clients6.google.com"
+//#define HANGOUTS_PBLITE_API_URL "https://www.googleapis.com"
 #define HANGOUTS_CHANNEL_URL_PREFIX "https://0.client-channel.google.com/client-channel/"
 
 void hangouts_process_data_chunks(HangoutsAccount *ha, const gchar *data, gsize len);

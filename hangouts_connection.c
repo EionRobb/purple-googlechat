@@ -521,6 +521,7 @@ hangouts_pblite_request_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse *
 	if (purple_http_response_get_error(response) != NULL) {
 		g_free(request_info);
 		g_free(response_message);
+		purple_debug_error("hangouts", "Error from server: (%s) %s\n", purple_http_response_get_error(response), purple_http_response_get_data(response, NULL));
 		return; //TODO should we send NULL to the callee?
 	}
 	

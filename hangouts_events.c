@@ -702,9 +702,6 @@ hangouts_process_conversation_event(HangoutsAccount *ha, Conversation *conversat
 			case HANGOUT_EVENT_TYPE__HANGOUT_EVENT_TYPE_START:
 				msg = _("Call started");
 				break;
-			case HANGOUT_EVENT_TYPE__HANGOUT_EVENT_TYPE_ONGOING:
-				msg = _("Call ongoing");
-				break;
 			case HANGOUT_EVENT_TYPE__HANGOUT_EVENT_TYPE_END:
 				msg = _("Call ended");
 				break;
@@ -712,11 +709,13 @@ hangouts_process_conversation_event(HangoutsAccount *ha, Conversation *conversat
 				msg = NULL;
 				break;
 		}
-		if (g_hash_table_contains(ha->group_chats, conv_id)) {
-			purple_serv_got_chat_in(ha->pc, g_str_hash(conv_id), gaia_id, PURPLE_MESSAGE_SYSTEM, msg, message_timestamp);
-		} else {
-			gaia_id = g_hash_table_lookup(ha->one_to_ones, conv_id);
-			purple_serv_got_im(ha->pc, gaia_id, msg, PURPLE_MESSAGE_SYSTEM, message_timestamp);
+		if (msg != NULL) {
+			if (g_hash_table_contains(ha->group_chats, conv_id)) {
+				purple_serv_got_chat_in(ha->pc, g_str_hash(conv_id), gaia_id, PURPLE_MESSAGE_SYSTEM, msg, message_timestamp);
+			} else {
+				gaia_id = g_hash_table_lookup(ha->one_to_ones, conv_id);
+				purple_serv_got_im(ha->pc, gaia_id, msg, PURPLE_MESSAGE_SYSTEM, message_timestamp);
+			}
 		}
 		if (hangout_event->event_type == HANGOUT_EVENT_TYPE__HANGOUT_EVENT_TYPE_START) {
 			if (purple_account_get_bool(ha->account, "show-call-links", !purple_media_manager_get())) {

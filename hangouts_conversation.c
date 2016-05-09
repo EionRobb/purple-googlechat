@@ -34,7 +34,9 @@ RequestHeader *
 hangouts_get_request_header(HangoutsAccount *ha)
 {
 	RequestHeader *header = g_new0(RequestHeader, 1);
+	ClientVersion *version = g_new0(ClientVersion, 1);
 	request_header__init(header);
+	client_version__init(version);
 	
 	if (ha->client_id != NULL) {
 		ClientIdentifier *client_identifier = g_new0(ClientIdentifier, 1);
@@ -43,6 +45,11 @@ hangouts_get_request_header(HangoutsAccount *ha)
 		header->client_identifier = client_identifier;
 		header->client_identifier->resource = g_strdup(ha->client_id);
 	}
+	
+	version->has_client_id = TRUE;
+	version->client_id = CLIENT_ID__CLIENT_ID_ANDROID;
+	
+	header->client_version = version;
 	
 	return header;
 }
@@ -54,7 +61,7 @@ hangouts_request_header_free(RequestHeader *header)
 		g_free(header->client_identifier->resource);
 		g_free(header->client_identifier);
 	}
-	
+	g_free(header->client_version);
 	g_free(header);
 }
 

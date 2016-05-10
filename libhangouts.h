@@ -88,6 +88,7 @@ typedef struct {
 	PurpleHttpConnection *channel_connection;
 	PurpleHttpKeepalivePool *channel_keepalive_pool;
 	PurpleHttpKeepalivePool *icons_keepalive_pool;
+	PurpleHttpKeepalivePool *client6_keepalive_pool;
 	gint idle_time;
 	gint active_client_timeout;
 	

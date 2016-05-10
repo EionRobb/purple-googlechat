@@ -215,6 +215,7 @@ hangouts_login(PurpleAccount *account)
 	ha->cookie_jar = purple_http_cookie_jar_new();
 	ha->channel_buffer = g_byte_array_sized_new(HANGOUTS_BUFFER_DEFAULT_SIZE);
 	ha->channel_keepalive_pool = purple_http_keepalive_pool_new();
+	ha->client6_keepalive_pool = purple_http_keepalive_pool_new();
 	ha->sent_message_ids = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 	
 	ha->one_to_ones = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
@@ -265,6 +266,7 @@ hangouts_close(PurpleConnection *pc)
 	purple_http_conn_cancel_all(pc);
 	
 	purple_http_keepalive_pool_unref(ha->channel_keepalive_pool);
+	purple_http_keepalive_pool_unref(ha->client6_keepalive_pool);
 	g_free(ha->self_gaia_id);
 	g_free(ha->self_phone);
 	g_free(ha->refresh_token);

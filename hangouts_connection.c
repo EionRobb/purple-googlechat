@@ -592,6 +592,7 @@ hangouts_client6_request(HangoutsAccount *ha, const gchar *path, HangoutsContent
 	request = purple_http_request_new(NULL);
 	purple_http_request_set_url_printf(request, HANGOUTS_PBLITE_API_URL "%s%ckey=" GOOGLE_GPLUS_KEY "&alt=%s", path, (strchr(path, '?') ? '&' : '?'), response_type_str);
 	purple_http_request_set_cookie_jar(request, ha->cookie_jar);
+	purple_http_request_set_keepalive_pool(request, ha->client6_keepalive_pool);
 	
 	purple_http_request_header_set(request, "X-Goog-Encode-Response-If-Executable", "base64");
 	if (request_type != HANGOUTS_CONTENT_TYPE_NONE) {

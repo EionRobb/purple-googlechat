@@ -227,9 +227,14 @@ hangouts_got_users_information(HangoutsAccount *ha, GetEntityByIdResponse *respo
 	
 	for (i = 0; i < response->n_entity_result; i++) {
 		Entity *entity = response->entity_result[i]->entity[0];
-		const gchar *gaia_id = entity && entity->id ? entity->id->gaia_id : NULL;
+		const gchar *gaia_id;
+
+		if (entity == NULL) {
+			continue;
+		}
+		gaia_id = entity->id ? entity->id->gaia_id : NULL;
 		
-		if (gaia_id != NULL && entity && entity->properties) {
+		if (gaia_id != NULL && entity->properties) {
 			if (entity->properties->display_name)
 				purple_serv_got_alias(ha->pc, gaia_id, entity->properties->display_name);
 			else if (entity->properties->canonical_email)

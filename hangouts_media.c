@@ -133,6 +133,7 @@ typedef struct {
 	gchar *hangout_id;
 	PurpleMedia *media;
 	gchar *who;
+	PurpleMediaSessionType type;
 } HangoutsMedia;
 
 static MediaType
@@ -517,10 +518,53 @@ static void
 hangouts_pblite_media_hangout_resolve_cb(HangoutsAccount *ha, HangoutResolveResponse *response, gpointer user_data)
 {
 	HangoutsMedia *hangouts_media = user_data;
+	PurpleAccount *account = ha->account;
+	GParameter *params = NULL;
+	guint num_params = 0;
+	PurpleMedia *media;
+	
+	if (hangouts_media == NULL) {
+		//wtf
+		return;
+	}
 	
 	hangouts_media->hangout_id = g_strdup(response->hangout_id);
 	
 	hangouts_default_response_dump(ha, &response->base, user_data);
+	
+	//TODO use openwebrtc instead of fsrtpconference
+	media = purple_media_manager_create_media(purple_media_manager_get(),
+			account, "fsrtpconference", hangouts_media->who, TRUE);
+	
+	if (media == NULL) {
+		//TODO do something else
+		g_free(hangouts_media->hangout_id);
+		g_free(hangouts_media->who);
+		g_free(hangouts_media);
+		return;
+	}
+	
+	hangouts_media->media = media;	
+	purple_media_set_protocol_data(media, hangouts_media);
+	
+	g_signal_connect(G_OBJECT(media), "candidates-prepared",
+				 G_CALLBACK(hangouts_media_candidates_prepared_cb), hangouts_media);
+	g_signal_connect(G_OBJECT(media), "codecs-changed",
+				 G_CALLBACK(hangouts_media_codecs_changed_cb), hangouts_media);
+	// TODO
+	// g_signal_connect(G_OBJECT(media), "state-changed",
+				 // G_CALLBACK(hangouts_media_state_changed_cb), hangouts_media);
+	// g_signal_connect(G_OBJECT(media), "stream-info",
+			// G_CALLBACK(hangouts_media_stream_info_cb), hangouts_media);
+	
+	//TODO add params
+	
+	if(!purple_media_add_stream(media, "hangout", hangouts_media->who, hangouts_media->type, TRUE, "nice", num_params, params)) {
+		purple_media_end(media, NULL, NULL);
+		/* TODO: How much clean-up is necessary here? (does calling
+				 purple_media_end lead to cleaning up Jingle structs?) */
+		return;
+	}
 	
 	//Add self to hangout
 	{
@@ -574,62 +618,22 @@ hangouts_initiate_media(PurpleAccount *account, const gchar *who, PurpleMediaSes
 	PurpleConnection *pc = purple_account_get_connection(account);
 	HangoutsAccount *ha = purple_connection_get_protocol_data(pc);
 	HangoutsMedia *hangouts_media;
-	GParameter *params = NULL;
-	gint num_params = 0;
 	HangoutResolveRequest request;
 	ExternalKey external_key;
 	
 	hangouts_init_media_functions();
 	
-	//TODO use openwebrtc instead of fsrtpconference
-	PurpleMedia *media = purple_media_manager_create_media(purple_media_manager_get(),
-			account, "fsrtpconference", who, TRUE);
-	
-	if (media == NULL) {
-		return FALSE;
-	}
-	
 	hangouts_media = g_new0(HangoutsMedia, 1);
 	hangouts_media->ha = ha;
-	hangouts_media->media = media;
 	hangouts_media->who = g_strdup(who);
-	purple_media_set_protocol_data(media, hangouts_media);
-	
-	g_signal_connect(G_OBJECT(media), "candidates-prepared",
-				 G_CALLBACK(hangouts_media_candidates_prepared_cb), hangouts_media);
-	g_signal_connect(G_OBJECT(media), "codecs-changed",
-				 G_CALLBACK(hangouts_media_codecs_changed_cb), hangouts_media);
-	// TODO
-	// g_signal_connect(G_OBJECT(media), "state-changed",
-				 // G_CALLBACK(hangouts_media_state_changed_cb), hangouts_media);
-	// g_signal_connect(G_OBJECT(media), "stream-info",
-			// G_CALLBACK(hangouts_media_stream_info_cb), hangouts_media);
-	
-	//TODO add params
-	
-	if (type & PURPLE_MEDIA_AUDIO) {
-		if(!purple_media_add_stream(media, "audio", who, PURPLE_MEDIA_AUDIO, TRUE, "nice", num_params, params)) {
-			purple_media_end(media, NULL, NULL);
-			/* TODO: How much clean-up is necessary here? (does calling
-					 purple_media_end lead to cleaning up Jingle structs?) */
-			return FALSE;
-		}
-	}
-	if (type & PURPLE_MEDIA_VIDEO) {
-		if(!purple_media_add_stream(media, "video", who, PURPLE_MEDIA_VIDEO, TRUE, "nice", num_params, params)) {
-			purple_media_end(media, NULL, NULL);
-			/* TODO: How much clean-up is necessary here? (does calling
-					 purple_media_end lead to cleaning up Jingle structs?) */
-			return FALSE;
-		}
-	}
+	hangouts_media->type = type;
 	
 	hangout_resolve_request__init(&request);
 	external_key__init(&external_key);
 	external_key.service = "CONVERSATION";
 	external_key.value = g_hash_table_lookup(ha->one_to_ones_rev, who);
 	request.external_key = &external_key;
-	request.request_header = hangouts_get_request_header(hangouts_media->ha);
+	request.request_header = hangouts_get_request_header(ha);
 	hangouts_pblite_media_hangout_resolve(ha, &request, hangouts_pblite_media_hangout_resolve_cb, hangouts_media);
 	hangouts_request_header_free(request.request_header);
 	

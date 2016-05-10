@@ -36,7 +36,7 @@
 #include "media.h"
 
 
-#if !PURPLE_VERSION_CHECK(3, 0, 0)
+#if defined(_WIN32) && !PURPLE_VERSION_CHECK(3, 0, 0)
 /** This is a bit of a hack; 
 		if libpurple isn't compiled with USE_VV then a bunch of functions don't end up being exported, so we'll try load them in at runtime so we dont have to have a million and one different versions of the .so
 */

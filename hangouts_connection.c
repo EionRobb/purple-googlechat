@@ -534,6 +534,12 @@ hangouts_pblite_request_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse *
 			unpacked_message = protobuf_c_message_unpack(response_message->descriptor, NULL, response_len, decoded_response);
 			
 			if (unpacked_message != NULL) {
+				if (purple_debug_is_verbose()) {
+					gchar *pretty_json = pblite_dump_json(unpacked_message);
+					purple_debug_misc("hangouts", "Response: %s", pretty_json);
+					g_free(pretty_json);
+				}
+				
 				callback(ha, unpacked_message, real_user_data);
 				protobuf_c_message_free_unpacked(unpacked_message, NULL);
 			} else {
@@ -545,6 +551,13 @@ hangouts_pblite_request_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse *
 			
 			pblite_decode(response_message, response_array, /*Ignore First Item= */TRUE);
 			purple_debug_info("hangouts", "A '%s' says '%s'\n", response_message->descriptor->name, json_array_get_string_element(response_array, 0));
+			
+			if (purple_debug_is_verbose()) {
+				gchar *pretty_json = pblite_dump_json(response_message);
+				purple_debug_misc("hangouts", "Response: %s", pretty_json);
+				g_free(pretty_json);
+			}
+			
 			callback(ha, response_message, real_user_data);
 			
 			json_array_unref(response_array);
@@ -614,6 +627,12 @@ hangouts_pblite_request(HangoutsAccount *ha, const gchar *endpoint, ProtobufCMes
 	request_info->callback = callback;
 	request_info->response_message = response_message;
 	request_info->user_data = user_data;
+	
+	if (purple_debug_is_verbose()) {
+		gchar *pretty_json = pblite_dump_json(request_message);
+		purple_debug_misc("hangouts", "Request:  %s", pretty_json);
+		g_free(pretty_json);
+	}
 	
 	hangouts_client6_request(ha, endpoint, HANGOUTS_CONTENT_TYPE_PBLITE, request_data, request_len, HANGOUTS_CONTENT_TYPE_PBLITE, hangouts_pblite_request_cb, request_info);
 	

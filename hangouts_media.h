@@ -44,6 +44,7 @@ HANGOUTS_DEFINE_PBLITE_MEDIA_REQUEST_FUNC(media_session_add, MediaSessionAdd, "m
 HANGOUTS_DEFINE_PBLITE_MEDIA_REQUEST_FUNC(media_session_modify, MediaSessionModify, "media_sessions/modify");
 HANGOUTS_DEFINE_PBLITE_MEDIA_REQUEST_FUNC(media_session_query, MediaSessionQuery, "media_sessions/query");
 HANGOUTS_DEFINE_PBLITE_MEDIA_REQUEST_FUNC(hangout_participant_add, HangoutParticipantAdd, "hangout_participants/add");
+HANGOUTS_DEFINE_PBLITE_MEDIA_REQUEST_FUNC(hangout_participant_remove, HangoutParticipantRemove, "hangout_participants/remove");
 HANGOUTS_DEFINE_PBLITE_MEDIA_REQUEST_FUNC(hangout_invitation_add, HangoutInvitationAdd, "hangout_invitations/add");
 HANGOUTS_DEFINE_PBLITE_MEDIA_REQUEST_FUNC(hangout_bulk, HangoutBulk, "hangouts/bulk");
 HANGOUTS_DEFINE_PBLITE_MEDIA_REQUEST_FUNC(media_source_add, MediaSourceAdd, "media_sources/add");

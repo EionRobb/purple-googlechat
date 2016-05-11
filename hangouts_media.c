@@ -514,6 +514,31 @@ hangouts_media_codecs_changed_cb(PurpleMedia *media, gchar *sid, HangoutsMedia *
 }
 
 
+
+static void
+hangouts_media_state_changed_cb(PurpleMedia *media, PurpleMediaState state, gchar *sid, gchar *name, HangoutsMedia *hangouts_media)
+{
+	HangoutsAccount *ha = hangouts_media->ha;
+	
+	switch (state) {
+		case PURPLE_MEDIA_STATE_END: {
+			HangoutParticipantRemoveRequest request;
+			
+			hangout_participant_remove_request__init(&request);
+			
+			request.hangout_id = hangouts_media->hangout_id;
+			request.request_header = hangouts_get_request_header(ha);
+			
+			hangouts_pblite_media_hangout_participant_remove(ha, &request, NULL, NULL);
+			
+			hangouts_request_header_free(request.request_header);
+		} break;
+		default:
+			break;
+	}
+}
+
+
 static void
 hangouts_pblite_media_hangout_resolve_cb(HangoutsAccount *ha, HangoutResolveResponse *response, gpointer user_data)
 {
@@ -551,9 +576,9 @@ hangouts_pblite_media_hangout_resolve_cb(HangoutsAccount *ha, HangoutResolveResp
 				 G_CALLBACK(hangouts_media_candidates_prepared_cb), hangouts_media);
 	g_signal_connect(G_OBJECT(media), "codecs-changed",
 				 G_CALLBACK(hangouts_media_codecs_changed_cb), hangouts_media);
+	g_signal_connect(G_OBJECT(media), "state-changed",
+				 G_CALLBACK(hangouts_media_state_changed_cb), hangouts_media);
 	// TODO
-	// g_signal_connect(G_OBJECT(media), "state-changed",
-				 // G_CALLBACK(hangouts_media_state_changed_cb), hangouts_media);
 	// g_signal_connect(G_OBJECT(media), "stream-info",
 			// G_CALLBACK(hangouts_media_stream_info_cb), hangouts_media);
 	
@@ -604,6 +629,7 @@ hangouts_pblite_media_hangout_resolve_cb(HangoutsAccount *ha, HangoutResolveResp
 		invitee.invitee = &sharing_target_id;
 		invitation.n_invited_entity = 1;
 		invitation.invited_entity = &invitee_ptr;
+		invitation_request.invitation = &invitation;
 		invitation_request.request_header = hangouts_get_request_header(ha);
 		
 		hangouts_pblite_media_hangout_invitation_add(ha, &invitation_request, (HangoutsPbliteHangoutInvitationAddResponseFunc)hangouts_default_response_dump, NULL);

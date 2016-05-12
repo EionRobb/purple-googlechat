@@ -1690,28 +1690,31 @@ hangouts_mark_conversation_seen_timeout(gpointer convpointer)
 void
 hangouts_mark_conversation_seen(PurpleConversation *conv, PurpleConversationUpdateType type)
 {
-	PurpleConnection *pc = purple_conversation_get_connection(conv);
+	gint mark_seen_timeout;
+	PurpleConnection *pc;
+	
+	if (type != PURPLE_CONVERSATION_UPDATE_UNSEEN)
+		return;
 	
 	if (!purple_conversation_has_focus(conv))
 		return;
 	
+	pc = purple_conversation_get_connection(conv);
 	if (!PURPLE_CONNECTION_IS_CONNECTED(pc))
 		return;
 	
 	if (g_strcmp0(purple_protocol_get_id(purple_connection_get_protocol(pc)), HANGOUTS_PLUGIN_ID))
 		return;
 	
-	if (type == PURPLE_CONVERSATION_UPDATE_UNSEEN) {
-		gint mark_seen_timeout = GPOINTER_TO_INT(purple_conversation_get_data(conv, "mark_seen_timeout"));
-		
-		if (mark_seen_timeout) {
-			purple_timeout_remove(mark_seen_timeout);
-		}
-		
-		mark_seen_timeout = purple_timeout_add_seconds(1, hangouts_mark_conversation_seen_timeout, conv);
-		
-		purple_conversation_set_data(conv, "mark_seen_timeout", GINT_TO_POINTER(mark_seen_timeout));
+	mark_seen_timeout = GPOINTER_TO_INT(purple_conversation_get_data(conv, "mark_seen_timeout"));
+	
+	if (mark_seen_timeout) {
+		purple_timeout_remove(mark_seen_timeout);
 	}
+	
+	mark_seen_timeout = purple_timeout_add_seconds(1, hangouts_mark_conversation_seen_timeout, conv);
+	
+	purple_conversation_set_data(conv, "mark_seen_timeout", GINT_TO_POINTER(mark_seen_timeout));
 	
 	hangouts_set_active_client(pc);
 }

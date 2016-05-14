@@ -1455,6 +1455,8 @@ hangouts_chat_leave_by_conv_id(PurpleConnection *pc, const gchar *conv_id)
 	
 	hangouts_request_header_free(request.request_header);
 	hangouts_event_request_header_free(request.event_request_header);
+	
+	g_hash_table_remove(ha->group_chats, conv_id);
 }
 
 void 
@@ -1559,6 +1561,15 @@ hangouts_archive_conversation(HangoutsAccount *ha, const gchar *conv_id)
 	hangouts_pblite_modify_conversation_view(ha, &request, NULL, NULL);
 	
 	hangouts_request_header_free(request.request_header);
+	
+	if (g_hash_table_contains(ha->one_to_ones, conv_id)) {
+		gchar *buddy_id = g_hash_table_lookup(ha->one_to_ones, conv_id);
+		
+		g_hash_table_remove(ha->one_to_ones_rev, buddy_id);
+		g_hash_table_remove(ha->one_to_ones, conv_id);
+	} else {
+		g_hash_table_remove(ha->group_chats, conv_id);
+	}
 }
 
 void

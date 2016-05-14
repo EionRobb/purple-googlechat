@@ -100,4 +100,7 @@ typedef struct {
 } HangoutsAccount;
 
 
+
+gboolean hangouts_is_valid_id(const gchar *id);
+
 #endif /*_LIBHANGOUTS_H_*/

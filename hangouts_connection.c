@@ -787,10 +787,9 @@ hangouts_search_users_text_cb(PurpleHttpConnection *connection, PurpleHttpRespon
 }
 
 void
-hangouts_search_users_text(gpointer user_data, const gchar *text)
+hangouts_search_users_text(HangoutsAccount *ha, const gchar *text)
 {
 	PurpleHttpRequest *request;
-	HangoutsAccount *ha = user_data;
 	GString *url = g_string_new("https://people-pa.clients6.google.com/v2/people/autocomplete?");
 	PurpleHttpConnection *connection;
 	

@@ -42,6 +42,20 @@
 /*****************************************************************************/
 //TODO move to nicer place
 
+gboolean
+hangouts_is_valid_id(const gchar *id)
+{
+	gint i;
+	
+	for (i = strlen(id) - 1; i >= 0; i--) {
+		if (!g_ascii_isdigit(id[i])) {
+			return FALSE;
+		}
+	}
+	
+	return TRUE;
+}
+
 PurpleMediaCaps
 hangouts_get_media_caps(PurpleAccount *account, const char *who)
 {

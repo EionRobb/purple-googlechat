@@ -1346,6 +1346,11 @@ const gchar *who, const gchar *message, PurpleMessageFlags flags)
 	ha = purple_connection_get_protocol_data(pc);
 	conv_id = g_hash_table_lookup(ha->one_to_ones_rev, who);
 	if (conv_id == NULL) {
+		if (G_UNLIKELY(!hangouts_is_valid_id(who))) {
+			hangouts_search_users_text(ha, who);
+			return -1;
+		}
+		
 		//We don't have any known conversations for this person
 		hangouts_create_conversation(ha, TRUE, who, message);
 	}

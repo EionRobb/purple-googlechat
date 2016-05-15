@@ -216,9 +216,6 @@ hangouts_pblite_media_media_session_add_cb(HangoutsAccount *ha, MediaSessionAddR
 					case PROTOCOL__SSLTCP:
 #if PURPLE_VERSION_CHECK(3, 0, 0)
 						network_protocol = PURPLE_MEDIA_NETWORK_PROTOCOL_TCP_ACTIVE;
-#elif PURPLE_VERSION_CHECK(2, 10, 12)
-						// Handle ABI breakage in 2.10.12 - needs to have the same enum value as _TCP;
-						network_protocol = PURPLE_MEDIA_NETWORK_PROTOCOL_TCP_PASSIVE;
 #else
 						network_protocol = PURPLE_MEDIA_NETWORK_PROTOCOL_TCP;
 #endif

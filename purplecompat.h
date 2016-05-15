@@ -20,7 +20,7 @@
 
 #define purple_chat_user_set_alias(cb, alias)  g_object_set((cb), "alias", (alias), NULL)
 
-#else
+#else /*!PURPLE_VERSION_CHECK(3, 0, 0)*/
 
 #include "connection.h"
 
@@ -119,6 +119,10 @@ purple_message_destroy(PurpleMessage *message)
 #define PURPLE_IM_TYPED		PURPLE_TYPED
 
 #define purple_media_set_protocol_data  purple_media_set_prpl_data
+#if	PURPLE_VERSION_CHECK(2, 10, 12)
+// Handle ABI breakage
+#	define PURPLE_MEDIA_NETWORK_PROTOCOL_TCP  PURPLE_MEDIA_NETWORK_PROTOCOL_TCP_PASSIVE
+#endif
 
 #undef purple_notify_error
 #define purple_notify_error(handle, title, primary, secondary, cpar)   \

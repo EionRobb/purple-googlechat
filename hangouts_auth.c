@@ -54,6 +54,8 @@ static gboolean bitlbee_password_funcs_loaded = FALSE;
 #	define dlopen(filename, flag)  GetModuleHandleA(filename)
 #	define dlsym(handle, symbol)   GetProcAddress(handle, symbol)
 #	define dlclose(handle)         FreeLibrary(handle)
+static gchar *last_dlopen_error = NULL;
+#	define dlerror()               (g_free(last_dlopen_error),last_dlopen_error=g_win32_error_message(GetLastError()))
 #else
 #	include <dlfcn.h>
 #endif
@@ -66,7 +68,10 @@ save_bitlbee_password(PurpleAccount *account, const gchar *password)
 	
 	if (bitlbee_password_funcs_loaded == FALSE) {
 		bitlbee_module = dlopen(NULL, 0);
-		g_return_if_fail(bitlbee_module);
+		if (bitlbee_module == NULL) {
+			purple_debug_error("hangouts", "Couldn't acquire address of bitlbee handle: %s\n", dlerror());
+			g_return_if_fail(bitlbee_module);
+		}
 		
 		bitlbee_purple_ic_by_pa = (gpointer) dlsym(bitlbee_module, "purple_ic_by_pa");
 		bitlbee_set_setstr = (gpointer) dlsym(bitlbee_module, "set_setstr");

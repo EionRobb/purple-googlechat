@@ -510,6 +510,7 @@ hangouts_send_media_and_codecs(PurpleMedia *media, gchar *sid, gchar *name, Hang
 	crypto_param.tag = 1;
 	
 	crypto_params = &crypto_param;
+	client_content.n_crypto_param = 1;
 	client_content.crypto_param = &crypto_params;
 	
 	purple_media_set_encryption_parameters(media,

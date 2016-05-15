@@ -23,6 +23,7 @@
 #include "hangouts_connection.h"
 #include "hangout_media.pb-c.h"
 
+#define SRTP_KEY_LEN 30
 
 gboolean hangouts_initiate_media(PurpleAccount *account, const gchar *who, PurpleMediaSessionType type);
 

@@ -134,6 +134,8 @@ typedef struct {
 	PurpleMedia *media;
 	gchar *who;
 	PurpleMediaSessionType type;
+	guchar *encryption_key;
+	guchar *decryption_key;
 } HangoutsMedia;
 
 static MediaType
@@ -275,29 +277,66 @@ hangouts_pblite_media_media_session_add_cb(HangoutsAccount *ha, MediaSessionAddR
 				remote_codecs_list = g_list_append(remote_codecs_list, purple_codec);
 			}
 			purple_media_set_remote_codecs(hangouts_media->media, "", hangouts_media->who, remote_codecs_list);
+			
+#if PURPLE_VERSION_CHECK(2, 10, 12) || PURPLE_VERSION_CHECK(3, 0, 0)
+			if (server_content->n_crypto_param > 0) {
+				MediaCryptoParams *crypto_param = server_content->crypto_param[0];
+				const gchar *crypto_algo;
+				gchar *key_encoded;
+				gsize key_len;
+				
+				switch(crypto_param->suite) {
+					case MEDIA_CRYPTO_SUITE__AES_CM_128_HMAC_SHA1_80:
+					default:
+						crypto_algo = "hmac-sha1-80";
+						break;
+					case MEDIA_CRYPTO_SUITE__AES_CM_128_HMAC_SHA1_32:
+						crypto_algo = "hmac-sha1-32";
+						break;
+				}
+				
+				key_encoded = crypto_param->key_params;
+				if (g_str_has_prefix(key_encoded, "inline:")) {
+					key_encoded += 7;
+				}
+				hangouts_media->decryption_key = purple_base64_decode(key_encoded, &key_len);
+				
+				purple_media_set_decryption_parameters(hangouts_media->media,
+						"", hangouts_media->who, "aes-128-icm", crypto_algo,
+						(gchar *)hangouts_media->decryption_key, key_len);
+			}
+#endif
 		}
 	}
 	
-	//response->resource[0]->server_content[0]->transport->candidate[]
-	//response->resource[0]->server_content[0]->codec[]
 }
 
 static void
-hangouts_media_candidates_prepared_cb(PurpleMedia *media, gchar *sid, gchar *name, HangoutsMedia *hangouts_media)
+hangouts_send_media_and_codecs(PurpleMedia *media, gchar *sid, gchar *name, HangoutsMedia *hangouts_media)
 {
 	MediaSessionAddRequest request;
 	MediaSession media_session;
 	MediaSession *media_sessions;
 	MediaContent client_content;
 	MediaContent *client_contents;
-	// See TODO later down
-	// MediaCryptoParams crypto_param;
-	// MediaCryptoParams *crypto_params;
 	MediaTransport transport;
 	MediaIceCandidate **ice_candidates;
-	gint n_ice_candidates;
+	guint n_ice_candidates;
 	GList *purple_candidates;
-	gint i;
+#if PURPLE_VERSION_CHECK(2, 10, 12) || PURPLE_VERSION_CHECK(3, 0, 0)
+	MediaCryptoParams crypto_param;
+	MediaCryptoParams *crypto_params;
+	gchar *hangouts_crypto_base64, *hangouts_crypto_key;
+#endif
+	guint i, j;
+	
+	GList *purple_codecs;
+	MediaCodec **codecs;
+	guint n_codecs;
+	PurpleMediaSessionType purple_media_type;
+	GList *purple_codec_params;
+	MediaCodecParam **params;
+	guint n_params;
 	
 	media_session_add_request__init(&request);
 	media_session__init(&media_session);
@@ -305,6 +344,7 @@ hangouts_media_candidates_prepared_cb(PurpleMedia *media, gchar *sid, gchar *nam
 	media_transport__init(&transport);
 	
 	// Prefer RFC ICE
+	transport.has_ice_version = TRUE;
 	transport.ice_version = ICE_VERSION__ICE_RFC_5245;
 	
 	purple_candidates = purple_media_get_local_candidates(media, sid, name);
@@ -383,13 +423,99 @@ hangouts_media_candidates_prepared_cb(PurpleMedia *media, gchar *sid, gchar *nam
 	
 	client_content.transport = &transport;
 	
-	//TODO generate a key
-	//media_crypto_params__init(&crypto_param);
-	//crypto_param.has_suite = TRUE;
-	//crypto_param.suite = MEDIA_CRYPTO_SUITE__AES_CM_128_HMAC_SHA1_80;
-	//crypto_param.key_params = 'inline:' random key
-	//crypto_params = &crypto_param;
-	//client_content.crypto_param = &crypto_params;
+	// -- CODECS --
+	purple_codecs = purple_media_get_codecs(media, sid);
+	n_codecs = g_list_length(purple_codecs);
+	codecs = g_new0(MediaCodec *, n_codecs);
+	for(i = 0; purple_codecs; purple_codecs = g_list_next(purple_codecs), i++) {
+		PurpleMediaCodec *purple_codec = purple_codecs->data;
+		MediaCodec *codec = codecs[i] = g_new0(MediaCodec, 1);
+		media_codec__init(codec);
+		
+		codec->has_payload_id = TRUE;
+		codec->payload_id = _purple_media_codec_get_id(purple_codec);
+		
+		codec->name = _purple_media_codec_get_encoding_name(purple_codec);
+		
+		g_object_get(purple_codec, "media-type", &purple_media_type, NULL);
+		codec->has_media_type = TRUE;
+		if (purple_media_type & PURPLE_MEDIA_VIDEO) {
+			codec->media_type = MEDIA_TYPE__MEDIA_TYPE_VIDEO;
+		} else if (purple_media_type & PURPLE_MEDIA_AUDIO) {
+			codec->media_type = MEDIA_TYPE__MEDIA_TYPE_AUDIO;
+		} else {
+			codec->has_media_type = FALSE;
+		}
+		
+		//codec.preference = ; not set
+		
+		codec->has_sample_rate = TRUE;
+		codec->sample_rate = _purple_media_codec_get_clock_rate(purple_codec);
+		
+		if (g_strcmp0(codec->name, "PCMA") == 0 ||
+			g_strcmp0(codec->name, "PCMU") == 0) {
+			//TODO is this needed?
+			codec->has_bit_rate = TRUE;
+			codec->bit_rate = 48000;
+		}
+		
+		codec->has_channel_count = TRUE;
+		codec->channel_count = _purple_media_codec_get_channels(purple_codec);
+		
+		purple_codec_params = _purple_media_codec_get_optional_parameters(purple_codec);
+		n_params = g_list_length(purple_codec_params);
+		params = g_new0(MediaCodecParam *, n_params);
+		for(j = 0; purple_codec_params; purple_codec_params = g_list_next(purple_codec_params), j++) {
+			PurpleKeyValuePair *param_info = purple_codec_params->data;
+			MediaCodecParam *param;
+			
+			if (g_strcmp0(param_info->key, "bitrate") == 0) {
+				codec->has_bit_rate = TRUE;
+				codec->bit_rate = atoi(param_info->value);
+				n_params--;
+				j--;
+				continue;
+			}
+			
+			param = params[j] = g_new0(MediaCodecParam, 1);
+			media_codec_param__init(param);
+			
+			param->key = param_info->key;
+			param->value = param_info->value;
+		}
+		codec->n_param = n_params;
+		codec->param = params;
+	}
+	
+	client_content.n_codec = n_codecs;
+	client_content.codec = codecs;
+	
+#if PURPLE_VERSION_CHECK(2, 10, 12) || PURPLE_VERSION_CHECK(3, 0, 0)
+	//Generate a SRTP key
+	g_free(hangouts_media->encryption_key);
+	hangouts_media->encryption_key = g_new0(guchar, SRTP_KEY_LEN);
+	for (i = 0; i < SRTP_KEY_LEN; i++) {
+		hangouts_media->encryption_key[i] = rand() & 0xff;
+	}
+	
+	media_crypto_params__init(&crypto_param);
+	crypto_param.has_suite = TRUE;
+	crypto_param.suite = MEDIA_CRYPTO_SUITE__AES_CM_128_HMAC_SHA1_80;
+	
+	hangouts_crypto_base64 = purple_base64_encode(hangouts_media->encryption_key, SRTP_KEY_LEN);
+	hangouts_crypto_key = g_strconcat("inline:", hangouts_crypto_base64, NULL);
+	crypto_param.key_params = hangouts_crypto_key;
+	
+	crypto_param.has_tag = TRUE;
+	crypto_param.tag = 1;
+	
+	crypto_params = &crypto_param;
+	client_content.crypto_param = &crypto_params;
+	
+	purple_media_set_encryption_parameters(media,
+			sid, "aes-128-icm", "hmac-sha1-80",
+			(gchar *)hangouts_media->encryption_key, SRTP_KEY_LEN);
+#endif
 	
 	client_contents = &client_content;
 	media_session.n_client_content = 1;
@@ -410,99 +536,7 @@ hangouts_media_candidates_prepared_cb(PurpleMedia *media, gchar *sid, gchar *nam
 		g_free(ice_candidates[i]);
 	}
 	g_free(ice_candidates);
-}
-
-static void
-hangouts_media_codecs_changed_cb(PurpleMedia *media, gchar *sid, HangoutsMedia *hangouts_media)
-{
-	MediaSessionAddRequest request;
-	MediaSession media_session;
-	MediaSession *media_sessions;
-	MediaContent client_content;
-	MediaContent *client_contents;
 	
-	GList *purple_codecs;
-	MediaCodec **codecs;
-	guint n_codecs;
-	guint i, j;
-	MediaType media_type;
-	GList *purple_codec_params;
-	MediaCodecParam **params;
-	guint n_params;
-	
-	media_session_add_request__init(&request);
-	media_session__init(&media_session);
-	media_content__init(&client_content);
-	
-	media_type = hangout_get_session_media_type(media, sid);
-	
-	purple_codecs = purple_media_get_codecs(media, sid);
-	n_codecs = g_list_length(purple_codecs);
-	codecs = g_new0(MediaCodec *, n_codecs);
-	for(i = 0; purple_codecs; purple_codecs = g_list_next(purple_codecs), i++) {
-		PurpleMediaCodec *purple_codec = purple_codecs->data;
-		MediaCodec *codec = codecs[i] = g_new0(MediaCodec, 1);
-		media_codec__init(codec);
-		
-		codec->has_payload_id = TRUE;
-		codec->payload_id = _purple_media_codec_get_id(purple_codec);
-		
-		codec->name = _purple_media_codec_get_encoding_name(purple_codec);
-		
-		codec->has_media_type = TRUE;
-		codec->media_type = media_type;
-		
-		//codec.preference = ; not set
-		
-		codec->has_sample_rate = TRUE;
-		codec->sample_rate = _purple_media_codec_get_clock_rate(purple_codec);
-		
-		if (g_strcmp0(codec->name, "PCMA") == 0 ||
-			g_strcmp0(codec->name, "PCMU") == 0) {
-			
-			codec->has_bit_rate = TRUE;
-			codec->bit_rate = 48000;
-		}
-		
-		codec->has_channel_count = TRUE;
-		codec->channel_count = _purple_media_codec_get_channels(purple_codec);
-		
-		purple_codec_params = _purple_media_codec_get_optional_parameters(purple_codec);
-		n_params = g_list_length(purple_codec_params);
-		params = g_new0(MediaCodecParam *, n_params);
-		for(j = 0; purple_codec_params; purple_codec_params = g_list_next(purple_codec_params), j++) {
-			PurpleKeyValuePair *param_info = purple_codec_params->data;
-			MediaCodecParam *param = params[j] = g_new0(MediaCodecParam, 1);
-			media_codec_param__init(param);
-			
-			param->key = param_info->key;
-			param->value = param_info->value;
-		}
-		codec->n_param = n_params;
-		codec->param = params;
-	}
-	
-	client_content.n_codec = n_codecs;
-	client_content.codec = codecs;
-	
-	//TODO is this correct?
-	//media_session.session_id = sid;
-	
-	client_contents = &client_content;
-	media_session.n_client_content = 1;
-	media_session.client_content = &client_contents;
-	
-	client_content.has_media_type = TRUE;
-	client_content.media_type = hangout_get_session_media_type(media, sid);
-	
-	media_sessions = &media_session;
-	request.n_resource = 1;
-	request.resource = &media_sessions;
-	request.request_header = hangouts_get_request_header(hangouts_media->ha);
-	
-	hangouts_pblite_media_media_session_add(hangouts_media->ha, &request, hangouts_pblite_media_media_session_add_cb, hangouts_media);
-	
-	hangouts_request_header_free(request.request_header);
 	for(i = 0; i < n_codecs; i++) {
 		for(j = 0; j < codecs[i]->n_param; j++) {
 			g_free(codecs[i]->param[j]);
@@ -511,9 +545,43 @@ hangouts_media_codecs_changed_cb(PurpleMedia *media, gchar *sid, HangoutsMedia *
 		g_free(codecs[i]);
 	}
 	g_free(codecs);
+	
+#if PURPLE_VERSION_CHECK(2, 10, 12) || PURPLE_VERSION_CHECK(3, 0, 0)
+	g_free(hangouts_crypto_base64);
+	g_free(hangouts_crypto_key);
+#endif
+}
+
+static void
+hangouts_media_codecs_changed_cb(PurpleMedia *media, gchar *sid, HangoutsMedia *hangouts_media)
+{
+	gchar *name;
+	if (!purple_media_codecs_ready(media, sid)) {
+		return;
+	}
+	
+	name = hangouts_media->who;
+	if (!purple_media_candidates_prepared(media, sid, name)) {
+		return;
+	}
+	
+	hangouts_send_media_and_codecs(media, sid, name, hangouts_media);
 }
 
 
+static void
+hangouts_media_candidates_prepared_cb(PurpleMedia *media, gchar *sid, gchar *name, HangoutsMedia *hangouts_media)
+{
+	if (!purple_media_candidates_prepared(media, sid, name)) {
+		return;
+	}
+	
+	if (!purple_media_codecs_ready(media, sid)) {
+		return;
+	}
+	
+	hangouts_send_media_and_codecs(media, sid, name, hangouts_media);
+}
 
 static void
 hangouts_media_state_changed_cb(PurpleMedia *media, PurpleMediaState state, gchar *sid, gchar *name, HangoutsMedia *hangouts_media)

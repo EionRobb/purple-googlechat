@@ -59,7 +59,7 @@ hangouts_is_valid_id(const gchar *id)
 PurpleMediaCaps
 hangouts_get_media_caps(PurpleAccount *account, const char *who)
 {
-	return PURPLE_MEDIA_CAPS_AUDIO | PURPLE_MEDIA_CAPS_AUDIO_VIDEO | PURPLE_MEDIA_CAPS_MODIFY_SESSION;
+	return PURPLE_MEDIA_CAPS_AUDIO | PURPLE_MEDIA_CAPS_VIDEO | PURPLE_MEDIA_CAPS_AUDIO_VIDEO | PURPLE_MEDIA_CAPS_MODIFY_SESSION;
 }
 
 void

@@ -668,6 +668,12 @@ hangouts_pblite_media_hangout_resolve_cb(HangoutsAccount *ha, HangoutResolveResp
 				 purple_media_end lead to cleaning up Jingle structs?) */
 		return;
 	}
+
+	if (!purple_media_set_send_rtcp_mux(media, "hangout",
+			hangouts_media->who, TRUE)) {
+		purple_debug_warning("hangouts",
+				"Unable to set rtcp mux on stream");
+	}
 	
 	//Add self to hangout
 	{

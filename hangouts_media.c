@@ -308,7 +308,10 @@ hangouts_pblite_media_media_session_add_cb(HangoutsAccount *ha, MediaSessionAddR
 #endif
 		}
 	}
-	
+
+	// TODO: Find a better place for this?
+	purple_media_stream_info(hangouts_media->media,
+			PURPLE_MEDIA_INFO_ACCEPT, NULL, NULL, FALSE);
 }
 
 static void
@@ -337,6 +340,12 @@ hangouts_send_media_and_codecs(PurpleMedia *media, gchar *sid, gchar *name, Hang
 	GList *purple_codec_params;
 	MediaCodecParam **params;
 	guint n_params;
+
+	if (purple_media_accepted(media, NULL, NULL)) {
+		purple_debug_info("hangouts",
+				"Don't send session add request again.");
+		return;
+	}
 	
 	media_session_add_request__init(&request);
 	media_session__init(&media_session);

@@ -236,7 +236,7 @@ hangouts_pblite_media_media_session_add_cb(HangoutsAccount *ha, MediaSessionAddR
 				
 				remote_candidates_list = g_list_append(remote_candidates_list, purple_candidate);
 			}
-			purple_media_add_remote_candidates(hangouts_media->media, "", hangouts_media->who, remote_candidates_list);
+			purple_media_add_remote_candidates(hangouts_media->media, "hangout", hangouts_media->who, remote_candidates_list);
 			
 			for (k = 0; k < server_content->n_codec; k++) {
 				MediaCodec *codec = server_content->codec[k];
@@ -276,7 +276,7 @@ hangouts_pblite_media_media_session_add_cb(HangoutsAccount *ha, MediaSessionAddR
 				
 				remote_codecs_list = g_list_append(remote_codecs_list, purple_codec);
 			}
-			purple_media_set_remote_codecs(hangouts_media->media, "", hangouts_media->who, remote_codecs_list);
+			purple_media_set_remote_codecs(hangouts_media->media, "hangout", hangouts_media->who, remote_codecs_list);
 			
 #if PURPLE_VERSION_CHECK(2, 10, 12) || PURPLE_VERSION_CHECK(3, 0, 0)
 			if (server_content->n_crypto_param > 0) {
@@ -302,7 +302,7 @@ hangouts_pblite_media_media_session_add_cb(HangoutsAccount *ha, MediaSessionAddR
 				hangouts_media->decryption_key = purple_base64_decode(key_encoded, &key_len);
 				
 				purple_media_set_decryption_parameters(hangouts_media->media,
-						"", hangouts_media->who, "aes-128-icm", crypto_algo,
+						"hangout", hangouts_media->who, "aes-128-icm", crypto_algo,
 						(gchar *)hangouts_media->decryption_key, key_len);
 			}
 #endif

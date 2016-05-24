@@ -150,7 +150,11 @@ hangouts_json_path_query(JsonNode *root, const gchar *expr, GError **error)
 	}
 
 	result = json_node_get_array(node);
-
+	if (json_array_get_length(result) == 0) 
+	{
+		json_node_free(node);
+		return NULL;		
+	}
 	ret = json_array_dup_element(result, 0);
 	json_node_free(node);
 	return ret;

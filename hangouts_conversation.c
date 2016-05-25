@@ -1814,5 +1814,91 @@ hangouts_set_status(PurpleAccount *account, PurpleStatus *status)
 }
 
 
+static void
+hangouts_roomlist_got_list(HangoutsAccount *ha, SyncRecentConversationsResponse *response, gpointer user_data)
+{
+	PurpleRoomlist *roomlist = user_data;
+	guint i, j;
+	
+	for (i = 0; i < response->n_conversation_state; i++) {
+		ConversationState *conversation_state = response->conversation_state[i];
+		Conversation *conversation = conversation_state->conversation;
+		
+		if (conversation->type == CONVERSATION_TYPE__CONVERSATION_TYPE_GROUP) {
+			gchar *users = NULL;
+			gchar **users_set = g_new0(gchar *, conversation->n_participant_data + 1);
+			gchar *name = conversation->name;
+			PurpleRoomlistRoom *room = purple_roomlist_room_new(PURPLE_ROOMLIST_ROOMTYPE_ROOM, conversation->conversation_id->id, NULL);
+			
+			purple_roomlist_room_add_field(roomlist, room, conversation->conversation_id->id);
+			
+			for (j = 0; j < conversation->n_participant_data; j++) {
+				gchar *p_name = conversation->participant_data[j]->fallback_name;
+				if (p_name != NULL) {
+					users_set[j] = p_name;
+				} else {
+					users_set[j] = _("Unknown");
+				}
+			}
+			users = g_strjoinv(", ", users_set);
+			g_free(users_set);
+			purple_roomlist_room_add_field(roomlist, room, users);
+			g_free(users);
+			
+			purple_roomlist_room_add_field(roomlist, room, name);
+			
+			purple_roomlist_room_add(roomlist, room);
+		}
+	}
+	
+	purple_roomlist_set_in_progress(roomlist, FALSE);
+}
+
+PurpleRoomlist *
+hangouts_roomlist_get_list(PurpleConnection *pc)
+{
+	HangoutsAccount *ha = purple_connection_get_protocol_data(pc);
+	PurpleRoomlist *roomlist;
+	GList *fields = NULL;
+	PurpleRoomlistField *f;
+	
+	roomlist = purple_roomlist_new(ha->account);
+
+	f = purple_roomlist_field_new(PURPLE_ROOMLIST_FIELD_STRING, _("ID"), "chatname", TRUE);
+	fields = g_list_append(fields, f);
+
+	f = purple_roomlist_field_new(PURPLE_ROOMLIST_FIELD_STRING, _("Users"), "users", FALSE);
+	fields = g_list_append(fields, f);
+
+	f = purple_roomlist_field_new(PURPLE_ROOMLIST_FIELD_STRING, _("Name"), "name", FALSE);
+	fields = g_list_append(fields, f);
+
+	purple_roomlist_set_fields(roomlist, fields);
+	purple_roomlist_set_in_progress(roomlist, TRUE);
+	
+	{
+		//Stolen from hangouts_get_conversation_list()
+		SyncRecentConversationsRequest request;
+		SyncFilter sync_filter[1];
+		sync_recent_conversations_request__init(&request);
+		
+		request.request_header = hangouts_get_request_header(ha);
+		request.has_max_conversations = TRUE;
+		request.max_conversations = 100;
+		request.has_max_events_per_conversation = TRUE;
+		request.max_events_per_conversation = 1;
+		
+		sync_filter[0] = SYNC_FILTER__SYNC_FILTER_INBOX;
+		request.sync_filter = sync_filter;
+		request.n_sync_filter = 1;  // Back streets back, alright!
+		
+		hangouts_pblite_sync_recent_conversations(ha, &request, hangouts_roomlist_got_list, roomlist);
+		
+		hangouts_request_header_free(request.request_header);
+	}
+	
+	
+	return roomlist;
+}
 
 

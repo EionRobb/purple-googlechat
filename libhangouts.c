@@ -491,6 +491,12 @@ hangouts_protocol_media_iface_init(PurpleProtocolMediaIface *prpl_info)
 	prpl_info->initiate_session = hangouts_initiate_media;
 }
 
+static void 
+hangouts_protocol_roomlist_iface_init(PurpleProtocolRoomlistIface *prpl_info)
+{
+	prpl_info->get_list = hangouts_roomlist_get_list;
+}
+
 static PurpleProtocol *hangouts_protocol;
 
 PURPLE_DEFINE_TYPE_EXTENDED(
@@ -513,6 +519,9 @@ PURPLE_DEFINE_TYPE_EXTENDED(
 
 	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_MEDIA_IFACE,
 	                                  hangouts_protocol_media_iface_init)
+
+	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_ROOMLIST_IFACE,
+	                                  hangouts_protocol_roomlist_iface_init)
 );
 
 static gboolean
@@ -668,6 +677,8 @@ init_plugin(PurplePlugin *plugin)
 	
 	prpl_info->add_deny = hangouts_block_user;
 	prpl_info->rem_deny = hangouts_unblock_user;
+	
+	prpl_info->roomlist_get_list = hangouts_roomlist_get_list;
 	
 	info->extra_info = prpl_info;
 	#if PURPLE_MINOR_VERSION >= 5

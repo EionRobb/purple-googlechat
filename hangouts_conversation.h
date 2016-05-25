@@ -78,4 +78,6 @@ void hangouts_set_status(PurpleAccount *account, PurpleStatus *status);
 void hangouts_block_user(PurpleConnection *pc, const char *who);
 void hangouts_unblock_user(PurpleConnection *pc, const char *who);
 
+PurpleRoomlist *hangouts_roomlist_get_list(PurpleConnection *pc);
+
 #endif /*_HANGOUTS_CONVERSATION_H_*/

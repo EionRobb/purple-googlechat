@@ -705,6 +705,26 @@ hangouts_set_active_client(PurpleConnection *pc)
 
 
 void
+hangouts_search_results_send_im(PurpleConnection *pc, GList *row, void *user_data)
+{
+	PurpleAccount *account = purple_connection_get_account(pc);
+	const gchar *who = g_list_nth_data(row, 0);
+	PurpleIMConversation *imconv;
+	
+	imconv = purple_conversations_find_im_with_account(who, account);
+	if (imconv == NULL) {
+		imconv = purple_im_conversation_new(account, who);
+	}
+	purple_conversation_present(PURPLE_CONVERSATION(imconv));
+}
+
+void
+hangouts_search_results_get_info(PurpleConnection *pc, GList *row, void *user_data)
+{
+	hangouts_get_info(pc, g_list_nth_data(row, 0));
+}
+
+void
 hangouts_search_results_add_buddy(PurpleConnection *pc, GList *row, void *user_data)
 {
 	PurpleAccount *account = purple_connection_get_account(pc);
@@ -765,6 +785,8 @@ hangouts_search_users_text_cb(PurpleHttpConnection *connection, PurpleHttpRespon
 	purple_notify_searchresults_column_add(results, column);
 	
 	purple_notify_searchresults_button_add(results, PURPLE_NOTIFY_BUTTON_ADD, hangouts_search_results_add_buddy);
+	purple_notify_searchresults_button_add(results, PURPLE_NOTIFY_BUTTON_INFO, hangouts_search_results_get_info);
+	purple_notify_searchresults_button_add(results, PURPLE_NOTIFY_BUTTON_IM, hangouts_search_results_send_im);
 	
 	for(index = 0; index < length; index++)
 	{

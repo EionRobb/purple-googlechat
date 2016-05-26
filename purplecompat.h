@@ -13,6 +13,7 @@
 #define purple_circular_buffer_destroy  g_object_unref
 #define purple_hash_destroy             g_object_unref
 #define purple_message_destroy          g_object_unref
+#define purple_buddy_destroy            g_object_unref
 
 #define PURPLE_TYPE_STRING  G_TYPE_STRING
 
@@ -24,12 +25,13 @@
 
 #include "connection.h"
 
-#define purple_blist_find_buddy    purple_find_buddy
-#define purple_blist_find_group    purple_find_group
-#define PURPLE_IS_BUDDY            PURPLE_BLIST_NODE_IS_BUDDY
-#define PURPLE_IS_CHAT             PURPLE_BLIST_NODE_IS_CHAT
-#define purple_chat_get_name_only  purple_chat_get_name
-#define purple_chat_set_alias      purple_blist_alias_chat
+#define purple_blist_find_buddy        purple_find_buddy
+#define purple_blist_find_group        purple_find_group
+#define PURPLE_IS_BUDDY                PURPLE_BLIST_NODE_IS_BUDDY
+#define PURPLE_IS_CHAT                 PURPLE_BLIST_NODE_IS_CHAT
+#define purple_chat_get_name_only      purple_chat_get_name
+#define purple_chat_set_alias          purple_blist_alias_chat
+#define purple_buddy_set_server_alias  purple_blist_server_alias_buddy
 
 #define PURPLE_CMD_FLAG_PROTOCOL_ONLY  PURPLE_CMD_FLAG_PRPL_ONLY
 

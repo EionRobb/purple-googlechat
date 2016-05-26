@@ -219,6 +219,7 @@ hangouts_get_users_presence(HangoutsAccount *ha, GList *user_ids)
 	g_free(request.field_mask);
 }
 
+static void hangouts_got_buddy_photo(PurpleHttpConnection *connection, PurpleHttpResponse *response, gpointer user_data);
 
 static void
 hangouts_got_users_information(HangoutsAccount *ha, GetEntityByIdResponse *response, gpointer user_data)
@@ -235,6 +236,9 @@ hangouts_got_users_information(HangoutsAccount *ha, GetEntityByIdResponse *respo
 		gaia_id = entity->id ? entity->id->gaia_id : NULL;
 		
 		if (gaia_id != NULL && entity->properties) {
+			PurpleBuddy *buddy = purple_blist_find_buddy(ha->account, gaia_id);
+			
+			// Give a best-guess for the buddy's alias
 			if (entity->properties->display_name)
 				purple_serv_got_alias(ha->pc, gaia_id, entity->properties->display_name);
 			else if (entity->properties->canonical_email)
@@ -242,6 +246,24 @@ hangouts_got_users_information(HangoutsAccount *ha, GetEntityByIdResponse *respo
 			else if (entity->entity_type == PARTICIPANT_TYPE__PARTICIPANT_TYPE_OFF_NETWORK_PHONE
 			         && entity->properties->n_phone)
 				purple_serv_got_alias(ha->pc, gaia_id, entity->properties->phone[0]);
+			
+			// Set the buddy photo, if it's real
+			if (entity->properties->photo_url != NULL && entity->properties->photo_url_status == PHOTO_URL_STATUS__PHOTO_URL_STATUS_USER_PHOTO) {
+				gchar *photo = g_strconcat("https:", entity->properties->photo_url, NULL);
+				if (g_strcmp0(purple_buddy_icons_get_checksum_for_user(buddy), photo)) {
+					PurpleHttpRequest *photo_request = purple_http_request_new(photo);
+					
+					if (ha->icons_keepalive_pool == NULL) {
+						ha->icons_keepalive_pool = purple_http_keepalive_pool_new();
+						purple_http_keepalive_pool_set_limit_per_host(ha->icons_keepalive_pool, 4);
+					}
+					purple_http_request_set_keepalive_pool(photo_request, ha->icons_keepalive_pool);
+					
+					purple_http_request(ha->pc, photo_request, hangouts_got_buddy_photo, buddy);
+					purple_http_request_unref(photo_request);
+				}
+				g_free(photo);
+			}
 		}
 		
 		if (entity->entity_type == PARTICIPANT_TYPE__PARTICIPANT_TYPE_OFF_NETWORK_PHONE) {

@@ -647,7 +647,7 @@ hangouts_pblite_media_hangout_resolve_cb(HangoutsAccount *ha, HangoutResolveResp
 		return;
 	}
 	
-	hangouts_media->media = media;	
+	hangouts_media->media = media;
 	purple_media_set_protocol_data(media, hangouts_media);
 	
 	g_signal_connect(G_OBJECT(media), "candidates-prepared",
@@ -669,11 +669,12 @@ hangouts_pblite_media_hangout_resolve_cb(HangoutsAccount *ha, HangoutResolveResp
 		return;
 	}
 
-	if (!purple_media_set_send_rtcp_mux(media, "hangout",
-			hangouts_media->who, TRUE)) {
+#if PURPLE_VERSION_CHECK(2, 10, 12) || PURPLE_VERSION_CHECK(3, 0, 0)
+	if (!purple_media_set_send_rtcp_mux(media, "hangout", hangouts_media->who, TRUE)) {
 		purple_debug_warning("hangouts",
 				"Unable to set rtcp mux on stream");
 	}
+#endif
 	
 	//Add self to hangout
 	{

@@ -32,6 +32,19 @@
 #define purple_chat_get_name_only      purple_chat_get_name
 #define purple_chat_set_alias          purple_blist_alias_chat
 #define purple_buddy_set_server_alias  purple_blist_server_alias_buddy
+static inline void
+purple_blist_node_set_transient(PurpleBlistNode *node, gboolean transient)
+{
+	PurpleBlistNodeFlags old_flags = purple_blist_node_get_flags(node);
+	PurpleBlistNodeFlags new_flags;
+	
+	if (transient)
+		new_flags = old_flags | PURPLE_BLIST_NODE_FLAG_NO_SAVE;
+	else
+		new_flags = old_flags & ~PURPLE_BLIST_NODE_FLAG_NO_SAVE;
+	
+	purple_blist_node_set_flags(node, new_flags);
+}
 
 #define PURPLE_CMD_FLAG_PROTOCOL_ONLY  PURPLE_CMD_FLAG_PRPL_ONLY
 

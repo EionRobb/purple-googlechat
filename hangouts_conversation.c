@@ -406,6 +406,7 @@ hangouts_got_conversation_events(HangoutsAccount *ha, GetConversationResponse *r
 	PurpleChatConversation *chatconv;
 	guint i;
 	PurpleConversationUiOps *convuiops;
+	PurpleGroup *temp_group = NULL;
 	
 	g_return_if_fail(conversation);
 	conv_id = conversation->conversation_id->id;
@@ -453,9 +454,19 @@ hangouts_got_conversation_events(HangoutsAccount *ha, GetConversationResponse *r
 			
 			if (ui_update_sent == FALSE) {
 				// Bitlbee doesn't have the above two functions, lets do an even worse hack
-				PurpleBuddy *fakebuddy = purple_buddy_new(ha->account, gaia_id, NULL);
-				purple_buddy_set_server_alias(fakebuddy, participant_data->fallback_name);
-				purple_buddy_destroy(fakebuddy);
+				PurpleBuddy *fakebuddy;
+				if (temp_group == NULL) {
+					temp_group = purple_blist_find_group("Hangouts Temporary Chat Buddies");
+					if (!temp_group)
+					{
+						temp_group = purple_group_new("Hangouts Temporary Chat Buddies");
+						purple_blist_add_group(temp_group, NULL);
+					}
+				}
+				
+				fakebuddy = purple_buddy_new(ha->account, gaia_id, participant_data->fallback_name);
+				purple_blist_node_set_transient(PURPLE_BLIST_NODE(fakebuddy), TRUE);
+				purple_blist_add_buddy(fakebuddy, NULL, temp_group, NULL);
 			}
 		}
 	}

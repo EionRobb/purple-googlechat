@@ -60,6 +60,8 @@ static guint (*_purple_media_codec_get_channels)(PurpleMediaCodec *codec);
 static GList *(*_purple_media_codec_get_optional_parameters)(PurpleMediaCodec *codec);
 static PurpleMediaCodec *(*_purple_media_codec_new)(int id, const char *encoding_name, PurpleMediaSessionType media_type, guint clock_rate);
 static void (*_purple_media_codec_add_optional_parameter)(PurpleMediaCodec *codec, const gchar *name, const gchar *value);
+// media/backend-fs2.h
+static GType (*_purple_media_backend_fs2_get_type)(void);
 
 // Using dlopen() instead of GModule because I don't want another dep
 #ifdef _WIN32
@@ -97,6 +99,9 @@ hangouts_init_media_functions()
 			_purple_media_codec_new = (gpointer) dlsym(libpurple_module, "purple_media_codec_new");
 			_purple_media_codec_add_optional_parameter = (gpointer) dlsym(libpurple_module, "purple_media_codec_add_optional_parameter");
 			
+			// media/backend-fs2.h
+			_purple_media_backend_fs2_get_type = (gpointer) dlsym(libpurple_module, "purple_media_backend_fs2_get_type");
+			
 			purple_media_functions_initaliased = TRUE;
 		}
 	}
@@ -119,6 +124,7 @@ hangouts_init_media_functions()
 #define _purple_media_codec_get_optional_parameters  purple_media_codec_get_optional_parameters
 #define _purple_media_codec_new                      purple_media_codec_new
 #define _purple_media_codec_add_optional_parameter   purple_media_codec_add_optional_parameter
+#define _purple_media_backend_fs2_get_type           purple_media_backend_fs2_get_type
 
 static void
 hangouts_init_media_functions()
@@ -128,6 +134,72 @@ hangouts_init_media_functions()
 
 #endif /*PURPLE_VERSION_CHECK*/
 
+
+
+// This is a hack that lets us get at some private variables we need from farsight
+typedef struct _PurpleMediaBackendFs2Session
+{
+	gpointer backend;
+	gchar *id;
+	GObject *session;
+} PurpleMediaBackendFs2Session;
+
+typedef struct _PurpleMediaBackendFs2Private
+{
+	PurpleMedia *media;
+	gpointer confbin;
+	gpointer conference;
+	gchar *conference_type;
+
+	gpointer potential_sessions_1;
+	gpointer potential_sessions_2;
+} PurpleMediaBackendFs2Private;
+
+/*
+#define PURPLE_TYPE_MEDIA_BACKEND_FS2  (_purple_media_backend_fs2_get_type())
+#define PURPLE_MEDIA_BACKEND_FS2_GET_PRIVATE(obj) \
+		(G_TYPE_INSTANCE_GET_PRIVATE((obj), \
+		PURPLE_TYPE_MEDIA_BACKEND_FS2, PurpleMediaBackendFs2Private))
+*/
+		
+//TODO should this take in a session_id?
+GList *
+purple_media_get_session_ssrcs(PurpleMedia *media)
+{
+	PurpleMediaBackendFs2Private *priv;
+	PurpleMediaBackendFs2Session *session;
+	GList *session_ids = purple_media_get_session_ids(media);
+	GList *ssrcs = NULL;
+	GObject *purple_media_backend;
+	GHashTable *sessions;
+	
+	g_object_get(media, "backend", &purple_media_backend, NULL);
+	priv = G_TYPE_INSTANCE_GET_PRIVATE((purple_media_backend), G_OBJECT_TYPE(purple_media_backend), PurpleMediaBackendFs2Private);
+	//priv = PURPLE_MEDIA_BACKEND_FS2_GET_PRIVATE(purple_media_backend);
+	
+	// could be at either of these two points in the struct, depending on #define options
+	if (G_IS_OBJECT(priv->potential_sessions_1)) {
+		sessions = (GHashTable *) priv->potential_sessions_2;
+	} else {
+		sessions = (GHashTable *) priv->potential_sessions_1;
+	}
+	
+	if (sessions != NULL) {
+		for (; session_ids; session_ids = g_list_delete_link(session_ids, session_ids)) {
+			guint ssrc;
+			
+			session = g_hash_table_lookup(sessions, session_ids->data);
+			g_object_get(session->session, "ssrc", &ssrc, NULL);
+			
+			ssrcs = g_list_append(ssrcs, GINT_TO_POINTER(ssrc));
+		}
+	}
+	
+	return ssrcs;
+}
+// end giant hack
+
+
 typedef struct {
 	HangoutsAccount *ha;
 	gchar *hangout_id;
@@ -136,7 +208,25 @@ typedef struct {
 	PurpleMediaSessionType type;
 	guchar *encryption_key;
 	guchar *decryption_key;
+	gchar *hangout_cookie;
+	gchar *participant_id;
+	gchar *session_id;
 } HangoutsMedia;
+
+static void
+hangouts_media_destroy(HangoutsMedia *hangouts_media)
+{
+	purple_media_set_protocol_data(hangouts_media->media, NULL);
+	
+	g_free(hangouts_media->session_id);
+	g_free(hangouts_media->participant_id);
+	g_free(hangouts_media->encryption_key);
+	g_free(hangouts_media->decryption_key);
+	g_free(hangouts_media->hangout_cookie);
+	g_free(hangouts_media->hangout_id);
+	g_free(hangouts_media->who);
+	g_free(hangouts_media);
+}
 
 static MediaType
 hangout_get_session_media_type(PurpleMedia *media, gchar *sid) {
@@ -170,6 +260,8 @@ hangouts_pblite_media_media_session_add_cb(HangoutsAccount *ha, MediaSessionAddR
 	
 	for (i = 0; i < response->n_resource; i++) {
 		MediaSession *resource = response->resource[i];
+		hangouts_media->session_id = g_strdup(resource->session_id);
+		
 		for (j = 0; j < resource->n_server_content; j++) {
 			MediaContent *server_content = resource->server_content[j];
 			GList *remote_candidates_list = NULL;
@@ -616,6 +708,165 @@ hangouts_media_state_changed_cb(PurpleMedia *media, PurpleMediaState state, gcha
 	}
 }
 
+static void
+hangout_participant_add_cb(HangoutsAccount *ha, HangoutParticipantAddResponse *response, gpointer user_data)
+{
+	HangoutsMedia *hangouts_media = user_data;
+	
+	hangouts_media->hangout_cookie = g_strdup(response->sync_metadata->hangout_cookie->cookie);
+	hangouts_media->participant_id = g_strdup(response->resource[0]->participant_id);
+	
+	//Add remote to hangout
+	{
+		HangoutInvitationAddRequest invitation_request;
+		HangoutInvitation invitation;
+		HangoutInvitee invitee, *invitee_ptr = &invitee;
+		HangoutSharingTargetId sharing_target_id;
+		PersonId person_id;
+		
+		hangout_invitation_add_request__init(&invitation_request);
+		hangout_invitation__init(&invitation);
+		person_id__init(&person_id);
+		hangout_sharing_target_id__init(&sharing_target_id);
+		hangout_invitee__init(&invitee);
+		
+		invitation.hangout_id = hangouts_media->hangout_id;
+		person_id.user_id = hangouts_media->who;
+		sharing_target_id.person_id = &person_id;
+		invitee.invitee = &sharing_target_id;
+		invitation.n_invited_entity = 1;
+		invitation.invited_entity = &invitee_ptr;
+		invitation_request.invitation = &invitation;
+		invitation_request.request_header = hangouts_get_request_header(ha);
+		
+		hangouts_pblite_media_hangout_invitation_add(ha, &invitation_request, (HangoutsPbliteHangoutInvitationAddResponseFunc)hangouts_default_response_dump, NULL);
+		
+		hangouts_request_header_free(invitation_request.request_header);
+	}
+	
+	//Enable media source
+	{
+		MediaSourceAddRequest source_request;
+		size_t n_resource = 0;
+		MediaSource audio_media_source;
+		MediaSource video_media_source;
+		MuteState audio_mute_state;
+		MuteState video_mute_state;
+		VideoDetails video_details;
+		
+		media_source_add_request__init(&source_request);
+		source_request.request_header = hangouts_get_request_header(ha);
+		
+		if (hangouts_media->type & PURPLE_MEDIA_AUDIO) {
+			media_source__init(&audio_media_source);
+			
+			audio_media_source.hangout_id = hangouts_media->hangout_id;
+            audio_media_source.participant_id = hangouts_media->participant_id;
+            audio_media_source.source_id = "1"; //TODO
+			audio_media_source.has_media_type = TRUE;
+			audio_media_source.media_type = MEDIA_TYPE__MEDIA_TYPE_AUDIO;
+			
+			mute_state__init(&audio_mute_state);
+			audio_mute_state.muted = FALSE;
+			audio_media_source.mute_state = &audio_mute_state;
+			
+			source_request.resource[n_resource++] = &audio_media_source;
+		}
+		if (hangouts_media->type & PURPLE_MEDIA_VIDEO) {
+			media_source__init(&video_media_source);
+			
+			video_media_source.hangout_id = hangouts_media->hangout_id;
+            video_media_source.participant_id = hangouts_media->participant_id;
+            video_media_source.source_id = "2"; //TODO
+			video_media_source.has_media_type = TRUE;
+			video_media_source.media_type = MEDIA_TYPE__MEDIA_TYPE_VIDEO;
+			
+			mute_state__init(&video_mute_state);
+			video_mute_state.muted = FALSE;
+			video_media_source.mute_state = &video_mute_state;
+			
+			video_details__init(&video_details);
+			video_details.has_capture_type = TRUE;
+			video_details.capture_type = CAPTURE_TYPE__CAMERA; // could be a screencast
+			video_media_source.video_details = &video_details;
+			
+			source_request.resource[n_resource++] = &video_media_source;
+		}
+		
+		source_request.n_resource = n_resource;
+		
+		hangouts_pblite_media_media_source_add(ha, &source_request, (HangoutsPbliteMediaSourceAddResponseFunc)hangouts_default_response_dump, NULL);
+		
+		hangouts_request_header_free(source_request.request_header);
+	}
+	
+	// Send ssrc's
+	{
+		MediaStreamAddRequest stream_request;
+		size_t n_resource = 0;
+		MediaStream audio_media_stream;
+		MediaStream video_media_stream;
+		// Male otters are called dogs or boars, females are called bitches or sows, and their offspring are called pups.
+		MediaStreamOffer audio_stream_otter;
+		MediaStreamOffer video_stream_otter;
+		
+		if (hangouts_media->type & PURPLE_MEDIA_AUDIO) {
+			GList *ssrcs;
+			media_stream__init(&audio_media_stream);
+			media_stream_offer__init(&audio_stream_otter);
+			
+			audio_media_stream.has_direction = TRUE;
+			audio_media_stream.direction = MEDIA_STREAM_DIRECTION__MEDIA_STREAM_DIRECTION_UP;
+			audio_media_stream.has_media_type = TRUE;
+			audio_media_stream.media_type = MEDIA_TYPE__MEDIA_TYPE_AUDIO;
+			audio_media_stream.session_id = hangouts_media->session_id;
+			audio_media_stream.stream_id = "dogboarsowpup/1"; //TODO
+			audio_media_stream.hangout_id = hangouts_media->hangout_id;
+            audio_media_stream.participant_id = hangouts_media->participant_id;
+            audio_media_stream.source_id = "1"; //TODO
+			
+			ssrcs = purple_media_get_session_ssrcs(hangouts_media->media);
+			audio_stream_otter.ssrc = g_new0(uint32_t, g_list_length(ssrcs));
+			for(; ssrcs; ssrcs = g_list_delete_link(ssrcs, ssrcs)) {
+				audio_stream_otter.ssrc[audio_stream_otter.n_ssrc++] = GPOINTER_TO_INT(ssrcs->data);
+			}
+			
+			stream_request.resource[n_resource++] = &audio_media_stream;
+		}
+		
+		if (hangouts_media->type & PURPLE_MEDIA_VIDEO) {
+			GList *ssrcs;
+			media_stream__init(&video_media_stream);
+			media_stream_offer__init(&video_stream_otter);
+			
+			video_media_stream.has_direction = TRUE;
+			video_media_stream.direction = MEDIA_STREAM_DIRECTION__MEDIA_STREAM_DIRECTION_UP;
+			video_media_stream.has_media_type = TRUE;
+			video_media_stream.media_type = MEDIA_TYPE__MEDIA_TYPE_AUDIO;
+			video_media_stream.session_id = hangouts_media->session_id;
+			video_media_stream.stream_id = "dogboarsowpup/2"; //TODO
+			video_media_stream.hangout_id = hangouts_media->hangout_id;
+            video_media_stream.participant_id = hangouts_media->participant_id;
+            video_media_stream.source_id = "2"; //TODO
+			
+			ssrcs = purple_media_get_session_ssrcs(hangouts_media->media);
+			video_stream_otter.ssrc = g_new0(uint32_t, g_list_length(ssrcs));
+			for(; ssrcs; ssrcs = g_list_delete_link(ssrcs, ssrcs)) {
+				video_stream_otter.ssrc[video_stream_otter.n_ssrc++] = GPOINTER_TO_INT(ssrcs->data);
+			}
+			
+			stream_request.resource[n_resource++] = &video_media_stream;
+		}
+		
+		media_stream_add_request__init(&stream_request);
+		stream_request.request_header = hangouts_get_request_header(ha);
+		
+		hangouts_pblite_media_media_stream_add(ha, &stream_request, (HangoutsPbliteMediaStreamAddResponseFunc)hangouts_default_response_dump, NULL);
+		
+		hangouts_request_header_free(stream_request.request_header);
+	}
+}
+
 
 static void
 hangouts_pblite_media_hangout_resolve_cb(HangoutsAccount *ha, HangoutResolveResponse *response, gpointer user_data)
@@ -641,9 +892,7 @@ hangouts_pblite_media_hangout_resolve_cb(HangoutsAccount *ha, HangoutResolveResp
 	
 	if (media == NULL) {
 		//TODO do something else
-		g_free(hangouts_media->hangout_id);
-		g_free(hangouts_media->who);
-		g_free(hangouts_media);
+		hangouts_media_destroy(hangouts_media);
 		return;
 	}
 	
@@ -689,37 +938,9 @@ hangouts_pblite_media_hangout_resolve_cb(HangoutsAccount *ha, HangoutResolveResp
 		participant_request.resource = &participant_ptr;
 		participant_request.request_header = hangouts_get_request_header(ha);
 		
-		hangouts_pblite_media_hangout_participant_add(ha, &participant_request, (HangoutsPbliteHangoutParticipantAddResponseFunc)hangouts_default_response_dump, NULL);
+		hangouts_pblite_media_hangout_participant_add(ha, &participant_request, hangout_participant_add_cb, hangouts_media);
 		
 		hangouts_request_header_free(participant_request.request_header);
-	}
-	
-	//Add remote to hangout
-	{
-		HangoutInvitationAddRequest invitation_request;
-		HangoutInvitation invitation;
-		HangoutInvitee invitee, *invitee_ptr = &invitee;
-		HangoutSharingTargetId sharing_target_id;
-		PersonId person_id;
-		
-		hangout_invitation_add_request__init(&invitation_request);
-		hangout_invitation__init(&invitation);
-		person_id__init(&person_id);
-		hangout_sharing_target_id__init(&sharing_target_id);
-		hangout_invitee__init(&invitee);
-		
-		invitation.hangout_id = response->hangout_id;
-		person_id.user_id = hangouts_media->who;
-		sharing_target_id.person_id = &person_id;
-		invitee.invitee = &sharing_target_id;
-		invitation.n_invited_entity = 1;
-		invitation.invited_entity = &invitee_ptr;
-		invitation_request.invitation = &invitation;
-		invitation_request.request_header = hangouts_get_request_header(ha);
-		
-		hangouts_pblite_media_hangout_invitation_add(ha, &invitation_request, (HangoutsPbliteHangoutInvitationAddResponseFunc)hangouts_default_response_dump, NULL);
-		
-		hangouts_request_header_free(invitation_request.request_header);
 	}
 }
 

@@ -756,6 +756,7 @@ hangout_participant_add_cb(HangoutsAccount *ha, HangoutParticipantAddResponse *r
 		
 		media_source_add_request__init(&source_request);
 		source_request.request_header = hangouts_get_request_header(ha);
+		source_request.resource = g_new0(MediaSource *, 2);
 		
 		if (hangouts_media->type & PURPLE_MEDIA_AUDIO) {
 			media_source__init(&audio_media_source);
@@ -797,6 +798,7 @@ hangout_participant_add_cb(HangoutsAccount *ha, HangoutParticipantAddResponse *r
 		
 		hangouts_pblite_media_media_source_add(ha, &source_request, (HangoutsPbliteMediaSourceAddResponseFunc)hangouts_default_response_dump, NULL);
 		
+		g_free(source_request.resource);
 		hangouts_request_header_free(source_request.request_header);
 	}
 	
@@ -809,6 +811,10 @@ hangout_participant_add_cb(HangoutsAccount *ha, HangoutParticipantAddResponse *r
 		// Male otters are called dogs or boars, females are called bitches or sows, and their offspring are called pups.
 		MediaStreamOffer audio_stream_otter;
 		MediaStreamOffer video_stream_otter;
+		
+		media_stream_add_request__init(&stream_request);
+		stream_request.request_header = hangouts_get_request_header(ha);
+		stream_request.resource = g_new0(MediaStream *, 2);
 		
 		if (hangouts_media->type & PURPLE_MEDIA_AUDIO) {
 			GList *ssrcs;
@@ -858,11 +864,11 @@ hangout_participant_add_cb(HangoutsAccount *ha, HangoutParticipantAddResponse *r
 			stream_request.resource[n_resource++] = &video_media_stream;
 		}
 		
-		media_stream_add_request__init(&stream_request);
-		stream_request.request_header = hangouts_get_request_header(ha);
-		
 		hangouts_pblite_media_media_stream_add(ha, &stream_request, (HangoutsPbliteMediaStreamAddResponseFunc)hangouts_default_response_dump, NULL);
 		
+		g_free(audio_stream_otter.ssrc);
+		g_free(video_stream_otter.ssrc);
+		g_free(stream_request.resource);
 		hangouts_request_header_free(stream_request.request_header);
 	}
 }

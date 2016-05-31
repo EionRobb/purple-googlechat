@@ -400,7 +400,7 @@ hangouts_get_info(PurpleConnection *pc, const gchar *who)
 static void
 hangouts_got_conversation_events(HangoutsAccount *ha, GetConversationResponse *response, gpointer user_data)
 {
-	Conversation *conversation = response->conversation_state->conversation;
+	Conversation *conversation;
 	const gchar *conv_id;
 	PurpleConversation *conv;
 	PurpleChatConversation *chatconv;
@@ -408,7 +408,18 @@ hangouts_got_conversation_events(HangoutsAccount *ha, GetConversationResponse *r
 	PurpleConversationUiOps *convuiops;
 	PurpleGroup *temp_group = NULL;
 	
-	g_return_if_fail(conversation);
+	if (response->conversation_state == NULL) {
+		if (response->response_header->status == RESPONSE_STATUS__RESPONSE_STATUS_ERROR_INVALID_CONVERSATION) {
+			purple_notify_error(ha->pc, _("Invalid conversation"), _("This is not a valid conversation"), _("Please use the Room List to search for a valid conversation"), purple_request_cpar_from_connection(ha->pc));
+		} else {
+			purple_notify_error(ha->pc, _("Error"), _("An error occurred while fetching the history of the conversation"), NULL, purple_request_cpar_from_connection(ha->pc));
+		}
+		g_warn_if_reached();
+		return;
+	}
+	
+	conversation = response->conversation_state->conversation;
+	g_return_if_fail(conversation != NULL);
 	conv_id = conversation->conversation_id->id;
 	
 	//purple_debug_info("hangouts", "got conversation events %s\n", pblite_dump_json((ProtobufCMessage *)response));

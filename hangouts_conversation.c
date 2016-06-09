@@ -127,6 +127,7 @@ hangouts_got_self_info(HangoutsAccount *ha, GetSelfInfoResponse *response, gpoin
 	Entity *self_entity = response->self_entity;
 	PhoneData *phone_data = response->phone_data;
 	guint i;
+	const gchar *alias;
 	
 	g_return_if_fail(self_entity);
 	
@@ -134,6 +135,11 @@ hangouts_got_self_info(HangoutsAccount *ha, GetSelfInfoResponse *response, gpoin
 	ha->self_gaia_id = g_strdup(self_entity->id->gaia_id);
 	purple_connection_set_display_name(ha->pc, ha->self_gaia_id);
 	purple_account_set_string(ha->account, "self_gaia_id", ha->self_gaia_id);
+	
+	alias = purple_account_get_private_alias(ha->account);
+	if (alias == NULL || *alias == '\0') {
+		purple_account_set_private_alias(ha->account, self_entity->properties->display_name);
+	}
 	
 	if (phone_data != NULL) {
 		for (i = 0; i < phone_data->n_phone; i++) {

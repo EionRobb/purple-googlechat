@@ -91,7 +91,7 @@ hangouts_blist_node_removed(PurpleBlistNode *node)
 {
 	PurpleChat *chat = NULL;
 	PurpleBuddy *buddy = NULL;
-	PurpleAccount *account;
+	PurpleAccount *account = NULL;
 	PurpleConnection *pc;
 	const gchar *conv_id;
 	GHashTable *components;
@@ -102,6 +102,10 @@ hangouts_blist_node_removed(PurpleBlistNode *node)
 	} else if (PURPLE_IS_BUDDY(node)) {
 		buddy = PURPLE_BUDDY(node);
 		account = purple_buddy_get_account(buddy);
+	}
+	
+	if (account == NULL) {
+		return;
 	}
 	
 	if (g_strcmp0(purple_account_get_protocol_id(account), HANGOUTS_PLUGIN_ID)) {

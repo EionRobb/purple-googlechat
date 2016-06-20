@@ -1606,6 +1606,10 @@ hangouts_archive_conversation(HangoutsAccount *ha, const gchar *conv_id)
 	ModifyConversationViewRequest request;
 	ConversationId conversation_id;
 	
+	if (conv_id == NULL) {
+		return;
+	}
+	
 	modify_conversation_view_request__init(&request);
 	conversation_id__init(&conversation_id);
 	

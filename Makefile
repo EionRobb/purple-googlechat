@@ -99,16 +99,16 @@ hangouts-test.exe: $(TEST_C_FILES) $(PURPLE_COMPAT_FILES)
 	$(WIN32_CC) -o $@ -DDEBUG $^ $(WIN32_PIDGIN2_CFLAGS) $(WIN32_PIDGIN2_LDFLAGS) -Ipurple2compat
 
 install: $(HANGOUTS_TARGET) install-icons
-	cp $(HANGOUTS_TARGET) $(HANGOUTS_DEST)
+	install -p $(HANGOUTS_TARGET) $(HANGOUTS_DEST)
 
 install-icons: hangouts16.png hangouts22.png hangouts48.png
-	cp hangouts16.png $(HANGOUTS_ICONS_DEST)/16/hangouts.png
-	cp hangouts22.png $(HANGOUTS_ICONS_DEST)/22/hangouts.png
-	cp hangouts48.png $(HANGOUTS_ICONS_DEST)/48/hangouts.png
+	install hangouts16.png $(HANGOUTS_ICONS_DEST)/16/hangouts.png
+	install hangouts22.png $(HANGOUTS_ICONS_DEST)/22/hangouts.png
+	install hangouts48.png $(HANGOUTS_ICONS_DEST)/48/hangouts.png
 
 FAILNOPURPLE:
 	echo "You need libpurple development headers installed to be able to compile this plugin"
 
 clean:
-	rm -f $(HANGOUTS_TARGET) hangouts.pb-c.h hangouts.pb-c.c
+	rm -f $(HANGOUTS_TARGET) hangouts.pb-c.h hangouts.pb-c.c hangout_media.pb-c.h hangout_media.pb-c.c
 

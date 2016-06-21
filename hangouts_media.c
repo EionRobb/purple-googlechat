@@ -69,6 +69,7 @@ static GType (*_purple_media_backend_fs2_get_type)(void);
 #	define dlopen(filename, flag)  GetModuleHandleA(filename)
 #	define dlsym(handle, symbol)   GetProcAddress(handle, symbol)
 #	define dlclose(handle)         FreeLibrary(handle)
+#	define RTLD_LAZY               0x0001
 #else
 #	include <dlfcn.h>
 #endif
@@ -77,7 +78,7 @@ static void
 hangouts_init_media_functions()
 {	
 	if (purple_media_functions_initaliased == FALSE) {
-		libpurple_module = dlopen(NULL, 0);
+		libpurple_module = dlopen(NULL, RTLD_LAZY);
 		if (libpurple_module != NULL) {
 			// media/candidates.h
 			_purple_media_candidate_get_username = (gpointer) dlsym(libpurple_module, "purple_media_candidate_get_username");

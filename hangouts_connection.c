@@ -263,6 +263,7 @@ hangouts_set_auth_headers(HangoutsAccount *ha, PurpleHttpRequest *request)
 	purple_http_request_header_set(request, "X-Goog-AuthUser", "0");
 	
 	g_free(sapisid_cookie);
+	g_free(mstime_str);
 }
 
 
@@ -465,6 +466,7 @@ hangouts_send_maps(HangoutsAccount *ha, JsonArray *map_list, PurpleHttpCallback 
 	purple_http_request_set_contents(request, postdata->str, postdata->len);
 
 	purple_http_request(ha->pc, request, send_maps_callback, ha);
+	purple_http_request_unref(request);
 	
 	g_string_free(postdata, TRUE);
 	g_string_free(url, TRUE);	
@@ -573,6 +575,7 @@ PurpleHttpConnection *
 hangouts_client6_request(HangoutsAccount *ha, const gchar *path, HangoutsContentType request_type, const gchar *request_data, gssize request_len, HangoutsContentType response_type, PurpleHttpCallback callback, gpointer user_data)
 {
 	PurpleHttpRequest *request;
+	PurpleHttpConnection *connection;
 	const gchar *response_type_str;
 	
 	switch (response_type) {
@@ -608,7 +611,10 @@ hangouts_client6_request(HangoutsAccount *ha, const gchar *path, HangoutsContent
 	}
 	
 	hangouts_set_auth_headers(ha, request);
-	return purple_http_request(ha->pc, request, callback, user_data);
+	connection = purple_http_request(ha->pc, request, callback, user_data);
+	purple_http_request_unref(request);
+	
+	return connection;
 }
 
 void
@@ -827,6 +833,8 @@ hangouts_search_users_text(HangoutsAccount *ha, const gchar *text)
 	hangouts_set_auth_headers(ha, request);
 
 	connection = purple_http_request(ha->pc, request, hangouts_search_users_text_cb, ha);
+	purple_http_request_unref(request);
+	
 	g_dataset_set_data_full(connection, "search_term", g_strdup(text), g_free);
 	
 	g_string_free(url, TRUE);

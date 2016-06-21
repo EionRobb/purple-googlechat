@@ -155,6 +155,7 @@ hangouts_oauth_refresh_token(HangoutsAccount *ha)
 	purple_http_request_set_contents(request, postdata->str, postdata->len);
 
 	purple_http_request(pc, request, hangouts_oauth_refresh_token_cb, ha);
+	purple_http_request_unref(request);
 	
 	purple_debug_info("hangouts", "Postdata: %s\n", postdata->str);
 	
@@ -229,6 +230,7 @@ hangouts_oauth_with_code(HangoutsAccount *ha, const gchar *auth_code)
 	purple_http_request_set_contents(request, postdata->str, postdata->len);
 
 	purple_http_request(pc, request, hangouts_oauth_with_code_cb, ha);
+	purple_http_request_unref(request);
 	
 	g_string_free(postdata, TRUE);
 }
@@ -264,6 +266,8 @@ hangouts_auth_get_session_cookies_got_cb(PurpleHttpConnection *http_conn, Purple
 	//TODO trigger event instead
 	hangouts_get_self_info(ha);
 	hangouts_get_conversation_list(ha);
+	
+	g_free(sapisid_cookie);
 }
 
 static void
@@ -290,6 +294,7 @@ hangouts_auth_get_session_cookies_uberauth_cb(PurpleHttpConnection *http_conn, P
 	purple_http_request_set_max_redirects(request, 0);
 	
 	purple_http_request(ha->pc, request, hangouts_auth_get_session_cookies_got_cb, ha);
+	purple_http_request_unref(request);
 }
 
 void
@@ -303,4 +308,5 @@ hangouts_auth_get_session_cookies(HangoutsAccount *ha)
 	purple_http_request_header_set_printf(request, "Authorization", "Bearer %s", ha->access_token);
 
 	purple_http_request(ha->pc, request, hangouts_auth_get_session_cookies_uberauth_cb, ha);
+	purple_http_request_unref(request);
 }

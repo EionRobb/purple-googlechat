@@ -455,11 +455,15 @@ pblite_encode(ProtobufCMessage *message)
 				gchar *obj_id = g_strdup_printf("%u", field_descriptor->id);
 				json_object_set_member(cheats_object, obj_id, encoded_value);
 				g_free(obj_id);
+			} else {
+				json_node_free(encoded_value);
 			}
 		}
 	}
 	if (json_object_get_size(cheats_object)) {
 		json_array_add_object_element(pblite, cheats_object);
+	} else {
+		json_object_unref(cheats_object);
 	}
 	
 	return pblite;

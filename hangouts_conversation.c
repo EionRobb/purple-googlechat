@@ -775,6 +775,7 @@ hangouts_got_conversation_list(HangoutsAccount *ha, SyncRecentConversationsRespo
 {
 	guint i;
 	GHashTable *unique_user_ids = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, NULL);
+	GList *unique_user_ids_list;
 	
 	for (i = 0; i < response->n_conversation_state; i++) {
 		ConversationState *conversation_state = response->conversation_state[i];
@@ -785,8 +786,10 @@ hangouts_got_conversation_list(HangoutsAccount *ha, SyncRecentConversationsRespo
 	}
 	//todo mark the account as connected
 	
-	hangouts_get_users_presence(ha, g_hash_table_get_keys(unique_user_ids));
-	hangouts_get_users_information(ha, g_hash_table_get_keys(unique_user_ids));
+	unique_user_ids_list = g_hash_table_get_keys(unique_user_ids);
+	hangouts_get_users_presence(ha, unique_user_ids_list);
+	hangouts_get_users_information(ha, unique_user_ids_list);
+	g_list_free(unique_user_ids_list);
 	g_hash_table_unref(unique_user_ids);
 }
 
@@ -1289,6 +1292,7 @@ hangouts_conversation_send_image_part1_cb(PurpleHttpConnection *connection, Purp
 	purple_http_request_set_contents(request, purple_image_get_data(image), purple_image_get_size(image));
 	
 	new_connection = purple_http_request(ha->pc, request, hangouts_conversation_send_image_part2_cb, ha);
+	purple_http_request_unref(request);
 	
 	g_dataset_set_data_full(new_connection, "conv_id", g_strdup(conv_id), g_free);
 	
@@ -1322,6 +1326,7 @@ hangouts_conversation_send_image(HangoutsAccount *ha, const gchar *conv_id, Purp
 	purple_http_request_set_max_redirects(request, 0);
 	
 	connection = purple_http_request(ha->pc, request, hangouts_conversation_send_image_part1_cb, ha);
+	purple_http_request_unref(request);
 	
 	g_dataset_set_data_full(connection, "conv_id", g_strdup(conv_id), g_free);
 	g_dataset_set_data_full(connection, "image", image, NULL);

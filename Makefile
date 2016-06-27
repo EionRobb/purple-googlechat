@@ -99,9 +99,13 @@ hangouts-test.exe: $(TEST_C_FILES) $(PURPLE_COMPAT_FILES)
 	$(WIN32_CC) -o $@ -DDEBUG $^ $(WIN32_PIDGIN2_CFLAGS) $(WIN32_PIDGIN2_LDFLAGS) -Ipurple2compat
 
 install: $(HANGOUTS_TARGET) install-icons
+	mkdir -p $(HANGOUTS_DEST)
 	install -p $(HANGOUTS_TARGET) $(HANGOUTS_DEST)
 
 install-icons: hangouts16.png hangouts22.png hangouts48.png
+	mkdir -p $(HANGOUTS_ICONS_DEST)/16
+	mkdir -p $(HANGOUTS_ICONS_DEST)/22
+	mkdir -p $(HANGOUTS_ICONS_DEST)/48
 	install hangouts16.png $(HANGOUTS_ICONS_DEST)/16/hangouts.png
 	install hangouts22.png $(HANGOUTS_ICONS_DEST)/22/hangouts.png
 	install hangouts48.png $(HANGOUTS_ICONS_DEST)/48/hangouts.png

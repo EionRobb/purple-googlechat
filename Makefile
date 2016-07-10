@@ -10,6 +10,8 @@ WIN32_CC ?= $(WIN32_DEV_TOP)/mingw/bin/gcc
 PROTOC_C ?= protoc-c
 PKG_CONFIG ?= pkg-config
 
+CFLAGS	?= -O2 -g -pipe
+LDFLAGS ?= -Wl,-z,relro
 
 # Do some nasty OS and purple version detection
 ifeq ($(OS),Windows_NT)
@@ -84,10 +86,10 @@ hangout_media.pb-c.c: hangout_media.proto
 	$(PROTOC_C) --c_out=. hangout_media.proto
 
 libhangouts.so: $(PURPLE_C_FILES) $(PURPLE_COMPAT_FILES)
-	$(CC) -fPIC -shared -o $@ $^ $(PROTOBUF_OPTS) `$(PKG_CONFIG) purple glib-2.0 json-glib-1.0 --libs --cflags`  $(INCLUDES) -Ipurple2compat -g -ggdb
+	$(CC) -fPIC $(CFLAGS) -shared -o $@ $^ $(LDFLAGS) $(PROTOBUF_OPTS) `$(PKG_CONFIG) purple glib-2.0 json-glib-1.0 --libs --cflags`  $(INCLUDES) -Ipurple2compat -g -ggdb
 
 libhangouts3.so: $(PURPLE_C_FILES)
-	$(CC) -fPIC -shared -o $@ $^ $(PROTOBUF_OPTS) `$(PKG_CONFIG) purple-3 glib-2.0 json-glib-1.0 --libs --cflags` $(INCLUDES)  -g -ggdb
+	$(CC) -fPIC $(CFLAGS) -shared -o $@ $^ $(LDFLAGS) $(PROTOBUF_OPTS) `$(PKG_CONFIG) purple-3 glib-2.0 json-glib-1.0 --libs --cflags` $(INCLUDES)  -g -ggdb
 
 libhangouts.dll: $(PURPLE_C_FILES) $(PURPLE_COMPAT_FILES)
 	$(WIN32_CC) -shared -o $@ $^ $(WIN32_PIDGIN2_CFLAGS) $(WIN32_PIDGIN2_LDFLAGS) -Ipurple2compat

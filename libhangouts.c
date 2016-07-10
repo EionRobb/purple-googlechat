@@ -83,6 +83,9 @@ hangouts_add_account_options(GList *account_options)
 	option = purple_account_option_bool_new(N_("Show call links in chat"), "show-call-links", !purple_media_manager_get());
 	account_options = g_list_append(account_options, option);
 	
+	option = purple_account_option_bool_new(N_("Un-Googlify URLs"), "unravel_google_url", FALSE);
+	account_options = g_list_append(account_options, option);
+	
 	return account_options;
 }
 

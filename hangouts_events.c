@@ -572,7 +572,23 @@ hangouts_process_conversation_event(HangoutsAccount *ha, Conversation *conversat
 			} else if (segment->type == SEGMENT_TYPE__SEGMENT_TYPE_LINK) {
 				node = purple_xmlnode_new_child(html, "a");
 				if (segment->link_data) {
-					purple_xmlnode_set_attrib(node, "href", segment->link_data->link_target);
+					const gchar *href = segment->link_data->link_target;
+					purple_xmlnode_set_attrib(node, "href", href);
+					
+					// Strip out the www.google.com/url?q= bit
+					if (purple_account_get_bool(ha->account, "unravel_google_url", FALSE)) {
+						PurpleHttpURL *url = purple_http_url_parse(href);
+						if (purple_strequal(purple_http_url_get_host(url), "www.google.com")) {
+							const gchar *path = purple_http_url_get_path(url);
+							//apparently the path includes the query string
+							if (g_str_has_prefix(path, "/url?q=")) {
+								gchar *new_href = g_strndup(path + 7, strchr(path, '&') - path - 7);
+								purple_xmlnode_set_attrib(node, "href", purple_url_decode(new_href));
+								g_free(new_href);
+							}
+						}
+						purple_http_url_free(url);
+					}
 				}
 			} else {
 				continue;

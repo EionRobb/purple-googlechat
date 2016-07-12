@@ -1105,22 +1105,6 @@ hangouts_convert_html_to_segments(HangoutsAccount *ha, const gchar *html_message
 								last_link = purple_unescape_text(attrib);
 								g_free(attrib);
 								
-								// Strip out the www.google.com/url?q= bit
-								if (purple_account_get_bool(ha->account, "unravel_google_url", FALSE)) {
-									PurpleHttpURL *url = purple_http_url_parse(last_link);
-									if (purple_strequal(purple_http_url_get_host(url), "www.google.com")) {
-										const gchar *path = purple_http_url_get_path(url);
-										//apparently the path includes the query string
-										if (g_str_has_prefix(path, "/url?q=")) {
-											attrib = g_strndup(path + 7, path - strchr(path, '&') - 7);
-											g_free(last_link);
-											last_link = g_strdup(purple_url_decode(attrib));
-											g_free(attrib);
-										}
-									}
-									purple_http_url_free(url);
-								}
-								
 								c = href_end;
 								break;
 							}

@@ -867,8 +867,12 @@ hangout_participant_add_cb(HangoutsAccount *ha, HangoutParticipantAddResponse *r
 		
 		hangouts_pblite_media_media_stream_add(ha, &stream_request, (HangoutsPbliteMediaStreamAddResponseFunc)hangouts_default_response_dump, NULL);
 		
-		g_free(audio_stream_otter.ssrc);
-		g_free(video_stream_otter.ssrc);
+		if (hangouts_media->type & PURPLE_MEDIA_AUDIO) {
+			g_free(audio_stream_otter.ssrc);
+		}
+		if (hangouts_media->type & PURPLE_MEDIA_VIDEO) {
+			g_free(video_stream_otter.ssrc);
+		}
 		g_free(stream_request.resource);
 		hangouts_request_header_free(stream_request.request_header);
 	}

@@ -20,17 +20,18 @@ make && sudo make install
 ```
 
 ## Fedora ##
-On Fedora you can use [purple-hangouts](https://copr.fedorainfracloud.org/coprs/xvitaly/purple-hangouts/) COPR repository.
-
-At first time you should add COPR repository and enable it:
-```
-#!sh
-sudo dnf copr enable xvitaly/purple-hangouts
-```
-Now you can install packages:
+On Fedora you can install [package](https://apps.fedoraproject.org/packages/purple-hangouts) from Fedora's main repository:
 ```
 #!sh
 sudo dnf install purple-hangouts pidgin-hangouts
+```
+
+## CentOS/RHEL ##
+On CentOS/RHEL you can install [package](https://apps.fedoraproject.org/packages/purple-hangouts) from Fedora's [EPEL7](http://fedoraproject.org/wiki/EPEL) repository:
+
+```
+#!sh
+sudo yum install purple-hangouts pidgin-hangouts
 ```
 
 ## Building RPM package for Fedora/openSUSE/CentOS/RHEL ##

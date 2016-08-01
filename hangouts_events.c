@@ -267,7 +267,8 @@ hangouts_process_presence_result(HangoutsAccount *ha, PresenceResult *presence)
 		} else if (available) {
 			status_id = purple_primitive_get_id_from_type(PURPLE_STATUS_EXTENDED_AWAY);
 		} else {
-			status_id = purple_primitive_get_id_from_type(PURPLE_STATUS_OFFLINE);
+			// Hangouts contacts are never really unreachable, just invisible
+			status_id = purple_primitive_get_id_from_type(PURPLE_STATUS_INVISIBLE);
 		}
 	} else if (buddy == NULL) {
 		return;

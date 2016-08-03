@@ -64,8 +64,9 @@ void hangouts_get_users_presence(HangoutsAccount *ha, GList *user_ids);
 void hangouts_get_users_information(HangoutsAccount *ha, GList *user_ids);
 void hangouts_get_info(PurpleConnection *pc, const gchar *who);
 
-void hangouts_chat_leave_by_conv_id(PurpleConnection *pc, const gchar *conv_id);
+void hangouts_chat_leave_by_conv_id(PurpleConnection *pc, const gchar *conv_id, const gchar *who);
 void hangouts_chat_leave(PurpleConnection *pc, int id);
+void hangouts_chat_kick(PurpleConnection *pc, int id, const char *who);
 void hangouts_chat_invite(PurpleConnection *pc, int id, const char *message, const char *who);
 void hangouts_create_conversation(HangoutsAccount *ha, gboolean is_one_to_one, const char *who, const gchar *optional_message);
 void hangouts_archive_conversation(HangoutsAccount *ha, const gchar *conv_id);

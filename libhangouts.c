@@ -127,7 +127,7 @@ hangouts_blist_node_removed(PurpleBlistNode *node)
 			conv_id = purple_chat_get_name_only(chat);
 		}
 		
-		hangouts_chat_leave_by_conv_id(pc, conv_id);
+		hangouts_chat_leave_by_conv_id(pc, conv_id, NULL);
 	} else {
 		HangoutsAccount *ha = purple_connection_get_protocol_data(pc);
 		conv_id = g_hash_table_lookup(ha->one_to_ones_rev, purple_buddy_get_name(buddy));
@@ -149,6 +149,23 @@ hangouts_cmd_leave(PurpleConversation *conv, const gchar *cmd, gchar **args, gch
 		return PURPLE_CMD_RET_FAILED;
 	
 	hangouts_chat_leave(pc, id);
+	
+	return PURPLE_CMD_RET_OK;
+}
+
+static PurpleCmdRet
+hangouts_cmd_kick(PurpleConversation *conv, const gchar *cmd, gchar **args, gchar **error, void *data)
+{
+	PurpleConnection *pc = NULL;
+	int id = -1;
+	
+	pc = purple_conversation_get_connection(conv);
+	id = purple_chat_conversation_get_id(PURPLE_CHAT_CONVERSATION(conv));
+	
+	if (pc == NULL || id == -1)
+		return PURPLE_CMD_RET_FAILED;
+	
+	hangouts_chat_kick(pc, id, args[0]);
 	
 	return PURPLE_CMD_RET_OK;
 }
@@ -392,6 +409,11 @@ plugin_load(PurplePlugin *plugin, GError **error)
 						PURPLE_CMD_FLAG_PROTOCOL_ONLY | PURPLE_CMD_FLAG_ALLOW_WRONG_ARGS,
 						HANGOUTS_PLUGIN_ID, hangouts_cmd_leave,
 						_("leave:  Leave the group chat"), NULL);
+						
+	purple_cmd_register("kick", "s", PURPLE_CMD_P_PLUGIN, PURPLE_CMD_FLAG_CHAT |
+						PURPLE_CMD_FLAG_PROTOCOL_ONLY | PURPLE_CMD_FLAG_ALLOW_WRONG_ARGS,
+						HANGOUTS_PLUGIN_ID, hangouts_cmd_kick,
+						_("kick <user>:  Kick a user from the room."), NULL);
 	
 	return TRUE;
 }

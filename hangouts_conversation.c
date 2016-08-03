@@ -1501,16 +1501,25 @@ hangouts_send_typing(PurpleConnection *pc, const gchar *who, PurpleIMTypingState
 }
 
 void
-hangouts_chat_leave_by_conv_id(PurpleConnection *pc, const gchar *conv_id)
+hangouts_chat_leave_by_conv_id(PurpleConnection *pc, const gchar *conv_id, const gchar *who)
 {
 	HangoutsAccount *ha;
 	RemoveUserRequest request;
+	ParticipantId participant_id;
 	
 	g_return_if_fail(conv_id);
 	ha = purple_connection_get_protocol_data(pc);
 	g_return_if_fail(g_hash_table_contains(ha->group_chats, conv_id));
 	
 	remove_user_request__init(&request);
+	
+	if (who != NULL) {
+		participant_id__init(&participant_id);
+		
+		participant_id.gaia_id = (gchar *) who;
+		participant_id.chat_id = (gchar *) who; //XX do we need this?
+		request.participant_id = &participant_id;
+	}
 	
 	request.request_header = hangouts_get_request_header(ha);
 	request.event_request_header = hangouts_get_event_request_header(ha, conv_id);
@@ -1521,7 +1530,9 @@ hangouts_chat_leave_by_conv_id(PurpleConnection *pc, const gchar *conv_id)
 	hangouts_request_header_free(request.request_header);
 	hangouts_event_request_header_free(request.event_request_header);
 	
-	g_hash_table_remove(ha->group_chats, conv_id);
+	if (who == NULL) {
+		g_hash_table_remove(ha->group_chats, conv_id);
+	}
 }
 
 void 
@@ -1537,9 +1548,24 @@ hangouts_chat_leave(PurpleConnection *pc, int id)
 		conv_id = purple_conversation_get_name(PURPLE_CONVERSATION(chatconv));
 	}
 	
-	return hangouts_chat_leave_by_conv_id(pc, conv_id);
+	return hangouts_chat_leave_by_conv_id(pc, conv_id, NULL);
 }
 
+void
+hangouts_chat_kick(PurpleConnection *pc, int id, const gchar *who)
+{
+	const gchar *conv_id;
+	PurpleChatConversation *chatconv;
+	
+	chatconv = purple_conversations_find_chat(pc, id);
+	conv_id = purple_conversation_get_data(PURPLE_CONVERSATION(chatconv), "conv_id");
+	if (conv_id == NULL) {
+		// Fix for a race condition around the chat data and serv_got_joined_chat()
+		conv_id = purple_conversation_get_name(PURPLE_CONVERSATION(chatconv));
+	}
+	
+	return hangouts_chat_leave_by_conv_id(pc, conv_id, who);
+}
 
 static void 
 hangouts_created_conversation(HangoutsAccount *ha, CreateConversationResponse *response, gpointer user_data)

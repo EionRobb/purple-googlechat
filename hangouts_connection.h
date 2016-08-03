@@ -89,5 +89,8 @@ HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(remove_user, RemoveUser, "conversations/remo
 HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(update_watermark, UpdateWatermark, "conversations/updatewatermark");
 HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(set_active_client, SetActiveClient, "clients/setactiveclient");
 HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(get_entity_by_id, GetEntityById, "contacts/getentitybyid");
+HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(get_group_conversation_url, GetGroupConversationUrl, "conversations/getgroupconversationurl");
+HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(set_group_link_sharing_enabled, SetGroupLinkSharingEnabled, "conversations/setgrouplinksharingenabled");
+HANGOUTS_DEFINE_PBLITE_REQUEST_FUNC(open_group_conversation_from_url, OpenGroupConversationFromUrl, "conversations/opengroupconversationfromurl");
 
 #endif /*_HANGOUTS_CONNECTION_H_*/

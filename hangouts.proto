@@ -1478,6 +1478,17 @@ message ModifyConversationViewResponse {
   optional ResponseHeader response_header = 1;
 }
 
+message OpenGroupConversationFromUrlRequest {
+  optional RequestHeader request_header = 1;
+  // optional EventRequestHeader event_request_header = 2;
+  optional string url = 3;
+}
+
+message OpenGroupConversationFromUrlResponse {
+  optional ResponseHeader response_header = 1;
+  optional ConversationId conversation_id = 2;
+}
+
 message QueryPresenceRequest {
   optional RequestHeader request_header = 1;
   repeated ParticipantId participant_id = 2;

@@ -414,6 +414,8 @@ enum EventType {
   EVENT_TYPE_PLAN_MUTATION = 10;
   EVENT_TYPE_MMS = 11;
   EVENT_TYPE_DEPRECATED_12 = 12;
+  EVENT_TYPE_OBSERVED_EVENT = 13;
+  EVENT_TYPE_GROUP_LINK_SHARING_MODIFICATION = 14;
 }
 
 message HashModifier {
@@ -449,6 +451,7 @@ message Event {
   // Event version timestamp.
   optional uint64 event_version = 24;
   optional HashModifier hash_modifier = 26;
+  optional GroupLinkSharingModification group_link_sharing_modification = 31;
 }
 
 enum ConversationType {
@@ -576,6 +579,7 @@ message Conversation {
   repeated NetworkType network_type = 18;
   optional ForceHistory force_history_state = 19;
   optional bool is_group_link_sharing_enabled = 21;
+  optional GroupLinkSharingStatus group_link_sharing_status = 22;
 }
 
 message EasterEgg {
@@ -656,6 +660,8 @@ enum ClientId {
   // TODO work out what this is
   CLIENT_ID_SOMETHING = 34;
   CLIENT_ID_TEST_CLIENT = 35;
+  // Hangouts web app (https://hangouts.google.com).
+  CLIENT_ID_WEB_HANGOUTS = 44;
 }
 
 // Build type of the client.
@@ -1203,6 +1209,10 @@ message ConversationViewModification {
   optional ConversationView new_view = 3;
 }
 
+message GroupLinkSharingModification {
+  optional GroupLinkSharingStatus new_status = 1;
+}
+
 message EasterEggNotification {
   optional ParticipantId sender_id = 1;
   optional ConversationId conversation_id = 2;
@@ -1275,6 +1285,13 @@ enum OffnetworkAddressType {
 message OffnetworkAddress {
   optional OffnetworkAddressType type = 1;
   optional string email = 3;
+}
+
+enum GroupLinkSharingStatus {
+  GROUP_LINK_SHARING_STATUS_UNKNOWN = 0;
+  GROUP_LINK_SHARING_STATUS_ON = 1;
+  GROUP_LINK_SHARING_STATUS_OFF = 2;
+  GROUP_LINK_SHARING_STATUS_NOT_AVAILABLE = 3;
 }
 
 // ----------------------------------------------------------------------------
@@ -1366,6 +1383,17 @@ message GetEntityByIdResponse {
 message EntityResult {
   optional EntityLookupSpec lookup_spec = 1;
   repeated Entity entity = 2;
+}
+
+message GetGroupConversationUrlRequest {
+  optional RequestHeader request_header = 1;
+  optional ConversationId conversation_id = 2;
+}
+
+message GetGroupConversationUrlResponse {
+  optional ResponseHeader response_header = 1;
+  // URL for others to join the conversation.
+  optional string group_conversation_url = 2;
 }
 
 message GetSuggestedEntitiesRequest {
@@ -1589,6 +1617,23 @@ message SetFocusResponse {
   optional ResponseHeader response_header = 1;
   optional uint64 timestamp = 2;
 }
+
+message SetGroupLinkSharingEnabledRequest {
+  optional RequestHeader request_header = 1;
+  optional EventRequestHeader event_request_header = 2;
+  // New group link sharing status.
+  optional GroupLinkSharingStatus group_link_sharing_status = 4;
+
+}
+
+message SetGroupLinkSharingEnabledResponse {
+  optional ResponseHeader response_header = 1;
+  // Created event of type EVENT_TYPE_GROUP_LINK_SHARING_MODIFICATION.
+  optional Event created_event = 2;
+  // Updated conversation.
+  optional Conversation updated_conversation = 3;
+}
+
 
 // Allows setting one or more of the included presence-related settings.
 message SetPresenceRequest {

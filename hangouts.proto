@@ -233,6 +233,7 @@ message PlusPhoto {
   enum MediaType {
     MEDIA_TYPE_UNKNOWN = 0;
     MEDIA_TYPE_PHOTO = 1;
+    MEDIA_TYPE_VIDEO = 2;
     MEDIA_TYPE_ANIMATED_PHOTO = 4;
   }
 
@@ -252,7 +253,8 @@ message PlusPhoto {
   optional MediaType media_type = 13;
   // List of stream ID parameters.
   repeated string stream_id = 14;
-
+  // The download URL for a video
+  optional string download_url = 20;
 }
 
 // Place that can be embedded in a chat message via Google Maps.

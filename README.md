@@ -28,10 +28,19 @@ sudo dnf install purple-hangouts pidgin-hangouts
 
 ## CentOS/RHEL ##
 On CentOS/RHEL you can install [package](https://apps.fedoraproject.org/packages/purple-hangouts) from Fedora's [EPEL7](http://fedoraproject.org/wiki/EPEL) repository:
-
 ```
 #!sh
 sudo yum install purple-hangouts pidgin-hangouts
+```
+
+## Arch Linux ##
+On Arch Linux you can install a [package](https://aur.archlinux.org/packages/purple-hangouts-hg) from the [AUR](https://wiki.archlinux.org/index.php/Arch_User_Repository):
+```
+#!sh
+wget https://aur.archlinux.org/cgit/aur.git/snapshot/purple-hangouts-hg.tar.gz
+tar -xvf purple-hangouts-hg.tar.gz
+cd purple-hangouts-hg
+makepkg -sri
 ```
 
 ## Building RPM package for Fedora/openSUSE/CentOS/RHEL ##

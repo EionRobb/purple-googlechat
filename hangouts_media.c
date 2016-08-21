@@ -174,7 +174,7 @@ purple_media_get_session_ssrcs(PurpleMedia *media)
 	GObject *purple_media_backend;
 	GHashTable *sessions;
 	
-	g_return_if_fail(PURPLE_IS_MEDIA(media));
+	g_return_val_if_fail(PURPLE_IS_MEDIA(media), NULL);
 	
 	g_object_get(media, "backend", &purple_media_backend, NULL);
 	priv = G_TYPE_INSTANCE_GET_PRIVATE((purple_media_backend), G_OBJECT_TYPE(purple_media_backend), PurpleMediaBackendFs2Private);

@@ -668,6 +668,19 @@ hangouts_get_chat_name(GHashTable *data)
 }
 
 void
+hangouts_add_person_to_blist(HangoutsAccount *ha, gchar *gaia_id, gchar *alias)
+{
+	PurpleGroup *hangouts_group = purple_blist_find_group("Hangouts");
+	if (!hangouts_group)
+	{
+		hangouts_group = purple_group_new("Hangouts");
+		purple_blist_add_group(hangouts_group, NULL);
+	}
+	purple_blist_add_buddy(purple_buddy_new(ha->account, gaia_id, alias), NULL, hangouts_group, NULL);
+}
+
+
+void
 hangouts_add_conversation_to_blist(HangoutsAccount *ha, Conversation *conversation, GHashTable *unique_user_ids)
 {
 	PurpleGroup *hangouts_group = NULL;
@@ -698,15 +711,7 @@ hangouts_add_conversation_to_blist(HangoutsAccount *ha, Conversation *conversati
 		g_hash_table_replace(ha->one_to_ones_rev, g_strdup(other_person), g_strdup(conv_id));
 		
 		if (!purple_blist_find_buddy(ha->account, other_person)) {
-			if (hangouts_group == NULL) {
-				hangouts_group = purple_blist_find_group("Hangouts");
-				if (!hangouts_group)
-				{
-					hangouts_group = purple_group_new("Hangouts");
-					purple_blist_add_group(hangouts_group, NULL);
-				}
-			}
-			purple_blist_add_buddy(purple_buddy_new(ha->account, other_person, other_person_alias), NULL, hangouts_group, NULL);
+			hangouts_add_person_to_blist(ha, other_person, other_person_alias);
 		} else {
 			purple_serv_got_alias(ha->pc, other_person, other_person_alias);
 		}
@@ -760,6 +765,9 @@ hangouts_add_conversation_to_blist(HangoutsAccount *ha, Conversation *conversati
 		ConversationParticipantData *participant_data = conversation->participant_data[i];
 		
 		if (participant_data->participant_type != PARTICIPANT_TYPE__PARTICIPANT_TYPE_UNKNOWN) {
+			if (!purple_blist_find_buddy(ha->account, participant_data->id->gaia_id)) {
+				hangouts_add_person_to_blist(ha, participant_data->id->gaia_id, participant_data->fallback_name);
+			}
 			if (participant_data->fallback_name != NULL) {
 				purple_serv_got_alias(ha->pc, participant_data->id->gaia_id, participant_data->fallback_name);
 			}

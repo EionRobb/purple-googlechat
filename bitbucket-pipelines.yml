@@ -1,0 +1,8 @@
+# vi:et:ts=2 sw=2 sts=2
+image: pidgin/builder-debian:stretch
+pipelines:
+  default:
+    - step:
+        script:
+          - set -ex
+          - make -s -j$(nproc)

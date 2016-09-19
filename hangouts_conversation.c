@@ -1732,6 +1732,68 @@ hangouts_chat_invite(PurpleConnection *pc, int id, const char *message, const ch
 #define PURPLE_CONVERSATION_IS_VALID(conv) (g_list_find(purple_conversations_get_all(), conv) != NULL)
 
 gboolean
+hangouts_mark_conversation_focused_timeout(gpointer convpointer)
+{
+	PurpleConversation *conv = convpointer;
+	PurpleConnection *pc;
+	PurpleAccount *account;
+	HangoutsAccount *ha;
+	SetFocusRequest request;
+	ConversationId conversation_id;
+	const gchar *conv_id = NULL;
+	gboolean is_focused;
+	
+	if (!PURPLE_CONVERSATION_IS_VALID(conv))
+		return FALSE;
+	
+	account = purple_conversation_get_account(conv);
+	if (account == NULL || !purple_account_is_connected(account))
+		return FALSE;
+	
+	pc = purple_account_get_connection(account);
+	if (!PURPLE_CONNECTION_IS_CONNECTED(pc))
+		return FALSE;
+	
+	ha = purple_connection_get_protocol_data(pc);
+	
+	is_focused = purple_conversation_has_focus(conv);
+	if (is_focused && ha->last_conversation_focused == conv)
+		return FALSE;
+	
+	set_focus_request__init(&request);
+	request.request_header = hangouts_get_request_header(ha);
+	
+	conv_id = purple_conversation_get_data(conv, "conv_id");
+	if (conv_id == NULL) {
+		if (PURPLE_IS_IM_CONVERSATION(conv)) {
+			conv_id = g_hash_table_lookup(ha->one_to_ones_rev, purple_conversation_get_name(conv));
+		} else {
+			conv_id = purple_conversation_get_name(conv);
+		}
+	}
+	conversation_id__init(&conversation_id);
+	conversation_id.id = (gchar *) conv_id;
+	request.conversation_id = &conversation_id;
+	
+	if (is_focused) {
+		request.type = FOCUS_TYPE__FOCUS_TYPE_FOCUSED;
+		ha->last_conversation_focused = conv;
+	} else {
+		request.type = FOCUS_TYPE__FOCUS_TYPE_UNFOCUSED;
+		if (ha->last_conversation_focused == conv) {
+			ha->last_conversation_focused = NULL;
+		}
+	}
+	request.has_type = TRUE;
+	
+	hangouts_pblite_set_focus(ha, &request, (HangoutsPbliteSetFocusResponseFunc)hangouts_default_response_dump, NULL);
+	
+	hangouts_request_header_free(request.request_header);
+	
+	return FALSE;
+}
+
+gboolean
 hangouts_mark_conversation_seen_timeout(gpointer convpointer)
 {
 	PurpleConversation *conv = convpointer;
@@ -1745,6 +1807,8 @@ hangouts_mark_conversation_seen_timeout(gpointer convpointer)
 	gint64 *last_event_timestamp_ptr, last_event_timestamp = 0;
 	
 	if (!PURPLE_CONVERSATION_IS_VALID(conv))
+		return FALSE;
+	if (!purple_conversation_has_focus(conv))
 		return FALSE;
 	account = purple_conversation_get_account(conv);
 	if (account == NULL || !purple_account_is_connected(account))
@@ -1815,9 +1879,6 @@ hangouts_mark_conversation_seen(PurpleConversation *conv, PurpleConversationUpda
 	if (type != PURPLE_CONVERSATION_UPDATE_UNSEEN)
 		return;
 	
-	if (!purple_conversation_has_focus(conv))
-		return;
-	
 	pc = purple_conversation_get_connection(conv);
 	if (!PURPLE_CONNECTION_IS_CONNECTED(pc))
 		return;
@@ -1834,6 +1895,8 @@ hangouts_mark_conversation_seen(PurpleConversation *conv, PurpleConversationUpda
 	mark_seen_timeout = purple_timeout_add_seconds(1, hangouts_mark_conversation_seen_timeout, conv);
 	
 	purple_conversation_set_data(conv, "mark_seen_timeout", GINT_TO_POINTER(mark_seen_timeout));
+	
+	purple_timeout_add_seconds(1, hangouts_mark_conversation_focused_timeout, conv);
 	
 	hangouts_set_active_client(pc);
 }

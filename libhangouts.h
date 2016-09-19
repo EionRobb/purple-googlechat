@@ -82,6 +82,7 @@ typedef struct {
 	gchar *self_phone;
 	ActiveClientState active_client_state;
 	gint64 last_event_timestamp;
+	PurpleConversation *last_conversation_focused;
 	
 	GByteArray *channel_buffer;
 	guint channel_watchdog;

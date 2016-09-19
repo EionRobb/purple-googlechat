@@ -5,4 +5,6 @@ pipelines:
     - step:
         script:
           - set -ex
-          - make -s -j$(nproc)
+          - sudo apt-get install libpurple-dev libjson-glib-dev libglib2.0-dev libprotobuf-c-dev protobuf-c-compiler mercurial make;
+          - hg clone https://bitbucket.org/EionRobb/purple-hangouts/ && cd purple-hangouts;
+          - make && sudo make install

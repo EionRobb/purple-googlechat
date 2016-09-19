@@ -1,11 +1,10 @@
 # vi:et:ts=2 sw=2 sts=2
-image: pidgin/builder-debian:stretch
+image: pidgin/dev-2.x.y-debian:stretch
 pipelines:
   default:
     - step:
         script:
           - set -ex
           - apt-get update
-          - apt-get install -y libpurple-dev libjson-glib-dev libglib2.0-dev libprotobuf-c-dev protobuf-c-compiler mercurial make;
-          - hg clone https://bitbucket.org/EionRobb/purple-hangouts/ && cd purple-hangouts;
-          - make && make install
+          - apt-get install -y libprotobuf-c-dev protobuf-c-compiler libjson-glib-dev
+          - make

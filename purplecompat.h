@@ -20,6 +20,7 @@
 #define purple_protocol_action_get_connection(action)  ((action)->connection)
 
 #define purple_chat_user_set_alias(cb, alias)  g_object_set((cb), "alias", (alias), NULL)
+#define purple_chat_get_alias(chat)  g_object_get_data(G_OBJECT(chat), "alias")
 
 #else /*!PURPLE_VERSION_CHECK(3, 0, 0)*/
 
@@ -31,6 +32,7 @@
 #define PURPLE_IS_CHAT                 PURPLE_BLIST_NODE_IS_CHAT
 #define purple_chat_get_name_only      purple_chat_get_name
 #define purple_chat_set_alias          purple_blist_alias_chat
+#define purple_chat_get_alias(chat)    ((chat)->alias)
 #define purple_buddy_set_server_alias  purple_blist_server_alias_buddy
 static inline void
 purple_blist_node_set_transient(PurpleBlistNode *node, gboolean transient)

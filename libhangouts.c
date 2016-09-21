@@ -136,6 +136,64 @@ hangouts_blist_node_removed(PurpleBlistNode *node)
 	}
 }
 
+static void
+hangouts_blist_node_aliased(PurpleBlistNode *node, const char *old_alias)
+{
+	PurpleChat *chat = NULL;
+	PurpleAccount *account = NULL;
+	PurpleConnection *pc;
+	const gchar *conv_id;
+	GHashTable *components;
+	HangoutsAccount *ha;
+	
+	if (PURPLE_IS_CHAT(node)) {
+		chat = PURPLE_CHAT(node);
+		account = purple_chat_get_account(chat);
+	}
+	
+	if (account == NULL) {
+		return;
+	}
+	
+	if (g_strcmp0(purple_account_get_protocol_id(account), HANGOUTS_PLUGIN_ID)) {
+		return;
+	}
+	
+	pc = purple_account_get_connection(account);
+	if (pc == NULL) {
+		return;
+	}
+	ha = purple_connection_get_protocol_data(pc);
+	
+	if (chat != NULL) {
+		components = purple_chat_get_components(chat);
+		conv_id = g_hash_table_lookup(components, "conv_id");
+		if (conv_id == NULL) {
+			conv_id = purple_chat_get_name_only(chat);
+		}
+		
+		hangouts_rename_conversation(ha, conv_id, purple_chat_get_alias(chat));
+	}
+}
+
+static void
+hangouts_chat_set_topic(PurpleConnection *pc, int id, const char *topic)
+{
+	const gchar *conv_id;
+	PurpleChatConversation *chatconv;
+	HangoutsAccount *ha;
+	
+	ha = purple_connection_get_protocol_data(pc);
+	chatconv = purple_conversations_find_chat(pc, id);
+	conv_id = purple_conversation_get_data(PURPLE_CONVERSATION(chatconv), "conv_id");
+	if (conv_id == NULL) {
+		// Fix for a race condition around the chat data and serv_got_joined_chat()
+		conv_id = purple_conversation_get_name(PURPLE_CONVERSATION(chatconv));
+	}
+	
+	return hangouts_rename_conversation(ha, conv_id, topic);
+}
+
 static PurpleCmdRet
 hangouts_cmd_leave(PurpleConversation *conv, const gchar *cmd, gchar **args, gchar **error, void *data)
 {
@@ -285,6 +343,7 @@ hangouts_login(PurpleAccount *account)
 	}
 	
 	purple_signal_connect(purple_blist_get_handle(), "blist-node-removed", account, PURPLE_CALLBACK(hangouts_blist_node_removed), NULL);
+	purple_signal_connect(purple_blist_get_handle(), "blist-node-aliased", account, PURPLE_CALLBACK(hangouts_blist_node_aliased), NULL);
 	purple_signal_connect(purple_conversations_get_handle(), "conversation-updated", account, PURPLE_CALLBACK(hangouts_mark_conversation_seen), NULL);
 	
 	ha->active_client_timeout = purple_timeout_add_seconds(HANGOUTS_ACTIVE_CLIENT_TIMEOUT, ((GSourceFunc) hangouts_set_active_client), pc);
@@ -454,7 +513,7 @@ hangouts_protocol_init(PurpleProtocol *prpl_info)
 	info->id = HANGOUTS_PLUGIN_ID;
 	info->name = "Hangouts";
 
-	prpl_info->options = OPT_PROTO_NO_PASSWORD;
+	prpl_info->options = OPT_PROTO_NO_PASSWORD | OPT_PROTO_CHAT_TOPIC;
 	prpl_info->account_options = hangouts_add_account_options(prpl_info->account_options);
 	
 	purple_signal_register(plugin, "hangouts-received-stateupdate",
@@ -514,6 +573,7 @@ hangouts_protocol_chat_iface_init(PurpleProtocolChatIface *prpl_info)
 	prpl_info->join = hangouts_join_chat;
 	prpl_info->get_name = hangouts_get_chat_name;
 	prpl_info->invite = hangouts_chat_invite;
+	prpl_info->set_topic = hangouts_chat_set_topic;
 }
 
 static void 
@@ -672,7 +732,7 @@ init_plugin(PurplePlugin *plugin)
 		plugin->info = info = g_new0(PurplePluginInfo, 1);
 	}
 	
-	prpl_info->options = OPT_PROTO_NO_PASSWORD | OPT_PROTO_IM_IMAGE;
+	prpl_info->options = OPT_PROTO_NO_PASSWORD | OPT_PROTO_IM_IMAGE | OPT_PROTO_CHAT_TOPIC;
 	prpl_info->protocol_options = hangouts_add_account_options(prpl_info->protocol_options);
 	
 	purple_signal_register(plugin, "hangouts-received-stateupdate",
@@ -703,6 +763,7 @@ init_plugin(PurplePlugin *plugin)
 	prpl_info->join_chat = hangouts_join_chat;
 	prpl_info->get_chat_name = hangouts_get_chat_name;
 	prpl_info->chat_invite = hangouts_chat_invite;
+	prpl_info->set_chat_topic = hangouts_chat_set_topic;
 	
 	prpl_info->get_media_caps = hangouts_get_media_caps;
 	prpl_info->initiate_media = hangouts_initiate_media;

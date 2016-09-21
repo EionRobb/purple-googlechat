@@ -2067,4 +2067,20 @@ hangouts_roomlist_get_list(PurpleConnection *pc)
 	return roomlist;
 }
 
+void
+hangouts_rename_conversation(HangoutsAccount *ha, const gchar *conv_id, const gchar *alias)
+{
+	RenameConversationRequest request;
+	
+	rename_conversation_request__init(&request);
+	request.request_header = hangouts_get_request_header(ha);
+	request.event_request_header = hangouts_get_event_request_header(ha, conv_id);
+	
+	request.new_name = (gchar *) alias;
+	
+	hangouts_pblite_rename_conversation(ha, &request, NULL, NULL);
+	
+	hangouts_request_header_free(request.request_header);
+	hangouts_event_request_header_free(request.event_request_header);
+}
 

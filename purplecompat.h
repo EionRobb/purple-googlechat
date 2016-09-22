@@ -88,7 +88,6 @@ purple_blist_node_set_transient(PurpleBlistNode *node, gboolean transient)
 #define PURPLE_IS_IM_CONVERSATION(conv)       (purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_IM)
 #define PURPLE_IS_CHAT_CONVERSATION(conv)     (purple_conversation_get_type(conv) == PURPLE_CONV_TYPE_CHAT)
 #define purple_chat_conversation_add_user     purple_conv_chat_add_user
-#define purple_chat_conversation_find_user    purple_conv_chat_cb_find
 #define purple_chat_conversation_has_left     purple_conv_chat_has_left
 #define purple_chat_conversation_remove_user  purple_conv_chat_remove_user
 
@@ -126,8 +125,20 @@ purple_message_destroy(PurpleMessage *message)
 #define PURPLE_CHAT_USER_VOICE    PURPLE_CBFLAGS_VOICE
 #define PURPLE_CHAT_USER_TYPING   PURPLE_CBFLAGS_TYPING
 #define PurpleChatUser  PurpleConvChatBuddy
-#define purple_chat_user_get_flags(cb)     ((cb) == NULL ? PURPLE_CBFLAGS_NONE : (cb)->flags)
-#define purple_chat_user_set_flags(cb, f)  ((cb)->flags = (f))
+
+static inline PurpleChatUser *
+purple_chat_conversation_find_user(PurpleChatConversation *chat, const char *name)
+{
+	PurpleChatUser *cb = purple_conv_chat_cb_find(chat, name);
+	
+	if (cb != NULL) {
+		g_dataset_set_data(cb, "chat", chat);
+	}
+	
+	return cb;
+}
+#define purple_chat_user_get_flags(cb)     purple_conv_chat_user_get_flags(g_dataset_get_data((cb), "chat"), (cb)->name)
+#define purple_chat_user_set_flags(cb, f)  purple_conv_chat_user_set_flags(g_dataset_get_data((cb), "chat"), (cb)->name, (f))
 #define purple_chat_user_set_alias(cb, a)  ((cb)->alias = (a))
 
 #define PurpleIMTypingState	PurpleTypingState

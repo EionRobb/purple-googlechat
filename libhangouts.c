@@ -666,11 +666,22 @@ PURPLE_PLUGIN_INIT(hangouts, plugin_query,
 void _purple_socket_init(void);
 void _purple_socket_uninit(void);
 
+// See workaround for purple_chat_conversation_find_user() in purplecompat.h
+static void
+hangouts_deleting_chat_buddy(PurpleConvChatBuddy *cb)
+{
+	if (g_dataset_get_data(cb, "chat") != NULL) {
+		g_dataset_destroy(cb);
+	}
+}
+
 static gboolean
 libpurple2_plugin_load(PurplePlugin *plugin)
 {
 	_purple_socket_init();
 	purple_http_init();
+	
+	purple_signal_connect(purple_conversations_get_handle(), "deleting-chat-buddy", plugin, PURPLE_CALLBACK(hangouts_deleting_chat_buddy), NULL);
 	
 	return plugin_load(plugin, NULL);
 }

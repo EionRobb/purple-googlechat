@@ -749,6 +749,18 @@ hangouts_process_conversation_event(HangoutsAccount *ha, Conversation *conversat
 		}
 	}
 	
+	if (conv_id && event->conversation_rename != NULL) {
+		ConversationRename *conversation_rename = event->conversation_rename;
+		PurpleChat *chat;
+		
+		if (g_hash_table_contains(ha->group_chats, conv_id)) {
+			chat = purple_blist_find_chat(ha->account, conv_id);
+			if (chat && g_strcmp0(purple_chat_get_alias(chat), conversation_rename->new_name)) {
+				purple_chat_set_alias(chat, conversation_rename->new_name);
+			}
+		}
+	}
+	
 	if (timestamp && conv_id) {
 		if (pconv == NULL) {
 			if (g_hash_table_contains(ha->one_to_ones, conv_id)) {

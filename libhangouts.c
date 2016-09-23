@@ -145,6 +145,7 @@ hangouts_blist_node_aliased(PurpleBlistNode *node, const char *old_alias)
 	const gchar *conv_id;
 	GHashTable *components;
 	HangoutsAccount *ha;
+	const gchar *new_alias;
 	
 	if (PURPLE_IS_CHAT(node)) {
 		chat = PURPLE_CHAT(node);
@@ -165,14 +166,23 @@ hangouts_blist_node_aliased(PurpleBlistNode *node, const char *old_alias)
 	}
 	ha = purple_connection_get_protocol_data(pc);
 	
+	if (g_dataset_get_data(ha, "ignore_set_alias")) {
+		return;
+	}
+	
 	if (chat != NULL) {
-		components = purple_chat_get_components(chat);
-		conv_id = g_hash_table_lookup(components, "conv_id");
-		if (conv_id == NULL) {
-			conv_id = purple_chat_get_name_only(chat);
-		}
+		new_alias = purple_chat_get_alias(chat);
 		
-		hangouts_rename_conversation(ha, conv_id, purple_chat_get_alias(chat));
+		// Don't send update to existing update
+		if (g_strcmp0(old_alias, new_alias)) {
+			components = purple_chat_get_components(chat);
+			conv_id = g_hash_table_lookup(components, "conv_id");
+			if (conv_id == NULL) {
+				conv_id = purple_chat_get_name_only(chat);
+			}
+			
+			hangouts_rename_conversation(ha, conv_id, new_alias);
+		}
 	}
 }
 

@@ -756,7 +756,9 @@ hangouts_process_conversation_event(HangoutsAccount *ha, Conversation *conversat
 		if (g_hash_table_contains(ha->group_chats, conv_id)) {
 			chat = purple_blist_find_chat(ha->account, conv_id);
 			if (chat && g_strcmp0(purple_chat_get_alias(chat), conversation_rename->new_name)) {
+				g_dataset_set_data(ha, "ignore_set_alias", "true");
 				purple_chat_set_alias(chat, conversation_rename->new_name);
+				g_dataset_set_data(ha, "ignore_set_alias", NULL);
 			}
 		}
 	}

@@ -296,6 +296,7 @@ pblite_decode_element(ProtobufCMessage *message, guint index, JsonNode *value)
 		guint j;
 		size_t siz;
 		size_t array_len;
+		void *tmp;
 		
 		array_len = json_array_get_length(value_array);
 #ifdef DEBUG
@@ -305,7 +306,7 @@ pblite_decode_element(ProtobufCMessage *message, guint index, JsonNode *value)
 		//see protobuf-c.c:3068
 		siz = sizeof_elt_in_repeated_array(field->type);
 		STRUCT_MEMBER(size_t, message, field->quantifier_offset) = array_len;
-		STRUCT_MEMBER(void *, message, field->offset) = g_malloc0(siz * array_len);
+		STRUCT_MEMBER(void *, message, field->offset) = tmp = g_malloc0(siz * array_len);
 		
 		for (j = 0; j < array_len; j++) {
 #ifdef DEBUG
@@ -314,7 +315,10 @@ pblite_decode_element(ProtobufCMessage *message, guint index, JsonNode *value)
 			}
 #endif
 			success = pblite_decode_field(field, json_array_get_element(value_array, j), STRUCT_MEMBER(void *, message, field->offset) + (siz * j));
-			g_return_val_if_fail(success, FALSE);
+			if (!success) {
+				g_free(tmp);
+				g_return_val_if_fail(success, FALSE);
+			}
 		}
 	} else {
 		success = pblite_decode_field(field, value, STRUCT_MEMBER_P(message, field->offset));
@@ -369,8 +373,9 @@ pblite_decode(ProtobufCMessage *message, JsonArray *pblite_array, gboolean ignor
 	if (last_element_is_object) {
 		JsonObject *last_object = json_array_get_object_element(pblite_array, len);
 		GList *members = json_object_get_members(last_object);
-		for (; members != NULL; members = members->next) {
-			const gchar *member_name = members->data;
+		GList *l;
+		for (l = members; l != NULL; l = l->next) {
+			const gchar *member_name = l->data;
 			guint64 member = g_ascii_strtoull(member_name, NULL, 0);
 			JsonNode *value = json_object_get_member(last_object, member_name);
 			
@@ -378,6 +383,7 @@ pblite_decode(ProtobufCMessage *message, JsonArray *pblite_array, gboolean ignor
 		
 			g_return_val_if_fail(success, FALSE);
 		}
+		g_list_free(members);
 	}
 	
 	return TRUE;

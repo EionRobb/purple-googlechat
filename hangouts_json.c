@@ -101,6 +101,7 @@ JsonArray *
 json_decode_array(const gchar *data, gssize len)
 {
 	JsonNode *root = json_decode(data, len);
+	JsonArray *ret;
 	
 	g_return_val_if_fail(root, NULL);
 	
@@ -109,14 +110,19 @@ json_decode_array(const gchar *data, gssize len)
 		json_node_free(root);
 		return NULL;
 	}
+
+	ret = json_node_dup_array(root);
+
+	json_node_free(root);
 	
-	return json_node_get_array(root);
+	return ret;
 }
 
 JsonObject *
 json_decode_object(const gchar *data, gssize len)
 {
 	JsonNode *root = json_decode(data, len);
+	JsonObject *ret;
 	
 	g_return_val_if_fail(root, NULL);
 	
@@ -126,7 +132,11 @@ json_decode_object(const gchar *data, gssize len)
 		return NULL;
 	}
 	
-	return json_node_get_object(root);
+	ret = json_node_dup_object(root);
+
+	json_node_free(root);
+
+	return ret;
 }
 
 

@@ -954,6 +954,8 @@ hangouts_got_buddy_list(PurpleHttpConnection *http_conn, PurpleHttpResponse *res
 		g_free(alias);
 		g_free(photo);
 	}
+
+	json_object_unref(obj);
 }
 
 void

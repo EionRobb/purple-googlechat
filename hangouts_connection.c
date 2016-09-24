@@ -453,14 +453,17 @@ hangouts_send_maps(HangoutsAccount *ha, JsonArray *map_list, PurpleHttpCallback 
 		for(i = 0; i < map_list_len; i++) {
 			JsonObject *obj = json_array_get_object_element(map_list, i);
 			GList *members = json_object_get_members(obj);
+			GList *l;
 			
-			for (; members != NULL; members = members->next) {
-				const gchar *member_name = members->data;
+			for (l = members; l != NULL; l = l->next) {
+				const gchar *member_name = l->data;
 				JsonNode *value = json_object_get_member(obj, member_name);
 				
 				g_string_append_printf(postdata, "req%u_%s=", i, purple_url_encode(member_name));
 				g_string_append_printf(postdata, "%s&", purple_url_encode(json_node_get_string(value)));
 			}
+
+			g_list_free(members);
 		}
 	}
 	purple_http_request_set_contents(request, postdata->str, postdata->len);

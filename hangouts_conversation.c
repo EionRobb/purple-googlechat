@@ -1470,12 +1470,30 @@ guint
 hangouts_send_typing(PurpleConnection *pc, const gchar *who, PurpleIMTypingState state)
 {
 	HangoutsAccount *ha;
+	PurpleConversation *conv;
+	
+	ha = purple_connection_get_protocol_data(pc);
+	conv = PURPLE_CONVERSATION(purple_conversations_find_im_with_account(who, purple_connection_get_account(pc)));
+	g_return_val_if_fail(conv, -1);
+	
+	return hangouts_conv_send_typing(conv, state, ha);
+}
+
+guint
+hangouts_conv_send_typing(PurpleConversation *conv, PurpleIMTypingState state, HangoutsAccount *ha)
+{
 	const gchar *conv_id;
 	SetTypingRequest request;
 	ConversationId conversation_id;
 	
-	ha = purple_connection_get_protocol_data(pc);
-	conv_id = g_hash_table_lookup(ha->one_to_ones_rev, who);
+	conv_id = purple_conversation_get_data(conv, "conv_id");
+	if (conv_id == NULL) {
+		if (PURPLE_IS_IM_CONVERSATION(conv)) {
+			conv_id = g_hash_table_lookup(ha->one_to_ones_rev, purple_conversation_get_name(conv));
+		} else {
+			conv_id = purple_conversation_get_name(conv);
+		}
+	}
 	g_return_val_if_fail(conv_id, -1); //TODO create new conversation for this new person
 	
 	set_typing_request__init(&request);

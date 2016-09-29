@@ -202,18 +202,20 @@ hangouts_get_users_presence(HangoutsAccount *ha, GList *user_ids)
 		participant_id__init(participant_id[i]);
 		
 		participant_id[i]->gaia_id = (gchar *) cur->data;
-		participant_id[i]->chat_id = (gchar *) cur->data; //XX do we need this?
 	}
 	
 	request.participant_id = participant_id;
 	request.n_participant_id = n_participant_id;
 	
-	request.n_field_mask = 4;
+	request.n_field_mask = 7;
 	request.field_mask = g_new0(FieldMask, request.n_field_mask);
-	request.field_mask[0] = FIELD_MASK__FIELD_MASK_AVAILABLE;
-	request.field_mask[1] = FIELD_MASK__FIELD_MASK_REACHABLE;
+	request.field_mask[0] = FIELD_MASK__FIELD_MASK_REACHABLE;
+	request.field_mask[1] = FIELD_MASK__FIELD_MASK_AVAILABLE;
 	request.field_mask[2] = FIELD_MASK__FIELD_MASK_MOOD;
-	request.field_mask[3] = FIELD_MASK__FIELD_MASK_LAST_SEEN;
+	request.field_mask[3] = FIELD_MASK__FIELD_MASK_LOCATION;
+	request.field_mask[4] = FIELD_MASK__FIELD_MASK_IN_CALL;
+	request.field_mask[5] = FIELD_MASK__FIELD_MASK_DEVICE;
+	request.field_mask[6] = FIELD_MASK__FIELD_MASK_LAST_SEEN;
 
 	hangouts_pblite_query_presence(ha, &request, hangouts_got_users_presence, NULL);
 	

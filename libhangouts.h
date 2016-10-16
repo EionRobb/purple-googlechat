@@ -68,6 +68,8 @@
 
 #define HANGOUTS_ACTIVE_CLIENT_TIMEOUT 120
 
+#define HANGOUTS_MAGIC_HALF_EIGHT_SLASH_ME_TYPE 4
+
 typedef struct {
 	PurpleAccount *account;
 	PurpleConnection *pc;

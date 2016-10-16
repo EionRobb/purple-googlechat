@@ -560,6 +560,16 @@ hangouts_process_conversation_event(HangoutsAccount *ha, Conversation *conversat
 		PurpleXmlNode *html = purple_xmlnode_new("html");
 		gchar *msg;
 		time_t message_timestamp;
+		
+		for (i = 0; i < chat_message->n_annotation; i++) {
+			EventAnnotation *annotation = chat_message->annotation[i];
+			
+			if (annotation->type == HANGOUTS_MAGIC_HALF_EIGHT_SLASH_ME_TYPE) {
+				//TODO strip name off the front of the first segment
+				purple_xmlnode_insert_data(html, "/me ", -1);
+				break;
+			}
+		}
 
 		for (i = 0; i < n_segments; i++) {
 			Segment *segment = segments[i];

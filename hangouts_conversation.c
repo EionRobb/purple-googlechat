@@ -1373,16 +1373,30 @@ hangouts_conversation_send_message(HangoutsAccount *ha, const gchar *conv_id, co
 {
 	SendChatMessageRequest request;
 	MessageContent message_content;
+	EventAnnotation event_annotation;
 	Segment **segments;
 	guint n_segments;
+	gchar *message_dup = g_strdup(message);
 	
 	//Check for any images to send first
-	hangouts_conversation_check_message_for_images(ha, conv_id, message);
+	hangouts_conversation_check_message_for_images(ha, conv_id, message_dup);
 	
 	send_chat_message_request__init(&request);
 	message_content__init(&message_content);
 	
-	segments = hangouts_convert_html_to_segments(ha, message, &n_segments);
+	if (purple_message_meify(message_dup, -1)) {
+		//TODO put purple_account_get_private_alias(sa->account) on the front
+		
+		event_annotation__init(&event_annotation);
+		event_annotation.has_type = TRUE;
+		event_annotation.type = HANGOUTS_MAGIC_HALF_EIGHT_SLASH_ME_TYPE;
+		
+		request.n_annotation = 1;
+		request.annotation = g_new0(EventAnnotation *, 1);
+		request.annotation[0] = &event_annotation;
+	}
+	
+	segments = hangouts_convert_html_to_segments(ha, message_dup, &n_segments);
 	message_content.segment = segments;
 	message_content.n_segment = n_segments;
 	

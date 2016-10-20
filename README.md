@@ -6,8 +6,8 @@ A replacement prpl for Hangouts in Pidgin/libpurple to support the proprietary p
 This plugin is written by [Eion Robb](http://eion.robbmob.com/blog/) and [Mike 'Maiku' Ruprecht](https://bitbucket.org/CMaiku/).
 Heavily inspired by the [hangups library](https://github.com/tdryer/hangups) by Tom Dryer (et. al.) using code from [Nakul Gulati](https://hg.pidgin.im/soc/2015/nakulgulati/main/) and protobufs from [Darryl Pogue](http://dpogue.ca/)
 
-## NEW: Getting a 400 "invalid scope" error? ##
-A known issue at the moment unfortunately, we're working to fix this but if you still have a working Hangouts on an existing version of Pidgin you can copy the access token out of the 'password' field in your ~/.purple/accounts.xml and paste that into the new accounts.xml while Pidgin is not running.
+## Getting a 400 "invalid scope" error? ##
+A known issue at the moment unfortunately.  Please follow the instructional video at https://www.youtube.com/watch?v=hlDhp-eNLMU to workaround the problem.  More info at [Issue #71](https://bitbucket.org/EionRobb/purple-hangouts/issues/71/cannot-authenticate-error-invalid_scope)
 
 ## Compiling ##
 To compile, just do the standard `make && sudo make install` dance.  You'll need development packages for libpurple, libjson-glib, glib and libprotobuf-c to be able to compile.

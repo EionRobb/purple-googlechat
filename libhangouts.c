@@ -412,6 +412,7 @@ hangouts_tooltip_text(PurpleBuddy *buddy, PurpleNotifyUserInfo *user_info, gbool
 	PurplePresence *presence;
 	PurpleStatus *status;
 	const gchar *message;
+	HangoutsBuddy *hbuddy;
 	
 	g_return_if_fail(buddy != NULL);
 	
@@ -424,6 +425,25 @@ hangouts_tooltip_text(PurpleBuddy *buddy, PurpleNotifyUserInfo *user_info, gbool
 		purple_notify_user_info_add_pair_html(user_info, _("Message"), message);
 	}
 	
+	hbuddy = purple_buddy_get_protocol_data(buddy);
+	if (hbuddy != NULL) {
+		if (hbuddy->last_seen != 0) {
+			const time_t last_seen = hbuddy->last_seen;
+			purple_notify_user_info_add_pair_html(user_info, _("Last seen"), purple_date_format_full(localtime(&last_seen)));
+		}
+		
+		if (hbuddy->in_call) {
+			purple_notify_user_info_add_pair_html(user_info, _("In call"), NULL);
+		}
+		
+		if (hbuddy->device_type) {
+			purple_notify_user_info_add_pair_html(user_info, _("Device Type"), 
+				hbuddy->device_type & HANGOUTS_DEVICE_TYPE_DESKTOP ? _("Desktop") :
+				hbuddy->device_type & HANGOUTS_DEVICE_TYPE_TABLET ? _("Tablet") :
+				hbuddy->device_type & HANGOUTS_DEVICE_TYPE_MOBILE ? _("Mobile") :
+				_("Unknown"));
+		}
+	}
 }
 
 GList *
@@ -468,6 +488,15 @@ hangouts_status_text(PurpleBuddy *buddy)
 	return g_markup_printf_escaped("%s", message);
 }
 
+static void
+hangouts_buddy_free(PurpleBuddy *buddy)
+{
+	HangoutsBuddy *hbuddy = purple_buddy_get_protocol_data(buddy);
+	
+	g_return_if_fail(hbuddy != NULL);
+	
+	g_free(hbuddy);
+}
 
 
 /*****************************************************************************/
@@ -551,6 +580,7 @@ hangouts_protocol_client_iface_init(PurpleProtocolClientIface *prpl_info)
 	prpl_info->blist_node_menu = hangouts_node_menu;
 	prpl_info->status_text = hangouts_status_text;
 	prpl_info->tooltip_text = hangouts_tooltip_text;
+	prpl_info->buddy_free = hangouts_buddy_free;
 }
 
 static void
@@ -770,6 +800,7 @@ init_plugin(PurplePlugin *plugin)
 	prpl_info->list_icon = hangouts_list_icon;
 	prpl_info->status_text = hangouts_status_text;
 	prpl_info->tooltip_text = hangouts_tooltip_text;
+	prpl_info->buddy_free = hangouts_buddy_free;
 	
 	prpl_info->get_info = hangouts_get_info;
 	prpl_info->set_status = hangouts_set_status;

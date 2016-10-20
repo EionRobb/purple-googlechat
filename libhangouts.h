@@ -103,6 +103,21 @@ typedef struct {
 } HangoutsAccount;
 
 
+typedef enum
+{
+    HANGOUTS_DEVICE_TYPE_UNKNOWN = 0x0000,
+    HANGOUTS_DEVICE_TYPE_MOBILE  = 0x0001,
+    HANGOUTS_DEVICE_TYPE_DESKTOP = 0x0002,
+    HANGOUTS_DEVICE_TYPE_TABLET  = 0x0004
+} HangoutsDeviceTypeFlags;
+
+typedef struct {
+	PurpleBuddy *buddy;
+	gboolean in_call;
+	gint64 last_seen;
+	HangoutsDeviceTypeFlags device_type;
+} HangoutsBuddy;
+
 
 gboolean hangouts_is_valid_id(const gchar *id);
 

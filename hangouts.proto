@@ -78,7 +78,8 @@ message DeviceStatus {
 }
 
 message LastSeen {
-  required uint64 last_seen_timestamp = 1;
+  required uint64 last_seen_timestamp = 1; //in microseconds
+  optional uint64 usec_since_last_seen = 2;
 }
 
 message Location {

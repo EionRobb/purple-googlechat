@@ -397,6 +397,33 @@ hangouts_process_presence_result(HangoutsAccount *ha, PresenceResult *presence_r
 	}
 	
 	g_free(message);
+	
+	if (buddy != NULL) {
+		HangoutsBuddy *hbuddy = purple_buddy_get_protocol_data(buddy);
+		HangoutsDeviceTypeFlags device_type = HANGOUTS_DEVICE_TYPE_UNKNOWN;
+		
+		if (hbuddy == NULL) {
+			hbuddy = g_new0(HangoutsBuddy, 1);
+			hbuddy->buddy = buddy;
+			purple_buddy_set_protocol_data(buddy, hbuddy);
+		}
+		
+		hbuddy->in_call = presence->in_call && presence->in_call->has_call_type && presence->in_call->call_type != CALL_TYPE__CALL_TYPE_NONE;
+		hbuddy->last_seen = presence->last_seen ? presence->last_seen->last_seen_timestamp / 1000000 : 0;
+		
+		if (presence->device_status) {
+			if (presence->device_status->mobile) {
+				device_type |= HANGOUTS_DEVICE_TYPE_MOBILE;
+			}
+			if (presence->device_status->desktop) {
+				device_type |= HANGOUTS_DEVICE_TYPE_DESKTOP;
+			}
+			if (presence->device_status->tablet) {
+				device_type |= HANGOUTS_DEVICE_TYPE_TABLET;
+			}
+		}
+		hbuddy->device_type = device_type;
+	}
 }
 
 void

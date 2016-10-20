@@ -627,6 +627,9 @@ hangouts_process_conversation_event(HangoutsAccount *ha, Conversation *conversat
 		msg = purple_xmlnode_to_str(html, NULL);
 		message_timestamp = time(NULL) - ((current_server_time - timestamp) / 1000000);
 		msg_flags = (g_strcmp0(gaia_id, ha->self_gaia_id) ? PURPLE_MESSAGE_RECV : PURPLE_MESSAGE_SEND);
+		if (((current_server_time - timestamp) / 1000000) < 30) {
+			msg_flags |= PURPLE_MESSAGE_NOTIFY;
+		}
 		
 		if (g_hash_table_contains(ha->group_chats, conv_id)) {
 			PurpleChatConversation *chatconv = purple_conversations_find_chat_with_account(conv_id, ha->account);

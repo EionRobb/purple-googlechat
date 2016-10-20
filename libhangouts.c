@@ -428,8 +428,9 @@ hangouts_tooltip_text(PurpleBuddy *buddy, PurpleNotifyUserInfo *user_info, gbool
 	hbuddy = purple_buddy_get_protocol_data(buddy);
 	if (hbuddy != NULL) {
 		if (hbuddy->last_seen != 0) {
-			const time_t last_seen = hbuddy->last_seen;
-			purple_notify_user_info_add_pair_html(user_info, _("Last seen"), purple_date_format_full(localtime(&last_seen)));
+			gchar *seen = purple_str_seconds_to_string(time(NULL) - hbuddy->last_seen);
+			purple_notify_user_info_add_pair_html(user_info, _("Last seen"), seen);
+			g_free(seen);
 		}
 		
 		if (hbuddy->in_call) {

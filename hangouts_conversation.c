@@ -1498,9 +1498,22 @@ hangouts_send_typing(PurpleConnection *pc, const gchar *who, PurpleIMTypingState
 guint
 hangouts_conv_send_typing(PurpleConversation *conv, PurpleIMTypingState state, HangoutsAccount *ha)
 {
+	PurpleConnection *pc;
 	const gchar *conv_id;
 	SetTypingRequest request;
 	ConversationId conversation_id;
+	
+	pc = ha ? ha->pc : purple_conversation_get_connection(conv);
+	
+	if (!PURPLE_CONNECTION_IS_CONNECTED(pc))
+		return 0;
+	
+	if (g_strcmp0(purple_protocol_get_id(purple_connection_get_protocol(pc)), HANGOUTS_PLUGIN_ID))
+		return 0;
+	
+	if (ha == NULL) {
+		ha = purple_connection_get_protocol_data(pc);
+	}
 	
 	conv_id = purple_conversation_get_data(conv, "conv_id");
 	if (conv_id == NULL) {

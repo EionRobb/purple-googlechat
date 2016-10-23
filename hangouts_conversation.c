@@ -47,7 +47,7 @@ hangouts_get_request_header(HangoutsAccount *ha)
 	}
 	
 	version->has_client_id = TRUE;
-	version->client_id = CLIENT_ID__CLIENT_ID_ANDROID;
+	version->client_id = CLIENT_ID__CLIENT_ID_WEB_HANGOUTS;
 	
 	header->client_version = version;
 	

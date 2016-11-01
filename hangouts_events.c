@@ -398,7 +398,7 @@ hangouts_process_presence_result(HangoutsAccount *ha, PresenceResult *presence_r
 	
 	g_free(message);
 	
-	if (buddy != NULL) {
+	if (buddy != NULL && presence != NULL) {
 		HangoutsBuddy *hbuddy = purple_buddy_get_protocol_data(buddy);
 		HangoutsDeviceTypeFlags device_type = HANGOUTS_DEVICE_TYPE_UNKNOWN;
 		

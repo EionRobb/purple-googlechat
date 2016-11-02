@@ -716,7 +716,9 @@ hangout_participant_add_cb(HangoutsAccount *ha, HangoutParticipantAddResponse *r
 {
 	HangoutsMedia *hangouts_media = user_data;
 	
-	hangouts_media->hangout_cookie = g_strdup(response->sync_metadata->hangout_cookie->cookie);
+	if (response->sync_metadata && response->sync_metadata->hangout_cookie) {
+		hangouts_media->hangout_cookie = g_strdup(response->sync_metadata->hangout_cookie->cookie);
+	}
 	hangouts_media->participant_id = g_strdup(response->resource[0]->participant_id);
 	
 	//Add remote to hangout

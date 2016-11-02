@@ -1,11 +1,11 @@
 
-PIDGIN_TREE_TOP ?= ../pidgin-2.10.12
+PIDGIN_TREE_TOP ?= ../pidgin-2.10.11
 PIDGIN3_TREE_TOP ?= ../pidgin-main
 LIBPURPLE_DIR ?= $(PIDGIN_TREE_TOP)/libpurple
 WIN32_DEV_TOP ?= $(PIDGIN_TREE_TOP)/../win32-dev
 PROTOBUF_C_DIR ?= $(WIN32_DEV_TOP)/protobuf-c-Release-2.6
 
-WIN32_CC ?= $(WIN32_DEV_TOP)/mingw/bin/gcc
+WIN32_CC ?= $(WIN32_DEV_TOP)/mingw-4.7.2/bin/gcc
 
 PROTOC_C ?= protoc-c
 PKG_CONFIG ?= pkg-config

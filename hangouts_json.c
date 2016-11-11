@@ -90,7 +90,10 @@ json_decode(const gchar *data, gssize len)
 	{
 		purple_debug_error("hangouts", "Error parsing JSON: %s\n", data);
 	} else {
-		root = json_node_copy(json_parser_get_root(parser));
+		root = json_parser_get_root(parser);
+		if (root != NULL) {
+			root = json_node_copy(root);
+		}
 	}
 	g_object_unref(parser);
 	

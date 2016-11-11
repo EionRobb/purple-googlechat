@@ -11,7 +11,7 @@ PROTOC_C ?= protoc-c
 PKG_CONFIG ?= pkg-config
 
 CFLAGS	?= -O2 -g -pipe
-LDFLAGS ?= -Wl,-z,relro
+LDFLAGS ?= 
 
 # Do some nasty OS and purple version detection
 ifeq ($(OS),Windows_NT)

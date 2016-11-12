@@ -473,7 +473,7 @@ hangouts_got_http_image_for_conv(PurpleHttpConnection *connection, PurpleHttpRes
 	response_data = purple_http_response_get_data(response, &response_size);
 	image = purple_image_new_from_data(g_memdup(response_data, response_size), response_size);
 	image_id = purple_image_store_add(image);
-	msg = g_strdup_printf("<a href='%s'>View full image<img id='%d' /></a>", url, image_id);
+	msg = g_strdup_printf("<a href='%s'>View full image <img id='%d' src='%s' /></a>", url, image_id, purple_url_encode(purple_http_request_get_url(purple_http_conn_get_request(connection))));
 	msg_flags |= PURPLE_MESSAGE_IMAGES;
 		
 	if (g_hash_table_contains(ha->group_chats, conv_id)) {
@@ -718,7 +718,7 @@ hangouts_process_conversation_event(HangoutsAccount *ha, Conversation *conversat
 				if (embed_item->plus_photo) {
 					PlusPhoto *plus_photo = embed_item->plus_photo;
 					const gchar *image_url = plus_photo->thumbnail->image_url;
-					const gchar *url = plus_photo->original_content_url;
+					const gchar *url = plus_photo->url;
 					PurpleHttpConnection *connection;
 					
 					if (g_strcmp0(purple_core_get_ui(), "BitlBee") == 0) {

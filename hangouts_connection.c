@@ -78,6 +78,7 @@ hangouts_process_data_chunks(HangoutsAccount *ha, const gchar *data, gsize len)
 				
 				hangouts_add_channel_services(ha);
 				hangouts_set_active_client(ha->pc);
+				hangouts_set_status(ha->account, purple_account_get_active_status(ha->account));
 			}
 			if (json_object_has_member(wrapper, "2")) {
 				const gchar *wrapper22 = json_object_get_string_member(json_object_get_object_member(wrapper, "2"), "2");

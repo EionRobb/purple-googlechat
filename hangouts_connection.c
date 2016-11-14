@@ -380,6 +380,7 @@ hangouts_send_maps_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse *respo
 	JsonNode *node;
 	HangoutsAccount *ha = user_data;
 	const gchar *res_raw;
+	gchar *json_start;
 	size_t res_len;
 	gchar *gsid;
 	gchar *sid;
@@ -390,9 +391,14 @@ hangouts_send_maps_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse *respo
 	}
 
 	res_raw = purple_http_response_get_data(response, &res_len);
-	res_raw = g_strstr_len(res_raw, res_len, "\n");
-	res_raw++;
-	node = json_decode(res_raw, -1);
+	json_start = g_strstr_len(res_raw, res_len, "\n");
+	if (json_start == NULL) {
+		purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, "Blank maps response");
+		return;
+	}
+	*json_start = '\0';
+	json_start++;
+	node = json_decode(json_start, atoi(res_raw));
 	sid = hangouts_json_path_query_string(node, "$[0][1][1]", NULL);
 	gsid = hangouts_json_path_query_string(node, "$[1][1][0].gsid", NULL);
 

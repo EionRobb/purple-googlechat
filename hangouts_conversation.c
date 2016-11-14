@@ -2002,9 +2002,9 @@ hangouts_set_status(PurpleAccount *account, PurpleStatus *status)
 	request.dnd_setting = &dnd_setting;
 	
 	//has message?
+	mood_setting__init(&mood_setting);
 	message = purple_status_get_attr_string(status, "message");
 	if (message != NULL) {
-		mood_setting__init(&mood_setting);
 		mood_message__init(&mood_message);
 		mood_content__init(&mood_content);
 		
@@ -2016,8 +2016,8 @@ hangouts_set_status(PurpleAccount *account, PurpleStatus *status)
 		
 		mood_message.mood_content = &mood_content;
 		mood_setting.mood_message = &mood_message;
-		request.mood_setting = &mood_setting;
 	}
+	request.mood_setting = &mood_setting;
 
 	hangouts_pblite_set_presence(ha, &request, (HangoutsPbliteSetPresenceResponseFunc)hangouts_default_response_dump, NULL);
 	

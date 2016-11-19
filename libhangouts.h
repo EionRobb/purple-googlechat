@@ -94,6 +94,7 @@ typedef struct {
 	PurpleHttpKeepalivePool *client6_keepalive_pool;
 	gint idle_time;
 	gint active_client_timeout;
+	gint last_data_received; // A timestamp of when we last received data from the stream
 	
 	GHashTable *one_to_ones;     // A store of known conv_id's->gaia_id's
 	GHashTable *one_to_ones_rev; // A store of known gaia_id's->conv_id's

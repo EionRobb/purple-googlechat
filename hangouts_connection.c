@@ -209,7 +209,9 @@ hangouts_process_channel_buffer(HangoutsAccount *ha)
 		len_end = g_strstr_len(bufdata, bufsize, "\n");
 		if (len_end == NULL) {
 			// Not enough data to read
-			purple_debug_info("hangouts", "Couldn't find length of chunk\n");
+			if (purple_debug_is_verbose()) {
+				purple_debug_info("hangouts", "Couldn't find length of chunk\n");
+			}
 			return;
 		}
 		len_len = len_end - bufdata;
@@ -224,7 +226,9 @@ hangouts_process_channel_buffer(HangoutsAccount *ha)
 		
 		if (len > bufsize) {
 			// Not enough data to read
-			purple_debug_info("hangouts", "Couldn't read %" G_GSIZE_FORMAT " bytes when we only have %" G_GSIZE_FORMAT "\n", len, bufsize);
+			if (purple_debug_is_verbose()) {
+				purple_debug_info("hangouts", "Couldn't read %" G_GSIZE_FORMAT " bytes when we only have %" G_GSIZE_FORMAT "\n", len, bufsize);
+			}
 			return;
 		}
 		
@@ -273,6 +277,8 @@ hangouts_longpoll_request_content(PurpleHttpConnection *http_conn, PurpleHttpRes
 {
 	HangoutsAccount *ha = user_data;
 	
+	ha->last_data_received = time(NULL);
+	
 	if (purple_http_response_get_error(response) != NULL) {
 		return FALSE;
 	}
@@ -304,6 +310,7 @@ hangouts_longpoll_request_closed(PurpleHttpConnection *http_conn, PurpleHttpResp
 	
 	if (purple_http_response_get_error(response) != NULL) {
 		//TODO error checking
+		purple_debug_error("hangouts", "longpoll_request_closed %d %s\n", purple_http_response_get_code(response), purple_http_response_get_error(response));
 		hangouts_fetch_channel_sid(ha);
 	} else {
 		hangouts_longpoll_request(ha);
@@ -320,6 +327,11 @@ channel_watchdog_check(gpointer data)
 	if (PURPLE_IS_CONNECTION(pc)) {
 		ha = purple_connection_get_protocol_data(pc);
 		conn = ha->channel_connection;
+		
+		if (ha->last_data_received && ha->last_data_received < (time(NULL) - 60)) {
+			// should have been something within the last 60 seconds
+			purple_http_conn_cancel(conn);
+		}
 		
 		if (!purple_http_conn_is_running(conn)) {
 			hangouts_longpoll_request(ha);

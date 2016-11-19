@@ -331,6 +331,7 @@ channel_watchdog_check(gpointer data)
 		if (ha->last_data_received && ha->last_data_received < (time(NULL) - 60)) {
 			// should have been something within the last 60 seconds
 			purple_http_conn_cancel(conn);
+			ha->last_data_received = 0;
 		}
 		
 		if (!purple_http_conn_is_running(conn)) {

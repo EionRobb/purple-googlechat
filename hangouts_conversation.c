@@ -198,10 +198,16 @@ hangouts_get_users_presence(HangoutsAccount *ha, GList *user_ids)
 	participant_id = g_new0(ParticipantId *, n_participant_id);
 	
 	for (i = 0, cur = user_ids; cur && cur->data && i < n_participant_id; (cur = cur->next), i++) {
-		participant_id[i] = g_new0(ParticipantId, 1);
-		participant_id__init(participant_id[i]);
+		gchar *who = (gchar *) cur->data;
 		
-		participant_id[i]->gaia_id = (gchar *) cur->data;
+		if (G_UNLIKELY(!hangouts_is_valid_id(who))) {
+			i--;
+			n_participant_id--;
+		} else {
+			participant_id[i] = g_new0(ParticipantId, 1);
+			participant_id__init(participant_id[i]);
+			participant_id[i]->gaia_id = who;
+		}
 	}
 	
 	request.participant_id = participant_id;
@@ -786,6 +792,7 @@ hangouts_got_conversation_list(HangoutsAccount *ha, SyncRecentConversationsRespo
 	guint i;
 	GHashTable *unique_user_ids = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, NULL);
 	GList *unique_user_ids_list;
+	PurpleBlistNode *node;
 	
 	for (i = 0; i < response->n_conversation_state; i++) {
 		ConversationState *conversation_state = response->conversation_state[i];
@@ -794,7 +801,22 @@ hangouts_got_conversation_list(HangoutsAccount *ha, SyncRecentConversationsRespo
 		//purple_debug_info("hangouts", "got conversation state %s\n", pblite_dump_json((ProtobufCMessage *)conversation_state));
 		hangouts_add_conversation_to_blist(ha, conversation, unique_user_ids);
 	}
-	//todo mark the account as connected
+	
+	//Add missing people from the buddy list
+	for (node = purple_blist_get_root();
+	     node != NULL;
+		 node = purple_blist_node_next(node, TRUE)) {
+		if (PURPLE_IS_BUDDY(node)) {
+			PurpleBuddy *buddy = PURPLE_BUDDY(node);
+			const gchar *name;
+			if (purple_buddy_get_account(buddy) != ha->account) {
+				continue;
+			}
+			
+			name = purple_buddy_get_name(buddy);
+			g_hash_table_replace(unique_user_ids, (gchar *) name, NULL);
+		}
+	}
 	
 	unique_user_ids_list = g_hash_table_get_keys(unique_user_ids);
 	hangouts_get_users_presence(ha, unique_user_ids_list);

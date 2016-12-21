@@ -87,6 +87,11 @@ Section "MainSection" SEC01
 	File "/oname=protocols\48\hangouts.png" "hangouts48.png"
 
     SetOverwrite try
+    
+	SetOutPath "$PidginDir\ca-certs"
+	File "Google Internet Authority G2.pem"
+
+    SetOverwrite try
 	
 	copy:
 		ClearErrors

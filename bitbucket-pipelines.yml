@@ -5,6 +5,5 @@ pipelines:
     - step:
         script:
           - set -ex
-          - apt-get update
           - apt-get install -y libprotobuf-c-dev protobuf-c-compiler libjson-glib-dev
           - make

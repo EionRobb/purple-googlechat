@@ -1,9 +1,0 @@
-# vi:et:ts=2 sw=2 sts=2
-image: pidgin/dev-2.x.y-debian:stretch
-pipelines:
-  default:
-    - step:
-        script:
-          - set -ex
-          - apt-get install -y libprotobuf-c-dev protobuf-c-compiler libjson-glib-dev
-          - make

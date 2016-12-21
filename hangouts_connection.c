@@ -773,6 +773,7 @@ hangouts_search_users_text_cb(PurpleHttpConnection *connection, PurpleHttpRespon
 	JsonObject *node;
 	gint index, length;
 	gchar *search_term;
+	JsonObject *status;
 	
 	PurpleNotifySearchResults *results;
 	PurpleNotifySearchColumn *column;
@@ -791,9 +792,17 @@ hangouts_search_users_text_cb(PurpleHttpConnection *connection, PurpleHttpRespon
 	length = json_array_get_length(resultsarray);
 	
 	if (length == 0) {
-		gchar *primary_text = g_strdup_printf(_("Your search for the user \"%s\" returned no results"), search_term);
-		purple_notify_warning(ha->pc, _("No users found"), primary_text, "", purple_request_cpar_from_connection(ha->pc));
-		g_free(primary_text);
+		status = json_object_get_object_member(node, "status");
+		
+		if (!json_object_has_member(status, "personalResultsNotReady") || json_object_get_boolean_member(status, "personalResultsNotReady") == TRUE) {
+			//Not ready yet, retry
+			hangouts_search_users_text(ha, search_term);
+			
+		} else {		
+			gchar *primary_text = g_strdup_printf(_("Your search for the user \"%s\" returned no results"), search_term);
+			purple_notify_warning(ha->pc, _("No users found"), primary_text, "", purple_request_cpar_from_connection(ha->pc));
+			g_free(primary_text);
+		}
 		
 		g_dataset_destroy(connection);
 		json_object_unref(node);

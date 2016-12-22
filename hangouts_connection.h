@@ -22,7 +22,6 @@
 
 #include <glib.h>
 
-#include "purple-socket.h"
 #include "http.h"
 
 #include "libhangouts.h"

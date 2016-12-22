@@ -94,7 +94,7 @@ libhangouts3.so: $(PURPLE_C_FILES)
 libhangouts.dll: $(PURPLE_C_FILES) $(PURPLE_COMPAT_FILES)
 	$(WIN32_CC) -shared -o $@ $^ $(WIN32_PIDGIN2_CFLAGS) $(WIN32_PIDGIN2_LDFLAGS) -Ipurple2compat
 
-libhangouts3.dll: $(PURPLE_C_FILES) $(PURPLE_COMPAT_FILES)
+libhangouts3.dll: $(PURPLE_C_FILES)
 	$(WIN32_CC) -shared -o $@ $^ $(WIN32_PIDGIN3_CFLAGS) $(WIN32_PIDGIN3_LDFLAGS)
 
 hangouts-test.exe: $(TEST_C_FILES) $(PURPLE_COMPAT_FILES)

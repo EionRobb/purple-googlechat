@@ -279,7 +279,8 @@ hangouts_longpoll_request_content(PurpleHttpConnection *http_conn, PurpleHttpRes
 	
 	ha->last_data_received = time(NULL);
 	
-	if (purple_http_response_get_error(response) != NULL) {
+	if (!purple_http_response_is_successful(response)) {
+		purple_debug_error("hangouts", "longpoll_request_content had error: '%s'\n", purple_http_response_get_error(response));
 		return FALSE;
 	}
 	

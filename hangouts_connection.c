@@ -512,6 +512,11 @@ hangouts_add_channel_services(HangoutsAccount *ha)
 	json_object_set_string_member(obj, "p", "{\"3\":{\"1\":{\"1\":\"babel\"}}}");
 	json_array_add_object_element(map_list, obj);
 	
+	// This is for the presence updates
+	obj = json_object_new();
+	json_object_set_string_member(obj, "p", "{\"3\":{\"1\":{\"1\":\"babel_presence_last_seen\"}}}");
+	json_array_add_object_element(map_list, obj);
+	
 	// TODO Work out what this is for
 	obj = json_object_new();
 	json_object_set_string_member(obj, "p", "{\"3\":{\"1\":{\"1\":\"hangout_invite\"}}}");

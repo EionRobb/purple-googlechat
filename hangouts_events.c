@@ -423,6 +423,12 @@ hangouts_process_presence_result(HangoutsAccount *ha, PresenceResult *presence_r
 			}
 		}
 		hbuddy->device_type = device_type;
+		
+		if (presence->last_seen && !presence->has_reachable && !presence->has_available) {
+			GList *user_list = g_list_prepend(NULL, (gchar *)gaia_id);
+			hangouts_get_users_presence(ha, user_list);
+			g_list_free(user_list);
+		}
 	}
 }
 

@@ -1247,10 +1247,8 @@ message InvitationWatermarkNotification {
 }
 
 message SetNotificationSettingNotification {
+  repeated ConfigurationBit configuration_bit = 1;
   optional DesktopSoundSetting desktop_sound_setting = 2;
-
-  // TODO
-  // convert text to emoji setting
 }
 
 message RichPresenceEnabledStateNotification {
@@ -1682,6 +1680,11 @@ message SetTypingResponse {
   optional uint64 timestamp = 2;
 }
 
+message UnreadConversationState {
+  optional ConversationId conversation_id = 1;
+  optional uint64 timestamp = 2;
+}
+
 message SyncAllNewEventsRequest {
   optional RequestHeader request_header = 1;
   // Timestamp after which to return all new events.
@@ -1690,7 +1693,7 @@ message SyncAllNewEventsRequest {
   optional uint64 max_total_events = 4;
   repeated SyncFilter sync_filter = 5;
   optional bool no_missed_events_expected = 6;
-  //optional UnreadConversatioState unread_state = 7;
+  optional UnreadConversationState unread_state = 7;
   optional uint64 max_response_size_bytes = 8;
 }
 

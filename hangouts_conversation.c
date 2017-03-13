@@ -1525,7 +1525,7 @@ hangouts_conv_send_typing(PurpleConversation *conv, PurpleIMTypingState state, H
 	SetTypingRequest request;
 	ConversationId conversation_id;
 	
-	pc = ha ? ha->pc : purple_conversation_get_connection(conv);
+	pc = purple_conversation_get_connection(conv);
 	
 	if (!PURPLE_CONNECTION_IS_CONNECTED(pc))
 		return 0;

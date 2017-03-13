@@ -296,6 +296,8 @@ hangouts_authcode_input_cancel_cb(gpointer user_data)
 		_("User cancelled authorization"));
 }
 
+static gulong chat_conversation_typing_signal = 0;
+
 static void
 hangouts_login(PurpleAccount *account)
 {
@@ -355,7 +357,9 @@ hangouts_login(PurpleAccount *account)
 	purple_signal_connect(purple_blist_get_handle(), "blist-node-removed", account, PURPLE_CALLBACK(hangouts_blist_node_removed), NULL);
 	purple_signal_connect(purple_blist_get_handle(), "blist-node-aliased", account, PURPLE_CALLBACK(hangouts_blist_node_aliased), NULL);
 	purple_signal_connect(purple_conversations_get_handle(), "conversation-updated", account, PURPLE_CALLBACK(hangouts_mark_conversation_seen), NULL);
-	purple_signal_connect(purple_conversations_get_handle(), "chat-conversation-typing", account, PURPLE_CALLBACK(hangouts_conv_send_typing), ha);
+	if (!chat_conversation_typing_signal) {
+		chat_conversation_typing_signal = purple_signal_connect(purple_conversations_get_handle(), "chat-conversation-typing", purple_connection_get_protocol(pc), PURPLE_CALLBACK(hangouts_conv_send_typing), ha);
+	}
 	
 	ha->active_client_timeout = purple_timeout_add_seconds(HANGOUTS_ACTIVE_CLIENT_TIMEOUT, ((GSourceFunc) hangouts_set_active_client), pc);
 }

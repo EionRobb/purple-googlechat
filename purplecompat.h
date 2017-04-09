@@ -22,6 +22,9 @@
 #define purple_chat_user_set_alias(cb, alias)  g_object_set((cb), "alias", (alias), NULL)
 #define purple_chat_get_alias(chat)  g_object_get_data(G_OBJECT(chat), "alias")
 
+//TODO remove this when dx adds this to the PurpleMessageFlags enum
+#define PURPLE_MESSAGE_REMOTE_SEND  0x10000
+
 #else /*!PURPLE_VERSION_CHECK(3, 0, 0)*/
 
 #include "connection.h"
@@ -113,6 +116,9 @@ purple_message_destroy(PurpleMessage *message)
 	g_free(message->what);
 	g_free(message);
 }
+#if	!PURPLE_VERSION_CHECK(2, 12, 0)
+#	define PURPLE_MESSAGE_REMOTE_SEND  0x10000
+#endif
 
 #define PurpleProtocolChatEntry  struct proto_chat_entry
 #define PurpleChatUserFlags  PurpleConvChatBuddyFlags

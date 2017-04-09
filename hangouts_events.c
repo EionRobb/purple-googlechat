@@ -659,7 +659,7 @@ hangouts_process_conversation_event(HangoutsAccount *ha, Conversation *conversat
 		
 		msg = purple_xmlnode_to_str(html, NULL);
 		message_timestamp = time(NULL) - ((current_server_time - timestamp) / 1000000);
-		msg_flags = (g_strcmp0(gaia_id, ha->self_gaia_id) ? PURPLE_MESSAGE_RECV : PURPLE_MESSAGE_SEND);
+		msg_flags = (g_strcmp0(gaia_id, ha->self_gaia_id) ? PURPLE_MESSAGE_RECV : (PURPLE_MESSAGE_SEND | PURPLE_MESSAGE_REMOTE_SEND | PURPLE_MESSAGE_DELAYED));
 		if (((current_server_time - timestamp) / 1000000) > 120) {
 			msg_flags |= PURPLE_MESSAGE_DELAYED;
 		}

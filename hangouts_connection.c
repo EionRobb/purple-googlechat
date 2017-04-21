@@ -35,6 +35,7 @@
 #include "hangouts.pb-c.h"
 #include "hangouts_conversation.h"
 
+#include "gmail.pb-c.h"
 
 void
 hangouts_process_data_chunks(HangoutsAccount *ha, const gchar *data, gsize len)
@@ -83,6 +84,7 @@ hangouts_process_data_chunks(HangoutsAccount *ha, const gchar *data, gsize len)
 			if (json_object_has_member(wrapper, "2")) {
 				const gchar *wrapper22 = json_object_get_string_member(json_object_get_object_member(wrapper, "2"), "2");
 				JsonArray *pblite_message = json_decode_array(wrapper22, -1);
+				const gchar *message_type;
 
 				if (pblite_message == NULL) {
 #ifdef DEBUG
@@ -92,8 +94,10 @@ hangouts_process_data_chunks(HangoutsAccount *ha, const gchar *data, gsize len)
 					continue;
 				}
 				
+				message_type = json_array_get_string_element(pblite_message, 0);
+				
 				//cbu == ClientBatchUpdate
-				if (g_strcmp0(json_array_get_string_element(pblite_message, 0), "cbu") == 0) {
+				if (purple_strequal(message_type, "cbu")) {
 					BatchUpdate batch_update = BATCH_UPDATE__INIT;
 					guint j;
 					
@@ -126,6 +130,12 @@ hangouts_process_data_chunks(HangoutsAccount *ha, const gchar *data, gsize len)
 					for(j = 0; j < batch_update.n_state_update; j++) {
 						purple_signal_emit(purple_connection_get_protocol(ha->pc), "hangouts-received-stateupdate", ha->pc, batch_update.state_update[j]);
 					}
+				} else if (purple_strequal(message_type, "n_nm")) {
+					GmailNotification gmail_notification = GMAIL_NOTIFICATION__INIT;
+					const gchar *username = json_object_get_string_member(json_object_get_object_member(json_object_get_object_member(wrapper, "2"), "1"), "2");
+					
+					pblite_decode((ProtobufCMessage *) &gmail_notification, pblite_message, TRUE);
+					purple_signal_emit(purple_connection_get_protocol(ha->pc), "hangouts-gmail-notification", ha->pc, username, &gmail_notification);
 				}
 				
 				json_array_unref(pblite_message);
@@ -522,6 +532,10 @@ hangouts_add_channel_services(HangoutsAccount *ha)
 	json_object_set_string_member(obj, "p", "{\"3\":{\"1\":{\"1\":\"hangout_invite\"}}}");
 	json_array_add_object_element(map_list, obj);
 	
+	obj = json_object_new();
+	json_object_set_string_member(obj, "p", "{\"3\":{\"1\":{\"1\":\"gmail\"}}}");
+	json_array_add_object_element(map_list, obj);
+	
 	hangouts_send_maps(ha, map_list, NULL);
 	
 	json_array_unref(map_list);
@@ -853,6 +867,16 @@ hangouts_search_users_text_cb(PurpleHttpConnection *connection, PurpleHttpRespon
 	json_object_unref(node);
 }
 
+/* 
+
+POST https://people-pa.clients6.google.com/v2/people/lookup
+id=actual_email_address%40gmail.com&type=EMAIL&matchType=LENIENT&requestMask.includeField.paths=person.email&requestMask.includeField.paths=person.gender&requestMask.includeField.paths=person.in_app_reachability&requestMask.includeField.paths=person.metadata&requestMask.includeField.paths=person.name&requestMask.includeField.paths=person.phone&requestMask.includeField.paths=person.photo&requestMask.includeField.paths=person.read_only_profile_info&extensionSet.extensionNames=HANGOUTS_ADDITIONAL_DATA&extensionSet.extensionNames=HANGOUTS_OFF_NETWORK_GAIA_LOOKUP&extensionSet.extensionNames=HANGOUTS_PHONE_DATA&coreIdParams.useRealtimeNotificationExpandedAcls=true&key=AIzaSyAfFJCeph-euFSwtmqFZi0kaKk-cZ5wufM
+
+id=%2B123456789&type=PHONE&matchType=LENIENT&requestMask.includeField.paths=person.email&requestMask.includeField.paths=person.gender&requestMask.includeField.paths=person.in_app_reachability&requestMask.includeField.paths=person.metadata&requestMask.includeField.paths=person.name&requestMask.includeField.paths=person.phone&requestMask.includeField.paths=person.photo&requestMask.includeField.paths=person.read_only_profile_info&extensionSet.extensionNames=HANGOUTS_ADDITIONAL_DATA&extensionSet.extensionNames=HANGOUTS_OFF_NETWORK_GAIA_LOOKUP&extensionSet.extensionNames=HANGOUTS_PHONE_DATA&coreIdParams.useRealtimeNotificationExpandedAcls=true&quotaFilterType=PHONE&key=AIzaSyAfFJCeph-euFSwtmqFZi0kaKk-cZ5wufM
+
+*/
+
+
 void
 hangouts_search_users_text(HangoutsAccount *ha, const gchar *text)
 {
@@ -882,7 +906,7 @@ hangouts_search_users_text(HangoutsAccount *ha, const gchar *text)
 void
 hangouts_search_users(PurpleProtocolAction *action)
 {
-	PurpleConnection *pc = purple_protocol_action_get_connection(action);;
+	PurpleConnection *pc = purple_protocol_action_get_connection(action);
 	HangoutsAccount *ha = purple_connection_get_protocol_data(pc);
 	
 	purple_request_input(pc, _("Search for friends..."),

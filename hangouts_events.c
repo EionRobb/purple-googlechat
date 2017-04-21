@@ -45,6 +45,8 @@ hangouts_register_events(gpointer plugin)
 	purple_signal_connect(plugin, "hangouts-received-stateupdate", plugin, PURPLE_CALLBACK(hangouts_received_delete_notification), NULL);
 	purple_signal_connect(plugin, "hangouts-received-stateupdate", plugin, PURPLE_CALLBACK(hangouts_received_block_notification), NULL);
 	purple_signal_connect(plugin, "hangouts-received-stateupdate", plugin, PURPLE_CALLBACK(hangouts_received_other_notification), NULL);
+	
+	purple_signal_connect(plugin, "hangouts-gmail-notification", plugin, PURPLE_CALLBACK(hangouts_received_gmail_notification), NULL);
 }
 
 /*
@@ -170,6 +172,26 @@ hangouts_received_block_notification(PurpleConnection *pc, StateUpdate *state_up
 			}
 		}
 	}
+}
+
+void
+hangouts_received_gmail_notification(PurpleConnection *pc, const gchar *username, GmailNotification *msg)
+{
+	gchar *url;
+	gchar *subject = purple_markup_escape_text(msg->subject, -1);
+	gchar *from = purple_markup_escape_text(msg->sender_name, -1);
+	gchar *to = purple_markup_escape_text(username, -1);
+	
+	purple_debug_info("hangouts", "Received gmail notification %s\n", pblite_dump_json((ProtobufCMessage *) msg));
+	
+	url = g_strconcat("https://mail.google.com/mail/u/", username, "/#inbox/", purple_url_encode(msg->thread_id), NULL);
+	
+	purple_notify_email(pc, subject, from, to, url, NULL, NULL);
+	
+	g_free(url);
+	g_free(subject);
+	g_free(from);
+	g_free(to);
 }
 
 void

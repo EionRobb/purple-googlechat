@@ -22,6 +22,7 @@
 
 #include "libhangouts.h"
 #include "hangouts.pb-c.h"
+#include "gmail.pb-c.h"
 
 void hangouts_register_events(gpointer plugin);
 
@@ -35,6 +36,7 @@ void hangouts_received_view_modification(PurpleConnection *pc, StateUpdate *stat
 void hangouts_received_delete_notification(PurpleConnection *pc, StateUpdate *state_update);
 void hangouts_received_state_update(PurpleConnection *pc, StateUpdate *state_update);
 
+void hangouts_received_gmail_notification(PurpleConnection *pc, const gchar *username, GmailNotification *msg);
 
 void hangouts_process_presence_result(HangoutsAccount *ha, PresenceResult *presence);
 void hangouts_process_conversation_event(HangoutsAccount *ha, Conversation *conversation, Event *event, gint64 current_server_time);

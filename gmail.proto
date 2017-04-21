@@ -1,0 +1,16 @@
+
+// proto2 is required because we need to be able to serialize default values:
+syntax = "proto2";
+
+
+message GmailNotification {
+	optional string thread_id = 3;
+	//optional string previous_id = 4;
+	optional string id = 5;
+	repeated string labels = 6;
+	optional string subject = 7;
+	optional string snippet = 8;
+	optional string sender_name = 9;
+	optional string sender_email = 10;
+	//repeated unknown = 11;
+}

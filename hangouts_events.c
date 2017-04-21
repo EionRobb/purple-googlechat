@@ -178,9 +178,29 @@ void
 hangouts_received_gmail_notification(PurpleConnection *pc, const gchar *username, GmailNotification *msg)
 {
 	gchar *url;
-	gchar *subject = purple_markup_escape_text(msg->subject, -1);
-	gchar *from = purple_markup_escape_text(msg->sender_name, -1);
-	gchar *to = purple_markup_escape_text(username, -1);
+	gchar *subject;
+	gchar *from;
+	gchar *to;
+	guint i;
+	gboolean is_unread = FALSE;
+	
+	if (!purple_account_get_check_mail(purple_connection_get_account(pc))) {
+		return;
+	}
+	
+	for (i = 0; i < msg->n_labels; i++) {
+		if (purple_strequal(msg->labels[i], "^u")) {
+			is_unread = TRUE;
+			break;
+		}
+	}
+	if (is_unread == FALSE) {
+		return;
+	}
+	
+	subject = purple_markup_escape_text(msg->subject, -1);
+	from = purple_markup_escape_text(msg->sender_name, -1);
+	to = purple_markup_escape_text(username, -1);
 	
 	purple_debug_info("hangouts", "Received gmail notification %s\n", pblite_dump_json((ProtobufCMessage *) msg));
 	

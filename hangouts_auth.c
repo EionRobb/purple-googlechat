@@ -250,7 +250,7 @@ hangouts_auth_get_session_cookies_got_cb(PurpleHttpConnection *http_conn, Purple
 	
 	if (sapisid_cookie == NULL) {
 		purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED, 
-			_("SAPISID Cookie not recieved"));
+			_("SAPISID Cookie not received"));
 		return;
 	}
 	

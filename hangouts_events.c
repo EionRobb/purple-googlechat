@@ -769,6 +769,11 @@ hangouts_process_conversation_event(HangoutsAccount *ha, Conversation *conversat
 					const gchar *url = plus_photo->url;
 					PurpleHttpConnection *connection;
 					
+					// Provide a direct link to the video
+					if (plus_photo->media_type == PLUS_PHOTO__MEDIA_TYPE__MEDIA_TYPE_VIDEO && plus_photo->download_url != NULL) {
+						url = plus_photo->download_url;
+					}
+					
 					if (g_strcmp0(purple_core_get_ui(), "BitlBee") == 0) {
 						// Bitlbee doesn't support images, so just plop a url to the image instead
 						if (g_hash_table_contains(ha->group_chats, conv_id)) {

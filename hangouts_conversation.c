@@ -1224,6 +1224,12 @@ static void
 hangouts_free_segments(Segment **segments)
 {
 	guint i;
+	
+	if (segments == NULL) {
+		// Our work here is done
+		return;
+	}
+	
 	for (i = 0; segments[i]; i++) {
 		g_free(segments[i]->text);
 		g_free(segments[i]->formatting);
@@ -2042,10 +2048,7 @@ hangouts_set_status(PurpleAccount *account, PurpleStatus *status)
 	hangouts_pblite_set_presence(ha, &request, (HangoutsPbliteSetPresenceResponseFunc)hangouts_default_response_dump, NULL);
 	
 	hangouts_request_header_free(request.request_header);
-	
-	if (segments != NULL) {
-		hangouts_free_segments(segments);
-	}
+	hangouts_free_segments(segments);
 }
 
 

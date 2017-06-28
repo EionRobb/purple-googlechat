@@ -1047,7 +1047,14 @@ hangouts_convert_html_to_segments(HangoutsAccount *ha, const gchar *html_message
 	gboolean is_link = FALSE;
 	gchar *last_link = NULL;
 	
-	g_return_val_if_fail(c && *c, NULL);
+	if (c == NULL || *c == '\0') {
+		g_warn_if_reached();
+		
+		if (segments_count != NULL) {
+			*segments_count = 0;
+		}
+		return NULL;
+	}
 	
 	text_content = g_string_new("");
 	segment = g_new0(Segment, 1);

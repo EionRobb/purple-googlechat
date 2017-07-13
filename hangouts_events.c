@@ -183,6 +183,7 @@ hangouts_received_gmail_notification(PurpleConnection *pc, const gchar *username
 	gchar *to;
 	guint i;
 	gboolean is_unread = FALSE;
+	gboolean is_inbox = FALSE;
 	
 	if (!purple_account_get_check_mail(purple_connection_get_account(pc))) {
 		return;
@@ -191,14 +192,15 @@ hangouts_received_gmail_notification(PurpleConnection *pc, const gchar *username
 	for (i = 0; i < msg->n_labels; i++) {
 		if (purple_strequal(msg->labels[i], "^u")) {
 			is_unread = TRUE;
-			break;
+		} else if (purple_strequal(msg->labels[i], "^i")) {
+			is_inbox = TRUE;
 		}
 	}
-	if (is_unread == FALSE) {
+	if (is_unread == FALSE || is_inbox == FALSE) {
 		return;
 	}
 	
-	subject = purple_markup_escape_text(msg->subject, -1);
+	subject = purple_utf8_strip_unprintables(msg->subject);
 	from = purple_markup_escape_text(msg->sender_name, -1);
 	to = purple_markup_escape_text(username, -1);
 	

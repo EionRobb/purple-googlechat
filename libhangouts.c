@@ -503,6 +503,12 @@ hangouts_buddy_free(PurpleBuddy *buddy)
 	g_free(hbuddy);
 }
 
+static gboolean
+hangouts_offline_message(const PurpleBuddy *buddy)
+{
+	return TRUE;
+}
+
 
 /*****************************************************************************/
 
@@ -592,6 +598,7 @@ hangouts_protocol_client_iface_init(PurpleProtocolClientIface *prpl_info)
 	prpl_info->status_text = hangouts_status_text;
 	prpl_info->tooltip_text = hangouts_tooltip_text;
 	prpl_info->buddy_free = hangouts_buddy_free;
+ 	prpl_info->offline_message = hangouts_offline_message;
 }
 
 static void
@@ -818,6 +825,7 @@ init_plugin(PurplePlugin *plugin)
 	prpl_info->status_text = hangouts_status_text;
 	prpl_info->tooltip_text = hangouts_tooltip_text;
 	prpl_info->buddy_free = hangouts_buddy_free;
+	prpl_info->offline_message = hangouts_offline_message;
 	
 	prpl_info->get_info = hangouts_get_info;
 	prpl_info->set_status = hangouts_set_status;

@@ -498,8 +498,12 @@ hangouts_got_conversation_events(HangoutsAccount *ha, GetConversationResponse *r
 
 	for (i = 0; i < response->conversation_state->n_event; i++) {
 		Event *event = response->conversation_state->event[i];
-		//Send event to the hangouts_events.c slaughterhouse
-		hangouts_process_conversation_event(ha, conversation, event, response->response_header->current_server_time);
+		
+		// Ignore join/parts when loading history
+		if (!event->membership_change) {
+			//Send event to the hangouts_events.c slaughterhouse
+			hangouts_process_conversation_event(ha, conversation, event, response->response_header->current_server_time);
+		}
 	}
 }
 

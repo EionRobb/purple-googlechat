@@ -6,6 +6,7 @@ WIN32_DEV_TOP ?= $(PIDGIN_TREE_TOP)/../win32-dev
 PROTOBUF_C_DIR ?= $(WIN32_DEV_TOP)/protobuf-c-Release-2.6
 
 WIN32_CC ?= $(WIN32_DEV_TOP)/mingw-4.7.2/bin/gcc
+MAKENSIS ?= makensis
 
 PROTOC_C ?= protoc-c
 PKG_CONFIG ?= pkg-config
@@ -18,6 +19,7 @@ ifeq ($(OS),Windows_NT)
   HANGOUTS_TARGET = libhangouts.dll
   HANGOUTS_DEST = "$(PROGRAMFILES)/Pidgin/plugins"
   HANGOUTS_ICONS_DEST = "$(PROGRAMFILES)/Pidgin/pixmaps/pidgin/protocols"
+  MAKENSIS = "$(PROGRAMFILES)/NSIS/makensis.exe"
 else
 
   UNAME_S := $(shell uname -s)
@@ -121,3 +123,6 @@ FAILNOPURPLE:
 clean:
 	rm -f $(HANGOUTS_TARGET) hangouts.pb-c.h hangouts.pb-c.c hangout_media.pb-c.h hangout_media.pb-c.c
 
+
+installer: purple-hangouts.nsi libhangouts.dll
+	$(MAKENSIS) purple-hangouts.nsi

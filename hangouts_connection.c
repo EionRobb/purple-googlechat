@@ -23,10 +23,10 @@
 
 
 #include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
 #include <unistd.h>
 
-#include "ciphers/sha1hash.h"
 #include "debug.h"
 #include "request.h"
 
@@ -255,8 +255,8 @@ hangouts_set_auth_headers(HangoutsAccount *ha, PurpleHttpRequest *request)
 	gint64 mstime;
 	gchar *mstime_str;
 	GTimeVal time;
-	PurpleHash *hash;
-	gchar sha1[41];
+	GChecksum *hash;
+	const gchar *sha1;
 	gchar *sapisid_cookie;
 	
 	g_get_current_time(&time);
@@ -264,14 +264,13 @@ hangouts_set_auth_headers(HangoutsAccount *ha, PurpleHttpRequest *request)
 	mstime_str = g_strdup_printf("%" G_GINT64_FORMAT, mstime);
 	sapisid_cookie = purple_http_cookie_jar_get(ha->cookie_jar, "SAPISID");
 	
-	hash = purple_sha1_hash_new();
-	purple_hash_append(hash, (guchar *) mstime_str, strlen(mstime_str));
-	purple_hash_append(hash, (guchar *) " ", 1);
-	purple_hash_append(hash, (guchar *) sapisid_cookie, strlen(sapisid_cookie));
-	purple_hash_append(hash, (guchar *) " ", 1);
-	purple_hash_append(hash, (guchar *) HANGOUTS_PBLITE_XORIGIN_URL, strlen(HANGOUTS_PBLITE_XORIGIN_URL));
-	purple_hash_digest_to_str(hash, sha1, 41);
-	purple_hash_destroy(hash);
+	hash = g_checksum_new(G_CHECKSUM_SHA1);
+	g_checksum_update(hash, (guchar *) mstime_str, strlen(mstime_str));
+	g_checksum_update(hash, (guchar *) " ", 1);
+	g_checksum_update(hash, (guchar *) sapisid_cookie, strlen(sapisid_cookie));
+	g_checksum_update(hash, (guchar *) " ", 1);
+	g_checksum_update(hash, (guchar *) HANGOUTS_PBLITE_XORIGIN_URL, strlen(HANGOUTS_PBLITE_XORIGIN_URL));
+	sha1 = g_checksum_get_string(hash);
 	
 	purple_http_request_header_set_printf(request, "Authorization", "SAPISIDHASH %s_%s", mstime_str, sha1);
 	purple_http_request_header_set(request, "X-Origin", HANGOUTS_PBLITE_XORIGIN_URL);
@@ -279,6 +278,7 @@ hangouts_set_auth_headers(HangoutsAccount *ha, PurpleHttpRequest *request)
 	
 	g_free(sapisid_cookie);
 	g_free(mstime_str);
+	g_checksum_free(hash);
 }
 
 
@@ -311,7 +311,7 @@ hangouts_longpoll_request_closed(PurpleHttpConnection *http_conn, PurpleHttpResp
 	}
 	
 	if (ha->channel_watchdog) {
-		purple_timeout_remove(ha->channel_watchdog);
+		g_source_remove(ha->channel_watchdog);
 		ha->channel_watchdog = 0;
 	}
 	
@@ -386,9 +386,9 @@ hangouts_longpoll_request(HangoutsAccount *ha)
 	g_string_free(url, TRUE);
 	
 	if (ha->channel_watchdog) {
-		purple_timeout_remove(ha->channel_watchdog);
+		g_source_remove(ha->channel_watchdog);
 	}
-	ha->channel_watchdog = purple_timeout_add_seconds(1, channel_watchdog_check, ha->pc);
+	ha->channel_watchdog = g_timeout_add_seconds(1, channel_watchdog_check, ha->pc);
 }
 
 
@@ -575,7 +575,7 @@ hangouts_pblite_request_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse *
 		
 		content_type = purple_http_response_get_header(response, "X-Goog-Safety-Content-Type");
 		if (g_strcmp0(content_type, "application/x-protobuf") == 0) {
-			decoded_response = purple_base64_decode(raw_response, &response_len);
+			decoded_response = g_base64_decode(raw_response, &response_len);
 			unpacked_message = protobuf_c_message_unpack(response_message->descriptor, NULL, response_len, decoded_response);
 			
 			if (unpacked_message != NULL) {

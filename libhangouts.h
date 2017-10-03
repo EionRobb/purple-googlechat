@@ -32,7 +32,6 @@
 
 #include "account.h"
 #include "connection.h"
-#include "ciphers/sha1hash.h"
 #include "http.h"
 
 #include "hangouts.pb-c.h"

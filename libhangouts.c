@@ -19,6 +19,7 @@
 #include "libhangouts.h"
 
 #include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
 #include <glib.h>
 
@@ -361,7 +362,7 @@ hangouts_login(PurpleAccount *account)
 		chat_conversation_typing_signal = purple_signal_connect(purple_conversations_get_handle(), "chat-conversation-typing", purple_connection_get_protocol(pc), PURPLE_CALLBACK(hangouts_conv_send_typing), ha);
 	}
 	
-	ha->active_client_timeout = purple_timeout_add_seconds(HANGOUTS_ACTIVE_CLIENT_TIMEOUT, ((GSourceFunc) hangouts_set_active_client), pc);
+	ha->active_client_timeout = g_timeout_add_seconds(HANGOUTS_ACTIVE_CLIENT_TIMEOUT, ((GSourceFunc) hangouts_set_active_client), pc);
 }
 
 static void
@@ -372,8 +373,8 @@ hangouts_close(PurpleConnection *pc)
 	ha = purple_connection_get_protocol_data(pc);
 	purple_signals_disconnect_by_handle(ha->account);
 	
-	purple_timeout_remove(ha->active_client_timeout);
-	purple_timeout_remove(ha->channel_watchdog);
+	g_source_remove(ha->active_client_timeout);
+	g_source_remove(ha->channel_watchdog);
 	
 	purple_http_conn_cancel_all(pc);
 	

@@ -22,6 +22,9 @@
 #include "hangouts_connection.h"
 #include "hangouts_events.h"
 
+#include <string.h>
+#include <glib.h>
+
 #include "debug.h"
 #include "status.h"
 #include "glibcompat.h"
@@ -1340,7 +1343,7 @@ hangouts_conversation_send_image_part1_cb(PurpleHttpConnection *connection, Purp
 	purple_http_request_set_cookie_jar(request, ha->cookie_jar);
 	purple_http_request_header_set(request, "Content-Type", "application/octet-stream");
 	purple_http_request_set_method(request, "POST");
-	purple_http_request_set_contents(request, purple_image_get_data(image), purple_image_get_size(image));
+	purple_http_request_set_contents(request, purple_image_get_data(image), purple_image_get_data_size(image));
 	
 	new_connection = purple_http_request(ha->pc, request, hangouts_conversation_send_image_part2_cb, ha);
 	purple_http_request_unref(request);
@@ -1367,7 +1370,7 @@ hangouts_conversation_send_image(HangoutsAccount *ha, const gchar *conv_id, Purp
 		filename = g_strdup_printf("purple%d.%s", g_random_int(), purple_image_get_extension(image));
 	}
 	
-	postdata = g_strdup_printf("{\"protocolVersion\":\"0.8\",\"createSessionRequest\":{\"fields\":[{\"external\":{\"name\":\"file\",\"filename\":\"%s\",\"put\":{},\"size\":%" G_GSIZE_FORMAT "}},{\"inlined\":{\"name\":\"client\",\"content\":\"hangouts\",\"contentType\":\"text/plain\"}}]}}", filename, (gsize) purple_image_get_size(image));
+	postdata = g_strdup_printf("{\"protocolVersion\":\"0.8\",\"createSessionRequest\":{\"fields\":[{\"external\":{\"name\":\"file\",\"filename\":\"%s\",\"put\":{},\"size\":%" G_GSIZE_FORMAT "}},{\"inlined\":{\"name\":\"client\",\"content\":\"hangouts\",\"contentType\":\"text/plain\"}}]}}", filename, (gsize) purple_image_get_data_size(image));
 	
 	request = purple_http_request_new(HANGOUTS_IMAGE_UPLOAD_URL);
 	purple_http_request_set_cookie_jar(request, ha->cookie_jar);
@@ -1977,14 +1980,14 @@ hangouts_mark_conversation_seen(PurpleConversation *conv, PurpleConversationUpda
 	mark_seen_timeout = GPOINTER_TO_INT(purple_conversation_get_data(conv, "mark_seen_timeout"));
 	
 	if (mark_seen_timeout) {
-		purple_timeout_remove(mark_seen_timeout);
+		g_source_remove(mark_seen_timeout);
 	}
 	
-	mark_seen_timeout = purple_timeout_add_seconds(1, hangouts_mark_conversation_seen_timeout, conv);
+	mark_seen_timeout = g_timeout_add_seconds(1, hangouts_mark_conversation_seen_timeout, conv);
 	
 	purple_conversation_set_data(conv, "mark_seen_timeout", GINT_TO_POINTER(mark_seen_timeout));
 	
-	purple_timeout_add_seconds(1, hangouts_mark_conversation_focused_timeout, conv);
+	g_timeout_add_seconds(1, hangouts_mark_conversation_focused_timeout, conv);
 	
 	hangouts_set_active_client(pc);
 }

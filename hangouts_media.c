@@ -394,7 +394,7 @@ hangouts_pblite_media_media_session_add_cb(HangoutsAccount *ha, MediaSessionAddR
 				if (g_str_has_prefix(key_encoded, "inline:")) {
 					key_encoded += 7;
 				}
-				hangouts_media->decryption_key = purple_base64_decode(key_encoded, &key_len);
+				hangouts_media->decryption_key = g_base64_decode(key_encoded, &key_len);
 				
 				purple_media_set_decryption_parameters(hangouts_media->media,
 						"hangout", hangouts_media->who, "aes-128-icm", crypto_algo,
@@ -606,7 +606,7 @@ hangouts_send_media_and_codecs(PurpleMedia *media, gchar *sid, gchar *name, Hang
 	crypto_param.has_suite = TRUE;
 	crypto_param.suite = MEDIA_CRYPTO_SUITE__AES_CM_128_HMAC_SHA1_80;
 	
-	hangouts_crypto_base64 = purple_base64_encode(hangouts_media->encryption_key, SRTP_KEY_LEN);
+	hangouts_crypto_base64 = g_base64_encode(hangouts_media->encryption_key, SRTP_KEY_LEN);
 	hangouts_crypto_key = g_strconcat("inline:", hangouts_crypto_base64, NULL);
 	crypto_param.key_params = hangouts_crypto_key;
 	

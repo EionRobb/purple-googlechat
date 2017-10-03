@@ -193,6 +193,10 @@ purple_chat_conversation_find_user(PurpleChatConversation *chat, const char *nam
 
 #define purple_status_get_status_type  purple_status_get_type
 
+#define g_timeout_add_seconds  purple_timeout_add_seconds
+#define g_timeout_add          purple_timeout_add
+#define g_source_remove        purple_timeout_remove
+
 #define PurpleXmlNode                xmlnode
 #define purple_xmlnode_new           xmlnode_new
 #define purple_xmlnode_new_child     xmlnode_new_child

@@ -264,9 +264,11 @@ hangouts_auth_get_session_cookies_got_cb(PurpleHttpConnection *http_conn, Purple
 	// SOUND THE TRUMPETS
 	hangouts_fetch_channel_sid(ha);
 	purple_connection_set_state(ha->pc, PURPLE_CONNECTION_CONNECTED);
+	
 	//TODO trigger event instead
 	hangouts_get_self_info(ha);
 	hangouts_get_conversation_list(ha);
+	ha->poll_buddy_status_timeout = g_timeout_add_seconds(120, hangouts_poll_buddy_status, ha);
 	
 	g_free(sapisid_cookie);
 }

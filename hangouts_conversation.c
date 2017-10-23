@@ -236,6 +236,31 @@ hangouts_get_users_presence(HangoutsAccount *ha, GList *user_ids)
 	g_free(request.field_mask);
 }
 
+gboolean
+hangouts_poll_buddy_status(gpointer userdata)
+{
+	HangoutsAccount *ha = userdata;
+	GSList *buddies, *i;
+	GList *user_list = NULL;
+	
+	if (!PURPLE_CONNECTION_IS_CONNECTED(ha->pc)) {
+		return FALSE;
+	}
+	
+	buddies = purple_blist_find_buddies(ha->account, NULL);
+	for(i = buddies; i; i = i->next) {
+		PurpleBuddy *buddy = i->data;
+		user_list = g_list_prepend(user_list, (gpointer) purple_buddy_get_name(buddy));
+	}
+	
+	hangouts_get_users_presence(ha, user_list);
+	
+	g_slist_free(buddies);
+	g_list_free(user_list);
+	
+	return TRUE;
+}
+
 static void hangouts_got_buddy_photo(PurpleHttpConnection *connection, PurpleHttpResponse *response, gpointer user_data);
 
 static void

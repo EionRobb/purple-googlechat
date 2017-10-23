@@ -375,6 +375,7 @@ hangouts_close(PurpleConnection *pc)
 	
 	g_source_remove(ha->active_client_timeout);
 	g_source_remove(ha->channel_watchdog);
+	g_source_remove(ha->poll_buddy_status_timeout);
 	
 	purple_http_conn_cancel_all(pc);
 	

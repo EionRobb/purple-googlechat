@@ -64,6 +64,7 @@ guint hangouts_conv_send_typing(PurpleConversation *conv, PurpleIMTypingState st
 void hangouts_get_users_presence(HangoutsAccount *ha, GList *user_ids);
 void hangouts_get_users_information(HangoutsAccount *ha, GList *user_ids);
 void hangouts_get_info(PurpleConnection *pc, const gchar *who);
+gboolean hangouts_poll_buddy_status(gpointer ha_pointer);
 
 void hangouts_chat_leave_by_conv_id(PurpleConnection *pc, const gchar *conv_id, const gchar *who);
 void hangouts_chat_leave(PurpleConnection *pc, int id);

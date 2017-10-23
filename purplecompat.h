@@ -30,6 +30,7 @@
 #include "connection.h"
 
 #define purple_blist_find_buddy        purple_find_buddy
+#define purple_blist_find_buddies      purple_find_buddies
 #define purple_blist_find_group        purple_find_group
 #define PURPLE_IS_BUDDY                PURPLE_BLIST_NODE_IS_BUDDY
 #define PURPLE_IS_CHAT                 PURPLE_BLIST_NODE_IS_CHAT

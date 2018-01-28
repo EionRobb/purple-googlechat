@@ -86,7 +86,7 @@ json_decode(const gchar *data, gssize len)
 	JsonParser *parser = json_parser_new();
 	JsonNode *root = NULL;
 	
-	if (!json_parser_load_from_data(parser, data, len, NULL))
+	if (!data || !json_parser_load_from_data(parser, data, len, NULL))
 	{
 		purple_debug_error("hangouts", "Error parsing JSON: %s\n", data);
 	} else {

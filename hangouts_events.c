@@ -405,6 +405,8 @@ hangouts_process_presence_result(HangoutsAccount *ha, PresenceResult *presence_r
 			status_id = purple_primitive_get_id_from_type(PURPLE_STATUS_AWAY);
 		} else if (available) {
 			status_id = purple_primitive_get_id_from_type(PURPLE_STATUS_EXTENDED_AWAY);
+		} else if (purple_account_get_bool(ha->account, "treat_invisible_as_offline", FALSE)) {
+			status_id = "gone";
 		} else {
 			// Hangouts contacts are never really unreachable, just invisible
 			status_id = purple_primitive_get_id_from_type(PURPLE_STATUS_INVISIBLE);

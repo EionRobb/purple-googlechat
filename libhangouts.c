@@ -87,6 +87,9 @@ hangouts_add_account_options(GList *account_options)
 	option = purple_account_option_bool_new(N_("Un-Googlify URLs"), "unravel_google_url", FALSE);
 	account_options = g_list_append(account_options, option);
 	
+	option = purple_account_option_bool_new(N_("Treat invisible users as offline"), "treat_invisible_as_offline", FALSE);
+	account_options = g_list_append(account_options, option);
+	
 	return account_options;
 }
 
@@ -475,6 +478,9 @@ hangouts_status_types(PurpleAccount *account)
 	types = g_list_append(types, status);
 	
 	status = purple_status_type_new_full(PURPLE_STATUS_OFFLINE, NULL, NULL, TRUE, TRUE, FALSE);
+	types = g_list_append(types, status);
+	
+	status = purple_status_type_new_with_attrs(PURPLE_STATUS_OFFLINE, "gone", NULL, FALSE, FALSE, FALSE, "message", _("Mood"), purple_value_new(PURPLE_TYPE_STRING), NULL);
 	types = g_list_append(types, status);
 	
 	status = purple_status_type_new_with_attrs(PURPLE_STATUS_INVISIBLE, NULL, NULL, FALSE, FALSE, FALSE, "message", _("Mood"), purple_value_new(PURPLE_TYPE_STRING), NULL);

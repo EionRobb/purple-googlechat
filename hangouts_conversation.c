@@ -1481,6 +1481,8 @@ hangouts_conversation_send_message(HangoutsAccount *ha, const gchar *conv_id, co
 	hangouts_free_segments(segments);
 	hangouts_request_header_free(request.request_header);
 	hangouts_event_request_header_free(request.event_request_header);
+
+	g_free(message_dup);
 	
 	return 1;
 }

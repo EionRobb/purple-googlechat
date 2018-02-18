@@ -184,6 +184,7 @@ hangouts_received_gmail_notification(PurpleConnection *pc, const gchar *username
 	gchar *subject;
 	gchar *from;
 	gchar *to;
+	gchar *json_dump;
 	guint i;
 	gboolean is_unread = FALSE;
 	gboolean is_inbox = FALSE;
@@ -207,12 +208,14 @@ hangouts_received_gmail_notification(PurpleConnection *pc, const gchar *username
 	from = purple_markup_escape_text(msg->sender_name, -1);
 	to = purple_markup_escape_text(username, -1);
 	
-	purple_debug_info("hangouts", "Received gmail notification %s\n", pblite_dump_json((ProtobufCMessage *) msg));
+	json_dump = pblite_dump_json((ProtobufCMessage *) msg);
+	purple_debug_info("hangouts", "Received gmail notification %s\n", json_dump);
 	
 	url = g_strconcat("https://mail.google.com/mail/u/", username, "/#inbox/", purple_url_encode(msg->thread_id), NULL);
 	
 	purple_notify_email(pc, subject, from, to, url, NULL, NULL);
 	
+	g_free(json_dump);
 	g_free(url);
 	g_free(subject);
 	g_free(from);
@@ -222,6 +225,8 @@ hangouts_received_gmail_notification(PurpleConnection *pc, const gchar *username
 void
 hangouts_received_other_notification(PurpleConnection *pc, StateUpdate *state_update)
 {
+	gchar *json_dump;
+
 	if (state_update->typing_notification != NULL ||
 		state_update->presence_notification != NULL ||
 		state_update->event_notification != NULL ||
@@ -230,7 +235,10 @@ hangouts_received_other_notification(PurpleConnection *pc, StateUpdate *state_up
 	}
 	
 	purple_debug_info("hangouts", "Received new other event %p\n", state_update);
-	purple_debug_info("hangouts", "%s\n", pblite_dump_json((ProtobufCMessage *)state_update));
+	json_dump = pblite_dump_json((ProtobufCMessage *)state_update);
+	purple_debug_info("hangouts", "%s\n", json_dump);
+
+	g_free(json_dump);
 }
 
 /*        "conversation" : {

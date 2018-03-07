@@ -264,6 +264,23 @@ hangouts_node_menu(PurpleBlistNode *node)
 	return m;
 }
 
+static void
+hangouts_join_chat_by_url_action(PurpleProtocolAction *action)
+{
+	PurpleConnection *pc = purple_protocol_action_get_connection(action);
+	HangoutsAccount *ha = purple_connection_get_protocol_data(pc);
+	
+	purple_request_input(pc, _("Join chat..."),
+					   _("Join a Hangouts group chat from the invite URL..."),
+					   NULL,
+					   NULL, FALSE, FALSE, "https://hangouts.google.com/group/...",
+					   _("_Join"), G_CALLBACK(hangouts_join_chat_from_url),
+					   _("_Cancel"), NULL,
+					   purple_request_cpar_from_connection(pc),
+					   ha);
+
+}
+
 static GList *
 hangouts_actions(
 #if !PURPLE_VERSION_CHECK(3, 0, 0)
@@ -277,6 +294,9 @@ PurpleConnection *pc
 	PurpleProtocolAction *act;
 
 	act = purple_protocol_action_new(_("Search for friends..."), hangouts_search_users);
+	m = g_list_append(m, act);
+
+	act = purple_protocol_action_new(_("Join a group chat by URL..."), hangouts_join_chat_by_url_action);
 	m = g_list_append(m, act);
 
 	return m;

@@ -593,9 +593,13 @@ hangouts_pblite_request_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse *
 		} else {
 			gchar *tidied_json = hangouts_json_tidy_blank_arrays(raw_response);
 			JsonArray *response_array = json_decode_array(tidied_json, -1);
+			const gchar *first_element = json_array_get_string_element(response_array, 0);
+			gboolean ignore_first_element = (first_element != NULL);
 			
-			pblite_decode(response_message, response_array, /*Ignore First Item= */TRUE);
-			purple_debug_info("hangouts", "A '%s' says '%s'\n", response_message->descriptor->name, json_array_get_string_element(response_array, 0));
+			pblite_decode(response_message, response_array, ignore_first_element);
+			if (ignore_first_element) {
+				purple_debug_info("hangouts", "A '%s' says '%s'\n", response_message->descriptor->name, first_element);
+			}
 			
 			if (purple_debug_is_verbose()) {
 				gchar *pretty_json = pblite_dump_json(response_message);

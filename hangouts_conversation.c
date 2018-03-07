@@ -690,6 +690,34 @@ hangouts_join_chat(PurpleConnection *pc, GHashTable *data)
 	hangouts_get_conversation_events(ha, conv_id, 0);
 }
 
+static void
+hangouts_got_join_chat_from_url(HangoutsAccount *ha, OpenGroupConversationFromUrlResponse *response, gpointer user_data)
+{
+	if (!response || !response->conversation_id || !response->conversation_id->id) {
+		purple_notify_error(ha->pc, _("Join from URL Error"), _("Could not join group from URL"), response->response_header ? response->response_header->error_description : _("Unknown Error"), purple_request_cpar_from_connection(pc));
+		return;
+	}
+	
+	hangouts_get_conversation_events(ha, response->conversation_id->id, 0);
+}
+
+void
+hangouts_join_chat_from_url(HangoutsAccount *ha, const gchar *url)
+{
+	OpenGroupConversationFromUrlRequest request;
+	
+	g_return_if_fail(url != NULL);
+	
+	open_group_conversation_from_url_request__init(&request);
+	request.request_header = hangouts_get_request_header(ha);
+	
+	request.url = (gchar *) url;
+	
+	hangouts_pblite_open_group_conversation_from_url(ha, &request, hangouts_got_join_chat_from_url, NULL);
+	
+	hangouts_request_header_free(request.request_header);
+}
+
 
 gchar *
 hangouts_get_chat_name(GHashTable *data)

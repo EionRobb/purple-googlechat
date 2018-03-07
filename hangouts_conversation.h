@@ -34,6 +34,8 @@ GHashTable *hangouts_chat_info_defaults(PurpleConnection *pc, const char *chatna
 void hangouts_join_chat(PurpleConnection *pc, GHashTable *data);
 gchar *hangouts_get_chat_name(GHashTable *data);
 
+void hangouts_join_chat_from_url(HangoutsAccount *ha, const gchar *url);
+
 void hangouts_get_all_events(HangoutsAccount *ha, guint64 since_timestamp);
 void hangouts_add_conversation_to_blist(HangoutsAccount *ha, Conversation *conversation, GHashTable *unique_user_ids);
 

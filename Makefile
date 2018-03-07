@@ -16,10 +16,15 @@ LDFLAGS ?=
 
 # Do some nasty OS and purple version detection
 ifeq ($(OS),Windows_NT)
+  #only defined on 64-bit windows
+  PROGFILES32 = ${ProgramFiles(x86)}
+  ifndef PROGFILES32
+    PROGFILES32 = $(PROGRAMFILES)
+  endif
   HANGOUTS_TARGET = libhangouts.dll
-  HANGOUTS_DEST = "$(PROGRAMFILES)/Pidgin/plugins"
-  HANGOUTS_ICONS_DEST = "$(PROGRAMFILES)/Pidgin/pixmaps/pidgin/protocols"
-  MAKENSIS = "$(PROGRAMFILES)/NSIS/makensis.exe"
+  HANGOUTS_DEST = "$(PROGFILES32)/Pidgin/plugins"
+  HANGOUTS_ICONS_DEST = "$(PROGFILES32)/Pidgin/pixmaps/pidgin/protocols"
+  MAKENSIS = "$(PROGFILES32)/NSIS/makensis.exe"
 else
 
   UNAME_S := $(shell uname -s)

@@ -322,6 +322,19 @@ hangouts_authcode_input_cancel_cb(gpointer user_data)
 
 static gulong chat_conversation_typing_signal = 0;
 
+#if !PURPLE_VERSION_CHECK(3, 0, 0)
+static gulong deleting_chat_buddy_signal = 0;
+
+// See workaround for purple_chat_conversation_find_user() in purplecompat.h
+static void
+hangouts_deleting_chat_buddy(PurpleConvChatBuddy *cb)
+{
+	if (g_dataset_get_data(cb, "chat") != NULL) {
+		g_dataset_destroy(cb);
+	}
+}
+#endif
+
 static void
 hangouts_login(PurpleAccount *account)
 {
@@ -384,6 +397,12 @@ hangouts_login(PurpleAccount *account)
 	if (!chat_conversation_typing_signal) {
 		chat_conversation_typing_signal = purple_signal_connect(purple_conversations_get_handle(), "chat-conversation-typing", purple_connection_get_protocol(pc), PURPLE_CALLBACK(hangouts_conv_send_typing), ha);
 	}
+
+#if !PURPLE_VERSION_CHECK(3, 0, 0)
+	if (!deleting_chat_buddy_signal) {
+		deleting_chat_buddy_signal = purple_signal_connect(purple_conversations_get_handle(), "deleting-chat-buddy", purple_connection_get_protocol(pc), PURPLE_CALLBACK(hangouts_deleting_chat_buddy), NULL);
+	}
+#endif
 	
 	ha->active_client_timeout = g_timeout_add_seconds(HANGOUTS_ACTIVE_CLIENT_TIMEOUT, ((GSourceFunc) hangouts_set_active_client), pc);
 }
@@ -753,22 +772,12 @@ PURPLE_PLUGIN_INIT(hangouts, plugin_query,
 void _purple_socket_init(void);
 void _purple_socket_uninit(void);
 
-// See workaround for purple_chat_conversation_find_user() in purplecompat.h
-static void
-hangouts_deleting_chat_buddy(PurpleConvChatBuddy *cb)
-{
-	if (g_dataset_get_data(cb, "chat") != NULL) {
-		g_dataset_destroy(cb);
-	}
-}
 
 static gboolean
 libpurple2_plugin_load(PurplePlugin *plugin)
 {
 	_purple_socket_init();
 	purple_http_init();
-	
-	purple_signal_connect(purple_conversations_get_handle(), "deleting-chat-buddy", plugin, PURPLE_CALLBACK(hangouts_deleting_chat_buddy), NULL);
 	
 	return plugin_load(plugin, NULL);
 }

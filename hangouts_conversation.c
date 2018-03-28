@@ -694,7 +694,7 @@ static void
 hangouts_got_join_chat_from_url(HangoutsAccount *ha, OpenGroupConversationFromUrlResponse *response, gpointer user_data)
 {
 	if (!response || !response->conversation_id || !response->conversation_id->id) {
-		purple_notify_error(ha->pc, _("Join from URL Error"), _("Could not join group from URL"), response->response_header ? response->response_header->error_description : _("Unknown Error"), purple_request_cpar_from_connection(pc));
+		purple_notify_error(ha->pc, _("Join from URL Error"), _("Could not join group from URL"), response->response_header ? response->response_header->error_description : _("Unknown Error"), purple_request_cpar_from_connection(ha->pc));
 		return;
 	}
 	

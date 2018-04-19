@@ -395,7 +395,7 @@ hangouts_login(PurpleAccount *account)
 	purple_signal_connect(purple_blist_get_handle(), "blist-node-aliased", account, PURPLE_CALLBACK(hangouts_blist_node_aliased), NULL);
 	purple_signal_connect(purple_conversations_get_handle(), "conversation-updated", account, PURPLE_CALLBACK(hangouts_mark_conversation_seen), NULL);
 	if (!chat_conversation_typing_signal) {
-		chat_conversation_typing_signal = purple_signal_connect(purple_conversations_get_handle(), "chat-conversation-typing", purple_connection_get_protocol(pc), PURPLE_CALLBACK(hangouts_conv_send_typing), ha);
+		chat_conversation_typing_signal = purple_signal_connect(purple_conversations_get_handle(), "chat-conversation-typing", purple_connection_get_protocol(pc), PURPLE_CALLBACK(hangouts_conv_send_typing), NULL);
 	}
 
 #if !PURPLE_VERSION_CHECK(3, 0, 0)

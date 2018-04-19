@@ -267,7 +267,10 @@ hangouts_set_auth_headers(HangoutsAccount *ha, PurpleHttpRequest *request)
 	hash = g_checksum_new(G_CHECKSUM_SHA1);
 	g_checksum_update(hash, (guchar *) mstime_str, strlen(mstime_str));
 	g_checksum_update(hash, (guchar *) " ", 1);
-	g_checksum_update(hash, (guchar *) sapisid_cookie, strlen(sapisid_cookie));
+	if (sapisid_cookie && *sapisid_cookie) {
+		// Should we just bail out if we dont have the cookie?
+		g_checksum_update(hash, (guchar *) sapisid_cookie, strlen(sapisid_cookie));
+	}
 	g_checksum_update(hash, (guchar *) " ", 1);
 	g_checksum_update(hash, (guchar *) HANGOUTS_PBLITE_XORIGIN_URL, strlen(HANGOUTS_PBLITE_XORIGIN_URL));
 	sha1 = g_checksum_get_string(hash);

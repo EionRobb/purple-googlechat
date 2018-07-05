@@ -66,6 +66,12 @@ save_bitlbee_password(PurpleAccount *account, const gchar *password)
 {
 	bitlbee_account_t *acc;
 	bitlbee_im_connection *imconn;
+
+	gboolean result = GPOINTER_TO_INT(purple_signal_emit_return_1(purple_accounts_get_handle(), "bitlbee-set-account-password", account, password));
+
+	if (result) {
+		return;
+	}
 	
 	if (bitlbee_password_funcs_loaded == FALSE) {
 		bitlbee_module = dlopen(NULL, RTLD_LAZY);

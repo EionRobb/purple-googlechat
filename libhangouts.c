@@ -134,9 +134,14 @@ hangouts_blist_node_removed(PurpleBlistNode *node)
 		hangouts_chat_leave_by_conv_id(pc, conv_id, NULL);
 	} else {
 		HangoutsAccount *ha = purple_connection_get_protocol_data(pc);
-		conv_id = g_hash_table_lookup(ha->one_to_ones_rev, purple_buddy_get_name(buddy));
+		const gchar *gaia_id = purple_buddy_get_name(buddy);
+		conv_id = g_hash_table_lookup(ha->one_to_ones_rev, gaia_id);
 		
 		hangouts_archive_conversation(ha, conv_id);
+		
+		if (purple_strequal(gaia_id, ha->self_gaia_id)) {
+			purple_account_set_bool(account, "hide_self", TRUE);
+		}
 	}
 }
 

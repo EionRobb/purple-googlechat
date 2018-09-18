@@ -739,6 +739,11 @@ void
 hangouts_add_person_to_blist(HangoutsAccount *ha, gchar *gaia_id, gchar *alias)
 {
 	PurpleGroup *hangouts_group = purple_blist_find_group("Hangouts");
+	
+	if (purple_account_get_bool(ha->account, "hide_self", FALSE) && purple_strequal(gaia_id, ha->self_gaia_id)) {
+		return;
+	}
+	
 	if (!hangouts_group)
 	{
 		hangouts_group = purple_group_new("Hangouts");

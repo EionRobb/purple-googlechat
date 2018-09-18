@@ -1012,6 +1012,16 @@ hangouts_got_buddy_list(PurpleHttpConnection *http_conn, PurpleHttpResponse *res
 		photo = hangouts_json_path_query_string(node, "$.photo[*].url", NULL);
 		buddy = purple_blist_find_buddy(ha->account, name);
 		
+		if (purple_account_get_bool(ha->account, "hide_self", FALSE) && purple_strequal(ha->self_gaia_id, name)) {
+			if (buddy != NULL) {
+				purple_blist_remove_buddy(buddy);
+			}
+			
+			g_free(alias);
+			g_free(photo);
+			continue;
+		}
+		
 		if (buddy == NULL) {
 			if (hangouts_group == NULL) {
 				hangouts_group = purple_blist_find_group("Hangouts");

@@ -1463,7 +1463,7 @@ hangouts_conversation_check_message_for_images(HangoutsAccount *ha, const gchar 
 	const gchar *img;
 	
 	if ((img = strstr(message, "<img ")) || (img = strstr(message, "<IMG "))) {
-		const gchar *id;
+		const gchar *id, *src;
 		const gchar *close = strchr(img, '>');
 		
 		if (((id = strstr(img, "ID=\"")) || (id = strstr(img, "id=\""))) &&
@@ -1473,6 +1473,17 @@ hangouts_conversation_check_message_for_images(HangoutsAccount *ha, const gchar 
 			
 			if (image != NULL) {
 				hangouts_conversation_send_image(ha, conv_id, image);
+			}
+		} else if (((src = strstr(img, "SRC=\"")) || (src = strstr(img, "src=\""))) &&
+				src < close) {
+			// purple3 embeds images using src="purple-image:1"
+			if (strncmp(src + 5, "purple-image:", 13) == 0) {
+				int imgid = atoi(src + 5 + 13);
+				PurpleImage *image = purple_image_store_get(imgid);
+				
+				if (image != NULL) {
+					hangouts_conversation_send_image(ha, conv_id, image);
+				}
 			}
 		}
 	}

@@ -94,7 +94,9 @@ purple_blist_node_set_transient(PurpleBlistNode *node, gboolean transient)
 
 #define PurpleMessage  PurpleConvMessage
 #define purple_message_set_time(msg, time)  ((msg)->when = (time))
-#define purple_conversation_write_message(conv, msg)  purple_conversation_write(conv, msg->who, msg->what, msg->flags, msg->when)
+#define purple_conversation_write_message(conv, msg) \
+	purple_conversation_write(conv, msg->who, msg->what, msg->flags, msg->when); \
+	purple_message_destroy(msg)
 static inline PurpleMessage *
 purple_message_new_outgoing(const gchar *who, const gchar *contents, PurpleMessageFlags flags)
 {

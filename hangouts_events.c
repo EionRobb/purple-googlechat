@@ -556,7 +556,6 @@ hangouts_got_http_image_for_conv(PurpleHttpConnection *connection, PurpleHttpRes
 				}
 				purple_message_set_time(message, message_timestamp);
 				purple_conversation_write_message(PURPLE_CONVERSATION(imconv), message);
-				purple_message_destroy(message);
 			}
 		}
 	}
@@ -756,7 +755,6 @@ hangouts_process_conversation_event(HangoutsAccount *ha, Conversation *conversat
 					}
 					purple_message_set_time(message, message_timestamp);
 					purple_conversation_write_message(PURPLE_CONVERSATION(imconv), message);
-					purple_message_destroy(message);
 				}
 			}
 			
@@ -803,7 +801,6 @@ hangouts_process_conversation_event(HangoutsAccount *ha, Conversation *conversat
 								PurpleMessage *img_message = purple_message_new_outgoing(gaia_id, url, msg_flags);
 								purple_message_set_time(img_message, message_timestamp);
 								purple_conversation_write_message(pconv, img_message);
-								purple_message_destroy(img_message);
 							}
 						}
 					} else {

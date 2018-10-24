@@ -349,7 +349,7 @@ hangouts_received_watermark_notification(PurpleConnection *pc, StateUpdate *stat
 	
 	ha = purple_connection_get_protocol_data(pc);
 	
-	if (FALSE && g_strcmp0(watermark_notification->sender_id->gaia_id, ha->self_gaia_id)) {
+	if (FALSE && purple_strequal(watermark_notification->sender_id->gaia_id, ha->self_gaia_id)) {
 		//We marked this message as read ourselves
 		PurpleConversation *conv = NULL;
 		const gchar *conv_id = watermark_notification->conversation_id->id;
@@ -538,7 +538,7 @@ hangouts_got_http_image_for_conv(PurpleHttpConnection *connection, PurpleHttpRes
 	image = purple_image_new_from_data(g_memdup(response_data, response_size), response_size);
 	image_id = purple_image_store_add(image);
 	escaped_image_url = g_markup_escape_text(purple_http_request_get_url(purple_http_conn_get_request(connection)), -1);
-	msg = g_strdup_printf("<a href='%s'>View full image <img id='%d' src='%s' /></a>", url, image_id, escaped_image_url);
+	msg = g_strdup_printf("<a href='%s'>View full image <img id='%ud' src='%s' /></a>", url, image_id, escaped_image_url);
 	msg_flags |= PURPLE_MESSAGE_IMAGES;
 		
 	if (g_hash_table_contains(ha->group_chats, conv_id)) {
@@ -620,6 +620,11 @@ hangouts_process_conversation_event(HangoutsAccount *ha, Conversation *conversat
 		return;
 	}
 	
+	if (conv_id == NULL) {
+		// Invalid conversation
+		return;
+	}
+	
 	if (event->membership_change != NULL) {
 		//event->event_type == EVENT_TYPE__EVENT_TYPE_REMOVE_USER || EVENT_TYPE__EVENT_TYPE_ADD_USER
 		MembershipChange *membership_change = event->membership_change;
@@ -686,7 +691,9 @@ hangouts_process_conversation_event(HangoutsAccount *ha, Conversation *conversat
 							const gchar *path = purple_http_url_get_path(url);
 							//apparently the path includes the query string
 							if (g_str_has_prefix(path, "/url?q=")) {
-								gchar *new_href = g_strndup(path + 7, strchr(path, '&') - path - 7);
+								const gchar *end = strchr(path, '&');
+								gsize len = (end ? (gsize) (end - path) : (gsize) strlen(path));
+								gchar *new_href = g_strndup(path + 7, len - 7);
 								purple_xmlnode_set_attrib(node, "href", purple_url_decode(new_href));
 								g_free(new_href);
 							}
@@ -863,7 +870,7 @@ hangouts_process_conversation_event(HangoutsAccount *ha, Conversation *conversat
 		
 		if (g_hash_table_contains(ha->group_chats, conv_id)) {
 			chat = purple_blist_find_chat(ha->account, conv_id);
-			if (chat && g_strcmp0(purple_chat_get_alias(chat), conversation_rename->new_name)) {
+			if (chat && !purple_strequal(purple_chat_get_alias(chat), conversation_rename->new_name)) {
 				g_dataset_set_data(ha, "ignore_set_alias", "true");
 				purple_chat_set_alias(chat, conversation_rename->new_name);
 				g_dataset_set_data(ha, "ignore_set_alias", NULL);

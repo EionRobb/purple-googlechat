@@ -192,9 +192,11 @@ purple_media_get_session_ssrcs(PurpleMedia *media)
 			guint ssrc;
 			
 			session = g_hash_table_lookup(sessions, session_ids->data);
-			g_object_get(session->session, "ssrc", &ssrc, NULL);
-			
-			ssrcs = g_list_append(ssrcs, GINT_TO_POINTER(ssrc));
+			if (session != NULL) {
+				g_object_get(session->session, "ssrc", &ssrc, NULL);
+				
+				ssrcs = g_list_append(ssrcs, GINT_TO_POINTER(ssrc));
+			}
 		}
 	}
 	
@@ -837,9 +839,11 @@ hangout_participant_add_cb(HangoutsAccount *ha, HangoutParticipantAddResponse *r
             audio_media_stream.source_id = "1"; //TODO
 			
 			ssrcs = purple_media_get_session_ssrcs(hangouts_media->media);
-			audio_stream_otter.ssrc = g_new0(uint32_t, g_list_length(ssrcs));
-			for(; ssrcs; ssrcs = g_list_delete_link(ssrcs, ssrcs)) {
-				audio_stream_otter.ssrc[audio_stream_otter.n_ssrc++] = GPOINTER_TO_INT(ssrcs->data);
+			if (ssrcs != NULL) {
+				audio_stream_otter.ssrc = g_new0(uint32_t, g_list_length(ssrcs));
+				for(; ssrcs; ssrcs = g_list_delete_link(ssrcs, ssrcs)) {
+					audio_stream_otter.ssrc[audio_stream_otter.n_ssrc++] = GPOINTER_TO_INT(ssrcs->data);
+				}
 			}
 			
 			stream_request.resource[n_resource++] = &audio_media_stream;
@@ -861,9 +865,11 @@ hangout_participant_add_cb(HangoutsAccount *ha, HangoutParticipantAddResponse *r
             video_media_stream.source_id = "2"; //TODO
 			
 			ssrcs = purple_media_get_session_ssrcs(hangouts_media->media);
-			video_stream_otter.ssrc = g_new0(uint32_t, g_list_length(ssrcs));
-			for(; ssrcs; ssrcs = g_list_delete_link(ssrcs, ssrcs)) {
-				video_stream_otter.ssrc[video_stream_otter.n_ssrc++] = GPOINTER_TO_INT(ssrcs->data);
+			if (ssrcs != NULL) {
+				video_stream_otter.ssrc = g_new0(uint32_t, g_list_length(ssrcs));
+				for(; ssrcs; ssrcs = g_list_delete_link(ssrcs, ssrcs)) {
+					video_stream_otter.ssrc[video_stream_otter.n_ssrc++] = GPOINTER_TO_INT(ssrcs->data);
+				}
 			}
 			
 			stream_request.resource[n_resource++] = &video_media_stream;

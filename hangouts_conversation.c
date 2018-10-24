@@ -292,7 +292,7 @@ hangouts_got_users_information(HangoutsAccount *ha, GetEntityByIdResponse *respo
 			// Set the buddy photo, if it's real
 			if (entity->properties->photo_url != NULL && entity->properties->photo_url_status == PHOTO_URL_STATUS__PHOTO_URL_STATUS_USER_PHOTO) {
 				gchar *photo = g_strconcat("https:", entity->properties->photo_url, NULL);
-				if (g_strcmp0(purple_buddy_icons_get_checksum_for_user(buddy), photo)) {
+				if (!purple_strequal(purple_buddy_icons_get_checksum_for_user(buddy), photo)) {
 					PurpleHttpRequest *photo_request = purple_http_request_new(photo);
 					
 					if (ha->icons_keepalive_pool == NULL) {
@@ -694,7 +694,7 @@ static void
 hangouts_got_join_chat_from_url(HangoutsAccount *ha, OpenGroupConversationFromUrlResponse *response, gpointer user_data)
 {
 	if (!response || !response->conversation_id || !response->conversation_id->id) {
-		purple_notify_error(ha->pc, _("Join from URL Error"), _("Could not join group from URL"), response->response_header ? response->response_header->error_description : _("Unknown Error"), purple_request_cpar_from_connection(ha->pc));
+		purple_notify_error(ha->pc, _("Join from URL Error"), _("Could not join group from URL"), response && response->response_header ? response->response_header->error_description : _("Unknown Error"), purple_request_cpar_from_connection(ha->pc));
 		return;
 	}
 	
@@ -802,14 +802,13 @@ hangouts_add_conversation_to_blist(HangoutsAccount *ha, Conversation *conversati
 		g_hash_table_replace(ha->group_chats, g_strdup(conv_id), NULL);
 		
 		if (chat == NULL) {
-			if (hangouts_group == NULL) {
-				hangouts_group = purple_blist_find_group("Hangouts");
-				if (!hangouts_group)
-				{
-					hangouts_group = purple_group_new("Hangouts");
-					purple_blist_add_group(hangouts_group, NULL);
-				}
+			hangouts_group = purple_blist_find_group("Hangouts");
+			if (!hangouts_group)
+			{
+				hangouts_group = purple_group_new("Hangouts");
+				purple_blist_add_group(hangouts_group, NULL);
 			}
+			
 			if (!has_name) {
 				gchar **name_set = g_new0(gchar *, conversation->n_participant_data + 1);
 				for (i = 0; i < conversation->n_participant_data; i++) {
@@ -1000,7 +999,7 @@ hangouts_got_buddy_list(PurpleHttpConnection *http_conn, PurpleHttpResponse *res
 		PurpleBuddy *buddy;
 		gchar *reachableAppType = hangouts_json_path_query_string(node, "$.inAppReachability[*].appType", NULL);
 		
-		if (g_strcmp0(reachableAppType, "BABEL")) {
+		if (!purple_strequal(reachableAppType, "BABEL")) {
 			//Not a hangouts user
 			g_free(reachableAppType);
 			continue;
@@ -1037,7 +1036,7 @@ hangouts_got_buddy_list(PurpleHttpConnection *http_conn, PurpleHttpResponse *res
 			purple_serv_got_alias(ha->pc, name, alias);
 		}
 		
-		if (g_strcmp0(purple_buddy_icons_get_checksum_for_user(buddy), photo)) {
+		if (!purple_strequal(purple_buddy_icons_get_checksum_for_user(buddy), photo)) {
 			PurpleHttpRequest *photo_request = purple_http_request_new(photo);
 			
 			if (ha->icons_keepalive_pool == NULL) {
@@ -1202,7 +1201,7 @@ hangouts_convert_html_to_segments(HangoutsAccount *ha, const gchar *html_message
 				if (opening) {
 					while (*c != '>') {
 						//Grab HREF for the A
-						if (g_ascii_strcasecmp(tag->str, " HREF=")) {
+						if (g_ascii_strcasecmp(tag->str, " HREF=") == 0) {
 							gchar *href_end;
 							c += 6;
 							if (*c == '"' || *c == '\'') {
@@ -1435,7 +1434,7 @@ hangouts_conversation_send_image(HangoutsAccount *ha, const gchar *conv_id, Purp
 	if (filename != NULL) {
 		filename = g_path_get_basename(filename);
 	} else {
-		filename = g_strdup_printf("purple%d.%s", g_random_int(), purple_image_get_extension(image));
+		filename = g_strdup_printf("purple%ud.%s", g_random_int(), purple_image_get_extension(image));
 	}
 	
 	postdata = g_strdup_printf("{\"protocolVersion\":\"0.8\",\"createSessionRequest\":{\"fields\":[{\"external\":{\"name\":\"file\",\"filename\":\"%s\",\"put\":{},\"size\":%" G_GSIZE_FORMAT "}},{\"inlined\":{\"name\":\"client\",\"content\":\"hangouts\",\"contentType\":\"text/plain\"}}]}}", filename, (gsize) purple_image_get_data_size(image));
@@ -1631,7 +1630,7 @@ hangouts_conv_send_typing(PurpleConversation *conv, PurpleIMTypingState state, H
 	if (!PURPLE_CONNECTION_IS_CONNECTED(pc))
 		return 0;
 	
-	if (g_strcmp0(purple_protocol_get_id(purple_connection_get_protocol(pc)), HANGOUTS_PLUGIN_ID))
+	if (!purple_strequal(purple_protocol_get_id(purple_connection_get_protocol(pc)), HANGOUTS_PLUGIN_ID))
 		return 0;
 	
 	if (ha == NULL) {
@@ -2055,7 +2054,7 @@ hangouts_mark_conversation_seen(PurpleConversation *conv, PurpleConversationUpda
 	if (!PURPLE_CONNECTION_IS_CONNECTED(pc))
 		return;
 	
-	if (g_strcmp0(purple_protocol_get_id(purple_connection_get_protocol(pc)), HANGOUTS_PLUGIN_ID))
+	if (!purple_strequal(purple_protocol_get_id(purple_connection_get_protocol(pc)), HANGOUTS_PLUGIN_ID))
 		return;
 	
 	mark_seen_timeout = GPOINTER_TO_INT(purple_conversation_get_data(conv, "mark_seen_timeout"));

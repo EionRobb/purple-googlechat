@@ -118,7 +118,7 @@ hangouts_blist_node_removed(PurpleBlistNode *node)
 		return;
 	}
 	
-	if (g_strcmp0(purple_account_get_protocol_id(account), HANGOUTS_PLUGIN_ID)) {
+	if (!purple_strequal(purple_account_get_protocol_id(account), HANGOUTS_PLUGIN_ID)) {
 		return;
 	}
 	
@@ -168,7 +168,7 @@ hangouts_blist_node_aliased(PurpleBlistNode *node, const char *old_alias)
 		return;
 	}
 	
-	if (g_strcmp0(purple_account_get_protocol_id(account), HANGOUTS_PLUGIN_ID)) {
+	if (!purple_strequal(purple_account_get_protocol_id(account), HANGOUTS_PLUGIN_ID)) {
 		return;
 	}
 	
@@ -186,7 +186,7 @@ hangouts_blist_node_aliased(PurpleBlistNode *node, const char *old_alias)
 		new_alias = purple_chat_get_alias(chat);
 		
 		// Don't send update to existing update
-		if (g_strcmp0(old_alias, new_alias)) {
+		if (!purple_strequal(old_alias, new_alias)) {
 			components = purple_chat_get_components(chat);
 			conv_id = g_hash_table_lookup(components, "conv_id");
 			if (conv_id == NULL) {

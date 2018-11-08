@@ -538,7 +538,7 @@ hangouts_got_http_image_for_conv(PurpleHttpConnection *connection, PurpleHttpRes
 	image = purple_image_new_from_data(g_memdup(response_data, response_size), response_size);
 	image_id = purple_image_store_add(image);
 	escaped_image_url = g_markup_escape_text(purple_http_request_get_url(purple_http_conn_get_request(connection)), -1);
-	msg = g_strdup_printf("<a href='%s'>View full image <img id='%ud' src='%s' /></a>", url, image_id, escaped_image_url);
+	msg = g_strdup_printf("<a href='%s'>View full image <img id='%u' src='%s' /></a>", url, image_id, escaped_image_url);
 	msg_flags |= PURPLE_MESSAGE_IMAGES;
 		
 	if (g_hash_table_contains(ha->group_chats, conv_id)) {

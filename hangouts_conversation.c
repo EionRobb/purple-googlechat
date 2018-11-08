@@ -1434,7 +1434,7 @@ hangouts_conversation_send_image(HangoutsAccount *ha, const gchar *conv_id, Purp
 	if (filename != NULL) {
 		filename = g_path_get_basename(filename);
 	} else {
-		filename = g_strdup_printf("purple%ud.%s", g_random_int(), purple_image_get_extension(image));
+		filename = g_strdup_printf("purple%u.%s", g_random_int(), purple_image_get_extension(image));
 	}
 	
 	postdata = g_strdup_printf("{\"protocolVersion\":\"0.8\",\"createSessionRequest\":{\"fields\":[{\"external\":{\"name\":\"file\",\"filename\":\"%s\",\"put\":{},\"size\":%" G_GSIZE_FORMAT "}},{\"inlined\":{\"name\":\"client\",\"content\":\"hangouts\",\"contentType\":\"text/plain\"}}]}}", filename, (gsize) purple_image_get_data_size(image));

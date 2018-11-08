@@ -503,7 +503,7 @@ pblite_encode_field_for_json(const ProtobufCFieldDescriptor *field, gpointer val
 			const ProtobufCEnumValue *enum_value = protobuf_c_enum_descriptor_get_value(enum_descriptor, *member);
 			node = json_node_new(JSON_NODE_VALUE);
 			if (enum_value == NULL) {
-				gchar *unknown_text = g_strdup_printf("UNKNOWN ENUM VALUE %ud", *member);
+				gchar *unknown_text = g_strdup_printf("UNKNOWN ENUM VALUE %u", *member);
 				json_node_set_string(node, unknown_text);
 				g_free(unknown_text);
 			} else {

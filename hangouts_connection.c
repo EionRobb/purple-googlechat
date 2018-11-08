@@ -482,7 +482,7 @@ hangouts_send_maps(HangoutsAccount *ha, JsonArray *map_list, PurpleHttpCallback 
 	postdata = g_string_new(NULL);
 	if (map_list != NULL) {
 		map_list_len = json_array_get_length(map_list);
-		g_string_append_printf(postdata, "count=%ud&", map_list_len);
+		g_string_append_printf(postdata, "count=%u&", map_list_len);
 		g_string_append(postdata, "ofs=0&");
 		for(i = 0; i < map_list_len; i++) {
 			JsonObject *obj = json_array_get_object_element(map_list, i);

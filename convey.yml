@@ -1,0 +1,23 @@
+tasks:
+  import:
+    type: docker/import
+    files:
+      - .:.
+  debian-stretch-amd64:
+    type: docker/run
+    image: pidgin/pidgin2-dev:debian-stretch-amd64
+    script:
+      - set -ex
+      - make
+      - mv libhangouts.so libhangouts-debian-stretch-amd64.so
+    workdir: ${CONVEY_WORKSPACE}
+plans:
+  default:
+    stages:
+      - name: setup
+        tasks:
+         - import
+      - name: build
+        tasks:
+         - debian-stretch-amd64
+

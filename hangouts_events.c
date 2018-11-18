@@ -146,8 +146,10 @@ hangouts_received_delete_notification(PurpleConnection *pc, StateUpdate *state_u
 	
 	ha = purple_connection_get_protocol_data(pc);
 	conv_id = delete_notification->conversation_id->id;
-
-	hangouts_remove_conversation(ha, conv_id);
+	
+	if (delete_notification->delete_action && delete_notification->delete_action->delete_type == DELETE_TYPE__DELETE_TYPE_UPPER_BOUND) {
+		hangouts_remove_conversation(ha, conv_id);
+	}
 }
 
 void
@@ -636,6 +638,9 @@ hangouts_process_conversation_event(HangoutsAccount *ha, Conversation *conversat
 				ParticipantId *participant_id = membership_change->participant_ids[i];
 				
 				if (membership_change->type == MEMBERSHIP_CHANGE_TYPE__MEMBERSHIP_CHANGE_TYPE_LEAVE) {
+					//TODO
+					//LeaveReason reason = membership_change->leave_reason;
+					
 					purple_chat_conversation_remove_user(chatconv, participant_id->gaia_id, NULL);
 					if (g_strcmp0(participant_id->gaia_id, ha->self_gaia_id) == 0) {
 						purple_serv_got_chat_left(ha->pc, g_str_hash(conv_id));

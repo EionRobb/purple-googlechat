@@ -351,7 +351,6 @@ hangouts_pblite_media_media_session_add_cb(HangoutsAccount *ha, MediaSessionAddR
 					default:
 						continue;
 				}
-				
 				purple_codec = _purple_media_codec_new(
 					codec->payload_id, codec->name,
 					type, codec->sample_rate);
@@ -829,6 +828,8 @@ hangouts_media_send_media_stream_add(HangoutsAccount *ha, HangoutsMedia *hangout
 		// Male otters are called dogs or boars, females are called bitches or sows, and their offspring are called pups.
 		MediaStreamOffer audio_stream_otter;
 		MediaStreamOffer video_stream_otter;
+		SsrcGroup sim_group;
+		SsrcGroup fid_group;
 		
 		media_stream_add_request__init(&stream_request);
 		stream_request.request_header = hangouts_get_request_header(ha);
@@ -880,10 +881,26 @@ hangouts_media_send_media_stream_add(HangoutsAccount *ha, HangoutsMedia *hangout
 			
 			ssrcs = purple_media_get_session_ssrcs(hangouts_media->media, "hangoutv");
 			if (ssrcs != NULL) {
+				//TODO work out what these actually should be
+				ssrc_group__init(&sim_group);
+				ssrc_group__init(&fid_group);
+				sim_group.semantics = "SIM";
+				fid_group.semantics = "FID";
+				
 				video_stream_otter.ssrc = g_new0(uint32_t, g_list_length(ssrcs));
+				sim_group.ssrc = g_new0(uint32_t, g_list_length(ssrcs));
+				fid_group.ssrc = g_new0(uint32_t, g_list_length(ssrcs));
+				
 				for(; ssrcs; ssrcs = g_list_delete_link(ssrcs, ssrcs)) {
 					video_stream_otter.ssrc[video_stream_otter.n_ssrc++] = GPOINTER_TO_INT(ssrcs->data);
+					sim_group.ssrc[sim_group.n_ssrc++] = GPOINTER_TO_INT(ssrcs->data);
+					fid_group.ssrc[fid_group.n_ssrc++] = GPOINTER_TO_INT(ssrcs->data);
 				}
+				
+				video_stream_otter.ssrc_group = g_new0(SsrcGroup *, 2);
+				video_stream_otter.n_ssrc_group = 2;
+				video_stream_otter.ssrc_group[0] = &sim_group;
+				video_stream_otter.ssrc_group[1] = &fid_group;
 			}
 			
 			stream_request.resource[n_resource++] = &video_media_stream;
@@ -899,12 +916,16 @@ hangouts_media_send_media_stream_add(HangoutsAccount *ha, HangoutsMedia *hangout
 			g_free(audio_stream_otter.ssrc);
 		}
 		if (hangouts_media->type & PURPLE_MEDIA_VIDEO) {
+			g_free(video_stream_otter.ssrc_group[0]->ssrc);
+			g_free(video_stream_otter.ssrc_group[1]->ssrc);
+			g_free(video_stream_otter.ssrc_group);
 			g_free(video_stream_otter.ssrc);
 		}
 		g_free(stream_request.resource);
 		hangouts_request_header_free(stream_request.request_header);
 	}
 	
+	//gst debugging:
 	//GST_DEBUG_BIN_TO_DOT_FILE(GST_BIN(purple_media_manager_get_pipeline(purple_media_manager_get())), GST_DEBUG_GRAPH_SHOW_ALL, "test");
 }
 
@@ -952,29 +973,24 @@ hangouts_pblite_media_hangout_resolve_cb(HangoutsAccount *ha, HangoutResolveResp
 			// G_CALLBACK(hangouts_media_stream_info_cb), hangouts_media);
 	
 	//TODO add params
-	
 	if(!purple_media_add_stream(media, "hangout", hangouts_media->who, hangouts_media->type & PURPLE_MEDIA_AUDIO, TRUE, "nice", num_params, params)) {
 		purple_media_end(media, NULL, NULL);
 		/* TODO: How much clean-up is necessary here? (does calling
 				 purple_media_end lead to cleaning up Jingle structs?) */
 		return;
 	}
-#if 0
 	if(!purple_media_add_stream(media, "hangoutv", hangouts_media->who, hangouts_media->type & PURPLE_MEDIA_VIDEO, TRUE, "nice", num_params, params)) {
 		purple_media_end(media, NULL, NULL);
 		return;
 	}
-#endif
 
 #if PURPLE_VERSION_CHECK(2, 10, 12) || PURPLE_VERSION_CHECK(3, 0, 0)
 	if (!purple_media_set_send_rtcp_mux(media, "hangout", hangouts_media->who, TRUE)) {
 		purple_debug_warning("hangouts", "Unable to set rtcp mux on audio stream");
 	}
-#if 0
 	if (!purple_media_set_send_rtcp_mux(media, "hangoutv", hangouts_media->who, TRUE)) {
 		purple_debug_warning("hangouts", "Unable to set rtcp mux on video stream");
 	}
-#endif
 #endif
 	
 	//Add self to hangout

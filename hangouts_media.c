@@ -20,7 +20,6 @@
 
 #include "hangouts_media.h"
 
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -156,20 +155,12 @@ typedef struct _PurpleMediaBackendFs2Private
 	gpointer potential_sessions_2;
 } PurpleMediaBackendFs2Private;
 
-/*
-#define PURPLE_TYPE_MEDIA_BACKEND_FS2  (_purple_media_backend_fs2_get_type())
-#define PURPLE_MEDIA_BACKEND_FS2_GET_PRIVATE(obj) \
-		(G_TYPE_INSTANCE_GET_PRIVATE((obj), \
-		PURPLE_TYPE_MEDIA_BACKEND_FS2, PurpleMediaBackendFs2Private))
-*/
-		
-//TODO should this take in a session_id?
+
 GList *
-purple_media_get_session_ssrcs(PurpleMedia *media)
+purple_media_get_session_ssrcs(PurpleMedia *media, const gchar *session_id)
 {
 	PurpleMediaBackendFs2Private *priv;
 	PurpleMediaBackendFs2Session *session;
-	GList *session_ids = purple_media_get_session_ids(media);
 	GList *ssrcs = NULL;
 	GObject *purple_media_backend;
 	GHashTable *sessions;
@@ -178,7 +169,6 @@ purple_media_get_session_ssrcs(PurpleMedia *media)
 	
 	g_object_get(media, "backend", &purple_media_backend, NULL);
 	priv = G_TYPE_INSTANCE_GET_PRIVATE((purple_media_backend), G_OBJECT_TYPE(purple_media_backend), PurpleMediaBackendFs2Private);
-	//priv = PURPLE_MEDIA_BACKEND_FS2_GET_PRIVATE(purple_media_backend);
 	
 	// could be at either of these two points in the struct, depending on #define options
 	if (G_IS_OBJECT(priv->potential_sessions_1)) {
@@ -188,15 +178,17 @@ purple_media_get_session_ssrcs(PurpleMedia *media)
 	}
 	
 	if (sessions != NULL) {
-		for (; session_ids; session_ids = g_list_delete_link(session_ids, session_ids)) {
-			guint ssrc;
-			
-			session = g_hash_table_lookup(sessions, session_ids->data);
-			if (session != NULL) {
-				g_object_get(session->session, "ssrc", &ssrc, NULL);
-				
-				ssrcs = g_list_append(ssrcs, GINT_TO_POINTER(ssrc));
+		guint ssrc;
+		
+		session = g_hash_table_lookup(sessions, session_id);
+		if (session != NULL) {
+			g_object_get(session->session, "ssrc", &ssrc, NULL);
+			if (ssrc == 0) {
+				ssrc = g_random_int();
+				g_object_set(session->session, "ssrc", ssrc, NULL);
 			}
+			
+			ssrcs = g_list_append(ssrcs, GINT_TO_POINTER(ssrc));
 		}
 	}
 	
@@ -217,6 +209,8 @@ typedef struct {
 	gchar *participant_id;
 	gchar *session_id;
 } HangoutsMedia;
+
+static void hangouts_media_send_media_stream_add(HangoutsAccount *ha, HangoutsMedia *hangouts_media);
 
 static void
 hangouts_media_destroy(HangoutsMedia *hangouts_media)
@@ -266,7 +260,6 @@ hangouts_pblite_media_media_session_add_cb(HangoutsAccount *ha, MediaSessionAddR
 	for (i = 0; i < response->n_resource; i++) {
 		MediaSession *resource = response->resource[i];
 		hangouts_media->session_id = g_strdup(resource->session_id);
-		
 		for (j = 0; j < resource->n_server_content; j++) {
 			MediaContent *server_content = resource->server_content[j];
 			GList *remote_candidates_list = NULL;
@@ -409,6 +402,10 @@ hangouts_pblite_media_media_session_add_cb(HangoutsAccount *ha, MediaSessionAddR
 	// TODO: Find a better place for this?
 	purple_media_stream_info(hangouts_media->media,
 			PURPLE_MEDIA_INFO_ACCEPT, NULL, NULL, FALSE);
+	
+	if (hangouts_media->participant_id != NULL) {		
+		hangouts_media_send_media_stream_add(ha, hangouts_media);
+	}
 }
 
 static void
@@ -636,6 +633,8 @@ hangouts_send_media_and_codecs(PurpleMedia *media, gchar *sid, gchar *name, Hang
 	request.resource = &media_sessions;
 	request.request_header = hangouts_get_request_header(hangouts_media->ha);
 	
+	purple_debug_info("hangouts", "hangouts_pblite_media_media_session_add: ");
+	hangouts_default_response_dump(NULL, (ProtobufCMessage*)&request, NULL);	
 	hangouts_pblite_media_media_session_add(hangouts_media->ha, &request, hangouts_pblite_media_media_session_add_cb, hangouts_media);
 	
 	hangouts_request_header_free(request.request_header);
@@ -746,6 +745,8 @@ hangout_participant_add_cb(HangoutsAccount *ha, HangoutParticipantAddResponse *r
 		invitation_request.invitation = &invitation;
 		invitation_request.request_header = hangouts_get_request_header(ha);
 		
+		purple_debug_info("hangouts", "hangouts_pblite_media_hangout_invitation_add: ");
+		hangouts_default_response_dump(NULL, (ProtobufCMessage*)&invitation_request, NULL);	
 		hangouts_pblite_media_hangout_invitation_add(ha, &invitation_request, (HangoutsPbliteHangoutInvitationAddResponseFunc)hangouts_default_response_dump, NULL);
 		
 		hangouts_request_header_free(invitation_request.request_header);
@@ -769,8 +770,8 @@ hangout_participant_add_cb(HangoutsAccount *ha, HangoutParticipantAddResponse *r
 			media_source__init(&audio_media_source);
 			
 			audio_media_source.hangout_id = hangouts_media->hangout_id;
-            audio_media_source.participant_id = hangouts_media->participant_id;
-            audio_media_source.source_id = "1"; //TODO
+			audio_media_source.participant_id = hangouts_media->participant_id;
+			audio_media_source.source_id = "1"; //TODO
 			audio_media_source.has_media_type = TRUE;
 			audio_media_source.media_type = MEDIA_TYPE__MEDIA_TYPE_AUDIO;
 			
@@ -784,8 +785,8 @@ hangout_participant_add_cb(HangoutsAccount *ha, HangoutParticipantAddResponse *r
 			media_source__init(&video_media_source);
 			
 			video_media_source.hangout_id = hangouts_media->hangout_id;
-            video_media_source.participant_id = hangouts_media->participant_id;
-            video_media_source.source_id = "2"; //TODO
+			video_media_source.participant_id = hangouts_media->participant_id;
+			video_media_source.source_id = "2"; //TODO
 			video_media_source.has_media_type = TRUE;
 			video_media_source.media_type = MEDIA_TYPE__MEDIA_TYPE_VIDEO;
 			
@@ -803,12 +804,22 @@ hangout_participant_add_cb(HangoutsAccount *ha, HangoutParticipantAddResponse *r
 		
 		source_request.n_resource = n_resource;
 		
+		purple_debug_info("hangouts", "hangouts_pblite_media_media_source_add: ");
+		hangouts_default_response_dump(NULL, (ProtobufCMessage*)&source_request, NULL);	
 		hangouts_pblite_media_media_source_add(ha, &source_request, (HangoutsPbliteMediaSourceAddResponseFunc)hangouts_default_response_dump, NULL);
 		
 		g_free(source_request.resource);
 		hangouts_request_header_free(source_request.request_header);
 	}
 	
+	if (hangouts_media->session_id != NULL) {		
+		hangouts_media_send_media_stream_add(ha, hangouts_media);
+	}
+}
+
+static void
+hangouts_media_send_media_stream_add(HangoutsAccount *ha, HangoutsMedia *hangouts_media)
+{
 	// Send ssrc's
 	{
 		MediaStreamAddRequest stream_request;
@@ -835,17 +846,19 @@ hangout_participant_add_cb(HangoutsAccount *ha, HangoutParticipantAddResponse *r
 			audio_media_stream.session_id = hangouts_media->session_id;
 			audio_media_stream.stream_id = "dogboarsowpup/1"; //TODO
 			audio_media_stream.hangout_id = hangouts_media->hangout_id;
-            audio_media_stream.participant_id = hangouts_media->participant_id;
-            audio_media_stream.source_id = "1"; //TODO
+			audio_media_stream.participant_id = hangouts_media->participant_id;
+			audio_media_stream.source_id = "1"; //TODO
+			audio_media_stream.offer = &audio_stream_otter;
 			
-			ssrcs = purple_media_get_session_ssrcs(hangouts_media->media);
+			ssrcs = purple_media_get_session_ssrcs(hangouts_media->media, "hangout");
+			//purple_debug_warning("TEST", "ssrcs: %d", g_list_length(ssrcs));
 			if (ssrcs != NULL) {
 				audio_stream_otter.ssrc = g_new0(uint32_t, g_list_length(ssrcs));
 				for(; ssrcs; ssrcs = g_list_delete_link(ssrcs, ssrcs)) {
 					audio_stream_otter.ssrc[audio_stream_otter.n_ssrc++] = GPOINTER_TO_INT(ssrcs->data);
 				}
 			}
-			
+
 			stream_request.resource[n_resource++] = &audio_media_stream;
 		}
 		
@@ -857,14 +870,15 @@ hangout_participant_add_cb(HangoutsAccount *ha, HangoutParticipantAddResponse *r
 			video_media_stream.has_direction = TRUE;
 			video_media_stream.direction = MEDIA_STREAM_DIRECTION__MEDIA_STREAM_DIRECTION_UP;
 			video_media_stream.has_media_type = TRUE;
-			video_media_stream.media_type = MEDIA_TYPE__MEDIA_TYPE_AUDIO;
+			video_media_stream.media_type = MEDIA_TYPE__MEDIA_TYPE_VIDEO;
 			video_media_stream.session_id = hangouts_media->session_id;
 			video_media_stream.stream_id = "dogboarsowpup/2"; //TODO
 			video_media_stream.hangout_id = hangouts_media->hangout_id;
-            video_media_stream.participant_id = hangouts_media->participant_id;
-            video_media_stream.source_id = "2"; //TODO
+			video_media_stream.participant_id = hangouts_media->participant_id;
+			video_media_stream.source_id = "2"; //TODO
+			video_media_stream.offer = &video_stream_otter;
 			
-			ssrcs = purple_media_get_session_ssrcs(hangouts_media->media);
+			ssrcs = purple_media_get_session_ssrcs(hangouts_media->media, "hangoutv");
 			if (ssrcs != NULL) {
 				video_stream_otter.ssrc = g_new0(uint32_t, g_list_length(ssrcs));
 				for(; ssrcs; ssrcs = g_list_delete_link(ssrcs, ssrcs)) {
@@ -875,6 +889,10 @@ hangout_participant_add_cb(HangoutsAccount *ha, HangoutParticipantAddResponse *r
 			stream_request.resource[n_resource++] = &video_media_stream;
 		}
 		
+		stream_request.n_resource = n_resource;
+		
+		purple_debug_info("hangouts", "hangouts_pblite_media_media_stream_add: ");
+		hangouts_default_response_dump(NULL, (ProtobufCMessage*)&stream_request, NULL);	
 		hangouts_pblite_media_media_stream_add(ha, &stream_request, (HangoutsPbliteMediaStreamAddResponseFunc)hangouts_default_response_dump, NULL);
 		
 		if (hangouts_media->type & PURPLE_MEDIA_AUDIO) {
@@ -886,6 +904,8 @@ hangout_participant_add_cb(HangoutsAccount *ha, HangoutParticipantAddResponse *r
 		g_free(stream_request.resource);
 		hangouts_request_header_free(stream_request.request_header);
 	}
+	
+	//GST_DEBUG_BIN_TO_DOT_FILE(GST_BIN(purple_media_manager_get_pipeline(purple_media_manager_get())), GST_DEBUG_GRAPH_SHOW_ALL, "test");
 }
 
 
@@ -905,6 +925,7 @@ hangouts_pblite_media_hangout_resolve_cb(HangoutsAccount *ha, HangoutResolveResp
 	
 	hangouts_media->hangout_id = g_strdup(response->hangout_id);
 	
+	purple_debug_info("hangouts", "hangouts_pblite_media_hangout_resolve_cb: ");
 	hangouts_default_response_dump(ha, &response->base, user_data);
 	
 	//TODO use openwebrtc instead of fsrtpconference
@@ -932,18 +953,28 @@ hangouts_pblite_media_hangout_resolve_cb(HangoutsAccount *ha, HangoutResolveResp
 	
 	//TODO add params
 	
-	if(!purple_media_add_stream(media, "hangout", hangouts_media->who, hangouts_media->type, TRUE, "nice", num_params, params)) {
+	if(!purple_media_add_stream(media, "hangout", hangouts_media->who, hangouts_media->type & PURPLE_MEDIA_AUDIO, TRUE, "nice", num_params, params)) {
 		purple_media_end(media, NULL, NULL);
 		/* TODO: How much clean-up is necessary here? (does calling
 				 purple_media_end lead to cleaning up Jingle structs?) */
 		return;
 	}
+#if 0
+	if(!purple_media_add_stream(media, "hangoutv", hangouts_media->who, hangouts_media->type & PURPLE_MEDIA_VIDEO, TRUE, "nice", num_params, params)) {
+		purple_media_end(media, NULL, NULL);
+		return;
+	}
+#endif
 
 #if PURPLE_VERSION_CHECK(2, 10, 12) || PURPLE_VERSION_CHECK(3, 0, 0)
 	if (!purple_media_set_send_rtcp_mux(media, "hangout", hangouts_media->who, TRUE)) {
-		purple_debug_warning("hangouts",
-				"Unable to set rtcp mux on stream");
+		purple_debug_warning("hangouts", "Unable to set rtcp mux on audio stream");
 	}
+#if 0
+	if (!purple_media_set_send_rtcp_mux(media, "hangoutv", hangouts_media->who, TRUE)) {
+		purple_debug_warning("hangouts", "Unable to set rtcp mux on video stream");
+	}
+#endif
 #endif
 	
 	//Add self to hangout
@@ -959,6 +990,8 @@ hangouts_pblite_media_hangout_resolve_cb(HangoutsAccount *ha, HangoutResolveResp
 		participant_request.resource = &participant_ptr;
 		participant_request.request_header = hangouts_get_request_header(ha);
 		
+		purple_debug_info("hangouts", "hangouts_pblite_media_hangout_participant_add: ");
+		hangouts_default_response_dump(NULL, (ProtobufCMessage*)&participant_request, NULL);	
 		hangouts_pblite_media_hangout_participant_add(ha, &participant_request, hangout_participant_add_cb, hangouts_media);
 		
 		hangouts_request_header_free(participant_request.request_header);

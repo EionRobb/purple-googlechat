@@ -913,13 +913,19 @@ hangouts_media_send_media_stream_add(HangoutsAccount *ha, HangoutsMedia *hangout
 		hangouts_pblite_media_media_stream_add(ha, &stream_request, (HangoutsPbliteMediaStreamAddResponseFunc)hangouts_default_response_dump, NULL);
 		
 		if (hangouts_media->type & PURPLE_MEDIA_AUDIO) {
-			g_free(audio_stream_otter.ssrc);
+			if (audio_stream_otter.n_ssrc) {
+				g_free(audio_stream_otter.ssrc);
+			}
 		}
 		if (hangouts_media->type & PURPLE_MEDIA_VIDEO) {
-			g_free(video_stream_otter.ssrc_group[0]->ssrc);
-			g_free(video_stream_otter.ssrc_group[1]->ssrc);
-			g_free(video_stream_otter.ssrc_group);
-			g_free(video_stream_otter.ssrc);
+			if (video_stream_otter.n_ssrc_group == 2) {
+				g_free(video_stream_otter.ssrc_group[0]->ssrc);
+				g_free(video_stream_otter.ssrc_group[1]->ssrc);
+				g_free(video_stream_otter.ssrc_group);
+			}
+			if (video_stream_otter.n_ssrc) {
+				g_free(video_stream_otter.ssrc);
+			}
 		}
 		g_free(stream_request.resource);
 		hangouts_request_header_free(stream_request.request_header);

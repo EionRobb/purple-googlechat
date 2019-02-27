@@ -979,22 +979,30 @@ hangouts_pblite_media_hangout_resolve_cb(HangoutsAccount *ha, HangoutResolveResp
 			// G_CALLBACK(hangouts_media_stream_info_cb), hangouts_media);
 	
 	//TODO add params
-	if(!purple_media_add_stream(media, "hangout", hangouts_media->who, hangouts_media->type & PURPLE_MEDIA_AUDIO, TRUE, "nice", num_params, params)) {
+	if(hangouts_media->type & PURPLE_MEDIA_AUDIO &&
+		!purple_media_add_stream(media, "hangout", hangouts_media->who, hangouts_media->type & PURPLE_MEDIA_AUDIO, TRUE, "nice", num_params, params)) {
+		
 		purple_media_end(media, NULL, NULL);
 		/* TODO: How much clean-up is necessary here? (does calling
 				 purple_media_end lead to cleaning up Jingle structs?) */
 		return;
 	}
-	if(!purple_media_add_stream(media, "hangoutv", hangouts_media->who, hangouts_media->type & PURPLE_MEDIA_VIDEO, TRUE, "nice", num_params, params)) {
+	if(hangouts_media->type & PURPLE_MEDIA_VIDEO &&
+		!purple_media_add_stream(media, "hangoutv", hangouts_media->who, hangouts_media->type & PURPLE_MEDIA_VIDEO, TRUE, "nice", num_params, params)) {
+		
 		purple_media_end(media, NULL, NULL);
 		return;
 	}
 
 #if PURPLE_VERSION_CHECK(2, 10, 12) || PURPLE_VERSION_CHECK(3, 0, 0)
-	if (!purple_media_set_send_rtcp_mux(media, "hangout", hangouts_media->who, TRUE)) {
+	if (hangouts_media->type & PURPLE_MEDIA_AUDIO &&
+		!purple_media_set_send_rtcp_mux(media, "hangout", hangouts_media->who, TRUE)) {
+		
 		purple_debug_warning("hangouts", "Unable to set rtcp mux on audio stream");
 	}
-	if (!purple_media_set_send_rtcp_mux(media, "hangoutv", hangouts_media->who, TRUE)) {
+	if (hangouts_media->type & PURPLE_MEDIA_VIDEO &&
+		!purple_media_set_send_rtcp_mux(media, "hangoutv", hangouts_media->who, TRUE)) {
+			
 		purple_debug_warning("hangouts", "Unable to set rtcp mux on video stream");
 	}
 #endif

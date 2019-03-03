@@ -92,6 +92,9 @@ hangouts_add_account_options(GList *account_options)
 	
 	option = purple_account_option_bool_new(N_("Hide self from buddy list (requires reconnect)"), "hide_self", FALSE);
 	account_options = g_list_append(account_options, option);
+
+	option = purple_account_option_bool_new(N_("Fetch image history when opening group chats"), "fetch_image_history", TRUE);
+	account_options = g_list_append(account_options, option);
 	
 	return account_options;
 }

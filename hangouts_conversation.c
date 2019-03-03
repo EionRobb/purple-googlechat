@@ -529,6 +529,10 @@ hangouts_got_conversation_events(HangoutsAccount *ha, GetConversationResponse *r
 		
 		// Ignore join/parts when loading history
 		if (!event->membership_change) {
+			if(event->chat_message != NULL && event->chat_message->message_content->n_attachment && !purple_account_get_bool(ha->account, "fetch_image_history", TRUE)) {
+				purple_debug_info("hangouts", "skipping attachment due to fetch_image_history disabled\n");
+				continue;
+			}
 			//Send event to the hangouts_events.c slaughterhouse
 			hangouts_process_conversation_event(ha, conversation, event, response->response_header->current_server_time);
 		}

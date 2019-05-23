@@ -92,6 +92,7 @@ Section "MainSection" SEC01
 	File "Google Internet Authority G2.pem"
 	File "Google Internet Authority G3.pem"
 	File "Google Trust Services - GlobalSign Root CA-R2.pem"
+	File "GTS CA 1O1.pem"
 
     SetOverwrite try
 	

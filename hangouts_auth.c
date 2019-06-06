@@ -164,8 +164,6 @@ hangouts_oauth_refresh_token(HangoutsAccount *ha)
 	purple_http_request(pc, request, hangouts_oauth_refresh_token_cb, ha);
 	purple_http_request_unref(request);
 	
-	purple_debug_info("hangouts", "Postdata: %s\n", postdata->str);
-	
 	g_string_free(postdata, TRUE);
 }
 

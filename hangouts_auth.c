@@ -291,8 +291,6 @@ hangouts_auth_get_session_cookies_uberauth_cb(PurpleHttpConnection *http_conn, P
 			_("Auth error"));
 		return;
 	}
-	
-	purple_debug_misc("hangouts-prpl", "uberauth: %s", uberauth);
 
 	request = purple_http_request_new(NULL);
 	purple_http_request_set_url_printf(request, "https://accounts.google.com/MergeSession" "?service=mail&continue=http://www.google.com&uberauth=%s", purple_url_encode(uberauth));

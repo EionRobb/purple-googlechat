@@ -30,7 +30,7 @@ message CommonAnnouncement {
   optional CommonAnnouncementAction action = 8;
   optional string title = 9;
   optional string body = 10;
-  optional LifeTime life_time = 11 [default = FIRE_AND_FORGET];
+  optional LifeTime life_time = 11;
 }
 
 enum CommonAnnouncementAction {
@@ -203,12 +203,12 @@ message HangoutParticipant {
   optional string given_name = 10;
   optional string family_name = 11;
   optional MediaRole role = 12;
-  optional ClientType client_type = 13 [default = OTHER];
+  optional ClientType client_type = 13;
   optional PhoneCallId phone_call_id = 16;
-  optional ParticipantState participant_state = 17 [default = PARTICIPANT_STATE_UNKNOWN];
+  optional ParticipantState participant_state = 17;
   repeated HangoutParticipantPrivilege privilege = 19;
   repeated HangoutParticipantBlockedUser blocked_user = 20;
-  optional bool accepted_tos = 21 [default = false];
+  optional bool accepted_tos = 21;
   optional E911UserLocationInfo e911_user_location_info = 22;
   optional int64 invitation_id = 23;
   optional string user_message = 25;
@@ -216,7 +216,7 @@ message HangoutParticipant {
 
 message HangoutParticipantBlockedUser {
   optional string user_id = 1;
-  optional BlockType block_type = 2 [default = HANGOUT_IGNORE];
+  optional BlockType block_type = 2;
 }
 
 enum BlockType {
@@ -270,7 +270,7 @@ message HangoutSearchRequest {
   optional RequestHeader request_header = 1;
   optional bool active_only = 2;
   optional bool is_public = 3;
-  optional int32 limit = 4 [default = 10];
+  optional int32 limit = 4;
   optional int64 oldest_timestamp = 6;
 }
 
@@ -310,8 +310,8 @@ message HangoutResolveRequest {
   optional RequestHeader request_header = 1;
   optional ExternalKey external_key = 2;
   optional NamedHangout named_hangout = 4;
-  optional bool is_joining = 5 [default = false];
-  optional HangoutMediaType media_type = 6[default = HANGOUT_MEDIA_TYPE_AUDIO_VIDEO];
+  optional bool is_joining = 5;
+  optional HangoutMediaType media_type = 6;
   optional string sharing_url = 7;
   optional SyncMetadata sync_metadata = 8;
 }
@@ -363,7 +363,7 @@ message HangoutParticipantSearchRequest {
 
 message RemovedParticipant {
   optional string participant_id = 1;
-  optional RemovalReason removal_reason = 2 [default = UNKNOWN_REASON];
+  optional RemovalReason removal_reason = 2;
 }
 
 message HangoutParticipantSearchResponse {
@@ -376,8 +376,8 @@ message HangoutParticipantSearchResponse {
 message HangoutParticipantAddPrerequisite {
   optional Hangout hangout = 1;
   repeated ParticipantId participant = 2;
-  optional bool hoa_tos_accepted = 3 [default = false];
-  optional bool customer_recording_tos_accepted = 4 [default = false];
+  optional bool hoa_tos_accepted = 3;
+  optional bool customer_recording_tos_accepted = 4;
 }
 
 message HangoutParticipantAddRequest {
@@ -677,7 +677,7 @@ message MediaRequest {
 }
 
 message MediaContent {
-  optional MediaType media_type = 1 [default = MEDIA_TYPE_BUNDLE];
+  optional MediaType media_type = 1;
   optional MediaTransport transport = 2;
   repeated MediaCodec codec = 3;
   repeated MediaCryptoParams crypto_param = 4;
@@ -1076,8 +1076,8 @@ enum NotificationSent {
 
 message HangoutInvitation {
   optional string hangout_id = 1;
-  optional NotificationType notification_type = 3 [default = RING];
-  optional int64 invitation_id = 8 [default = 0];
+  optional NotificationType notification_type = 3;
+  optional int64 invitation_id = 8;
   repeated HangoutInvitee invited_entity = 11;
 }
 
@@ -1089,7 +1089,7 @@ enum NotificationType {
 }
 
 message HangoutPhoneInvitation {
-  optional int64 invitation_id = 1 [default = 0];
+  optional int64 invitation_id = 1;
   optional string hangout_id = 2;
   optional PhoneNumber phone = 3;
   optional bool is_emergency_call = 4;
@@ -1165,7 +1165,7 @@ message GooglePlusRecordingDetails {
 message LiveStreamDetails {
   optional string youtube_live_id = 1;
   optional string topic = 2;
-  optional bool enable_monitor_stream = 3 [default = true];
+  optional bool enable_monitor_stream = 3;
   optional PrivacyStatus privacy_status = 4;
   repeated string tag = 5;
 }
@@ -1177,7 +1177,7 @@ enum PrivacyStatus {
 }
 
 message AbuseRecordingDetails {
-  optional AbuseRecordingDetailsStatus status = 1 [default = ABUSE_RECORDING_DETAILS_STATUS_UNKNOWN];
+  optional AbuseRecordingDetailsStatus status = 1;
   optional string defendant_participant_id = 2;
   optional string user_comments = 3;
 }
@@ -1191,7 +1191,7 @@ enum AbuseRecordingDetailsStatus {
 message LiveStreamStatus {
   optional LiveStreamStatusStatus current_state = 3;
   optional int64 live_start_time_ms = 4;
-  optional bool should_go_live = 5 [default = false];
+  optional bool should_go_live = 5;
 }
 
 enum LiveStreamStatusStatus {

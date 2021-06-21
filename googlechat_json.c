@@ -1,5 +1,5 @@
 /*
- * Hangouts Plugin for libpurple/Pidgin
+ * GoogleChat Plugin for libpurple/Pidgin
  * Copyright (c) 2015-2016 Eion Robb, Mike Ruprecht
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -16,7 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "hangouts_json.h"
+#include "googlechat_json.h"
 
 #include <debug.h>
 
@@ -88,7 +88,7 @@ json_decode(const gchar *data, gssize len)
 	
 	if (!data || !json_parser_load_from_data(parser, data, len, NULL))
 	{
-		purple_debug_error("hangouts", "Error parsing JSON: %s\n", data);
+		purple_debug_error("googlechat", "Error parsing JSON: %s\n", data);
 	} else {
 		root = json_parser_get_root(parser);
 		if (root != NULL) {
@@ -144,7 +144,7 @@ json_decode_object(const gchar *data, gssize len)
 
 
 JsonNode *
-hangouts_json_path_query(JsonNode *root, const gchar *expr, GError **error)
+googlechat_json_path_query(JsonNode *root, const gchar *expr, GError **error)
 {
 	JsonNode *ret;
 	JsonNode *node;
@@ -175,12 +175,12 @@ hangouts_json_path_query(JsonNode *root, const gchar *expr, GError **error)
 }
 
 gchar *
-hangouts_json_path_query_string(JsonNode *root, const gchar *expr, GError **error)
+googlechat_json_path_query_string(JsonNode *root, const gchar *expr, GError **error)
 {
 	gchar *ret;
 	JsonNode *rslt;
 
-	rslt = hangouts_json_path_query(root, expr, error);
+	rslt = googlechat_json_path_query(root, expr, error);
 
 	if (rslt == NULL)
 	{
@@ -193,12 +193,12 @@ hangouts_json_path_query_string(JsonNode *root, const gchar *expr, GError **erro
 }
 
 gint64
-hangouts_json_path_query_int(JsonNode *root, const gchar *expr, GError **error)
+googlechat_json_path_query_int(JsonNode *root, const gchar *expr, GError **error)
 {
 	gint64 ret;
 	JsonNode *rslt;
 
-	rslt = hangouts_json_path_query(root, expr, error);
+	rslt = googlechat_json_path_query(root, expr, error);
 
 	if (rslt == NULL)
 	{
@@ -211,7 +211,7 @@ hangouts_json_path_query_int(JsonNode *root, const gchar *expr, GError **error)
 }
 
 gchar *
-hangouts_json_tidy_blank_arrays(const gchar *json)
+googlechat_json_tidy_blank_arrays(const gchar *json)
 {
 	static GRegex *tidy_regex = NULL;
 	

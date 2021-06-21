@@ -1,5 +1,5 @@
 /*
- * Hangouts Plugin for libpurple/Pidgin
+ * GoogleChat Plugin for libpurple/Pidgin
  * Copyright (c) 2015-2016 Eion Robb, Mike Ruprecht
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -16,7 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "hangouts_events.h"
+#include "googlechat_events.h"
 
 #include <string.h>
 #include <glib.h>
@@ -28,28 +28,28 @@
 #include "image-store.h"
 #include "mediamanager.h"
 
-#include "hangouts_conversation.h"
-#include "hangouts.pb-c.h"
+#include "googlechat_conversation.h"
+#include "googlechat.pb-c.h"
 
-// From hangouts_pblite
+// From googlechat_pblite
 gchar *pblite_dump_json(ProtobufCMessage *message);
 
-//purple_signal_emit(purple_connection_get_protocol(ha->pc), "hangouts-received-stateupdate", ha->pc, batch_update.state_update[j]);
+//purple_signal_emit(purple_connection_get_protocol(ha->pc), "googlechat-received-stateupdate", ha->pc, batch_update.state_update[j]);
 
 void
-hangouts_register_events(gpointer plugin)
+googlechat_register_events(gpointer plugin)
 {
-	purple_signal_connect(plugin, "hangouts-received-stateupdate", plugin, PURPLE_CALLBACK(hangouts_received_typing_notification), NULL);
-	purple_signal_connect(plugin, "hangouts-received-stateupdate", plugin, PURPLE_CALLBACK(hangouts_received_event_notification), NULL);
-	purple_signal_connect(plugin, "hangouts-received-stateupdate", plugin, PURPLE_CALLBACK(hangouts_received_presence_notification), NULL);
-	purple_signal_connect(plugin, "hangouts-received-stateupdate", plugin, PURPLE_CALLBACK(hangouts_received_watermark_notification), NULL);
-	purple_signal_connect(plugin, "hangouts-received-stateupdate", plugin, PURPLE_CALLBACK(hangouts_received_state_update), NULL);
-	purple_signal_connect(plugin, "hangouts-received-stateupdate", plugin, PURPLE_CALLBACK(hangouts_received_view_modification), NULL);
-	purple_signal_connect(plugin, "hangouts-received-stateupdate", plugin, PURPLE_CALLBACK(hangouts_received_delete_notification), NULL);
-	purple_signal_connect(plugin, "hangouts-received-stateupdate", plugin, PURPLE_CALLBACK(hangouts_received_block_notification), NULL);
-	purple_signal_connect(plugin, "hangouts-received-stateupdate", plugin, PURPLE_CALLBACK(hangouts_received_other_notification), NULL);
+	purple_signal_connect(plugin, "googlechat-received-stateupdate", plugin, PURPLE_CALLBACK(googlechat_received_typing_notification), NULL);
+	purple_signal_connect(plugin, "googlechat-received-stateupdate", plugin, PURPLE_CALLBACK(googlechat_received_event_notification), NULL);
+	purple_signal_connect(plugin, "googlechat-received-stateupdate", plugin, PURPLE_CALLBACK(googlechat_received_presence_notification), NULL);
+	purple_signal_connect(plugin, "googlechat-received-stateupdate", plugin, PURPLE_CALLBACK(googlechat_received_watermark_notification), NULL);
+	purple_signal_connect(plugin, "googlechat-received-stateupdate", plugin, PURPLE_CALLBACK(googlechat_received_state_update), NULL);
+	purple_signal_connect(plugin, "googlechat-received-stateupdate", plugin, PURPLE_CALLBACK(googlechat_received_view_modification), NULL);
+	purple_signal_connect(plugin, "googlechat-received-stateupdate", plugin, PURPLE_CALLBACK(googlechat_received_delete_notification), NULL);
+	purple_signal_connect(plugin, "googlechat-received-stateupdate", plugin, PURPLE_CALLBACK(googlechat_received_block_notification), NULL);
+	purple_signal_connect(plugin, "googlechat-received-stateupdate", plugin, PURPLE_CALLBACK(googlechat_received_other_notification), NULL);
 	
-	purple_signal_connect(plugin, "hangouts-gmail-notification", plugin, PURPLE_CALLBACK(hangouts_received_gmail_notification), NULL);
+	purple_signal_connect(plugin, "googlechat-gmail-notification", plugin, PURPLE_CALLBACK(googlechat_received_gmail_notification), NULL);
 }
 
 /*
@@ -75,9 +75,9 @@ struct  _StateUpdate
 };*/
 
 void
-hangouts_received_state_update(PurpleConnection *pc, StateUpdate *state_update)
+googlechat_received_state_update(PurpleConnection *pc, StateUpdate *state_update)
 {
-	HangoutsAccount *ha = purple_connection_get_protocol_data(pc);
+	GoogleChatAccount *ha = purple_connection_get_protocol_data(pc);
 	
 	if (ha != NULL && state_update->state_update_header != NULL) {
 		gint64 current_server_time = state_update->state_update_header->current_server_time;
@@ -92,7 +92,7 @@ hangouts_received_state_update(PurpleConnection *pc, StateUpdate *state_update)
 }
 
 static void
-hangouts_remove_conversation(HangoutsAccount *ha, const gchar *conv_id)
+googlechat_remove_conversation(GoogleChatAccount *ha, const gchar *conv_id)
 {
 	if (g_hash_table_contains(ha->one_to_ones, conv_id)) {
 		const gchar *buddy_id = g_hash_table_lookup(ha->one_to_ones, conv_id);
@@ -115,9 +115,9 @@ hangouts_remove_conversation(HangoutsAccount *ha, const gchar *conv_id)
 }
 
 void
-hangouts_received_view_modification(PurpleConnection *pc, StateUpdate *state_update)
+googlechat_received_view_modification(PurpleConnection *pc, StateUpdate *state_update)
 {
-	HangoutsAccount *ha;
+	GoogleChatAccount *ha;
 	ConversationViewModification *view_modification = state_update->view_modification;
 	const gchar *conv_id;
 	
@@ -129,14 +129,14 @@ hangouts_received_view_modification(PurpleConnection *pc, StateUpdate *state_upd
 		ha = purple_connection_get_protocol_data(pc);
 		conv_id = view_modification->conversation_id->id;
 	
-		hangouts_remove_conversation(ha, conv_id);
+		googlechat_remove_conversation(ha, conv_id);
 	}
 }
 
 void
-hangouts_received_delete_notification(PurpleConnection *pc, StateUpdate *state_update)
+googlechat_received_delete_notification(PurpleConnection *pc, StateUpdate *state_update)
 {
-	HangoutsAccount *ha;
+	GoogleChatAccount *ha;
 	DeleteActionNotification *delete_notification = state_update->delete_notification;
 	const gchar *conv_id;
 	
@@ -148,14 +148,14 @@ hangouts_received_delete_notification(PurpleConnection *pc, StateUpdate *state_u
 	conv_id = delete_notification->conversation_id->id;
 	
 	if (delete_notification->delete_action && delete_notification->delete_action->delete_type == DELETE_TYPE__DELETE_TYPE_UPPER_BOUND) {
-		hangouts_remove_conversation(ha, conv_id);
+		googlechat_remove_conversation(ha, conv_id);
 	}
 }
 
 void
-hangouts_received_block_notification(PurpleConnection *pc, StateUpdate *state_update)
+googlechat_received_block_notification(PurpleConnection *pc, StateUpdate *state_update)
 {
-	HangoutsAccount *ha;
+	GoogleChatAccount *ha;
 	BlockNotification *block_notification = state_update->block_notification;
 	guint i;
 	
@@ -180,7 +180,7 @@ hangouts_received_block_notification(PurpleConnection *pc, StateUpdate *state_up
 }
 
 void
-hangouts_received_gmail_notification(PurpleConnection *pc, const gchar *username, GmailNotification *msg)
+googlechat_received_gmail_notification(PurpleConnection *pc, const gchar *username, GmailNotification *msg)
 {
 	gchar *url;
 	gchar *subject;
@@ -211,7 +211,7 @@ hangouts_received_gmail_notification(PurpleConnection *pc, const gchar *username
 	to = purple_markup_escape_text(username, -1);
 	
 	json_dump = pblite_dump_json((ProtobufCMessage *) msg);
-	purple_debug_info("hangouts", "Received gmail notification %s\n", json_dump);
+	purple_debug_info("googlechat", "Received gmail notification %s\n", json_dump);
 	
 	url = g_strconcat("https://mail.google.com/mail/u/", username, "/#inbox/", purple_url_encode(msg->thread_id), NULL);
 	
@@ -225,7 +225,7 @@ hangouts_received_gmail_notification(PurpleConnection *pc, const gchar *username
 }
 
 void
-hangouts_received_other_notification(PurpleConnection *pc, StateUpdate *state_update)
+googlechat_received_other_notification(PurpleConnection *pc, StateUpdate *state_update)
 {
 	gchar *json_dump;
 
@@ -236,9 +236,9 @@ hangouts_received_other_notification(PurpleConnection *pc, StateUpdate *state_up
 		return;
 	}
 	
-	purple_debug_info("hangouts", "Received new other event %p\n", state_update);
+	purple_debug_info("googlechat", "Received new other event %p\n", state_update);
 	json_dump = pblite_dump_json((ProtobufCMessage *)state_update);
-	purple_debug_info("hangouts", "%s\n", json_dump);
+	purple_debug_info("googlechat", "%s\n", json_dump);
 
 	g_free(json_dump);
 }
@@ -340,9 +340,9 @@ hangouts_received_other_notification(PurpleConnection *pc, StateUpdate *state_up
 
 
 void
-hangouts_received_watermark_notification(PurpleConnection *pc, StateUpdate *state_update)
+googlechat_received_watermark_notification(PurpleConnection *pc, StateUpdate *state_update)
 {
-	HangoutsAccount *ha;
+	GoogleChatAccount *ha;
 	WatermarkNotification *watermark_notification = state_update->watermark_notification;
 	
 	if (watermark_notification == NULL) {
@@ -383,7 +383,7 @@ hangouts_received_watermark_notification(PurpleConnection *pc, StateUpdate *stat
 }
 	
 void
-hangouts_process_presence_result(HangoutsAccount *ha, PresenceResult *presence_result)
+googlechat_process_presence_result(GoogleChatAccount *ha, PresenceResult *presence_result)
 {
 	const gchar *gaia_id = presence_result->user_id->gaia_id;
 	const gchar *status_id = NULL;
@@ -418,7 +418,7 @@ hangouts_process_presence_result(HangoutsAccount *ha, PresenceResult *presence_r
 		} else if (purple_account_get_bool(ha->account, "treat_invisible_as_offline", FALSE)) {
 			status_id = "gone";
 		} else {
-			// Hangouts contacts are never really unreachable, just invisible
+			// GoogleChat contacts are never really unreachable, just invisible
 			status_id = purple_primitive_get_id_from_type(PURPLE_STATUS_INVISIBLE);
 		}
 	} else if (buddy == NULL) {
@@ -458,11 +458,11 @@ hangouts_process_presence_result(HangoutsAccount *ha, PresenceResult *presence_r
 	g_free(message);
 	
 	if (buddy != NULL && presence != NULL) {
-		HangoutsBuddy *hbuddy = purple_buddy_get_protocol_data(buddy);
-		HangoutsDeviceTypeFlags device_type = HANGOUTS_DEVICE_TYPE_UNKNOWN;
+		GoogleChatBuddy *hbuddy = purple_buddy_get_protocol_data(buddy);
+		GoogleChatDeviceTypeFlags device_type = GOOGLECHAT_DEVICE_TYPE_UNKNOWN;
 		
 		if (hbuddy == NULL) {
-			hbuddy = g_new0(HangoutsBuddy, 1);
+			hbuddy = g_new0(GoogleChatBuddy, 1);
 			hbuddy->buddy = buddy;
 			purple_buddy_set_protocol_data(buddy, hbuddy);
 		}
@@ -472,29 +472,29 @@ hangouts_process_presence_result(HangoutsAccount *ha, PresenceResult *presence_r
 		
 		if (presence->device_status) {
 			if (presence->device_status->mobile) {
-				device_type |= HANGOUTS_DEVICE_TYPE_MOBILE;
+				device_type |= GOOGLECHAT_DEVICE_TYPE_MOBILE;
 			}
 			if (presence->device_status->desktop) {
-				device_type |= HANGOUTS_DEVICE_TYPE_DESKTOP;
+				device_type |= GOOGLECHAT_DEVICE_TYPE_DESKTOP;
 			}
 			if (presence->device_status->tablet) {
-				device_type |= HANGOUTS_DEVICE_TYPE_TABLET;
+				device_type |= GOOGLECHAT_DEVICE_TYPE_TABLET;
 			}
 		}
 		hbuddy->device_type = device_type;
 		
 		if (presence->last_seen && !presence->has_reachable && !presence->has_available) {
 			GList *user_list = g_list_prepend(NULL, (gchar *)gaia_id);
-			hangouts_get_users_presence(ha, user_list);
+			googlechat_get_users_presence(ha, user_list);
 			g_list_free(user_list);
 		}
 	}
 }
 
 void
-hangouts_received_presence_notification(PurpleConnection *pc, StateUpdate *state_update)
+googlechat_received_presence_notification(PurpleConnection *pc, StateUpdate *state_update)
 {
-	HangoutsAccount *ha;
+	GoogleChatAccount *ha;
 	PresenceNotification *presence_notification = state_update->presence_notification;
 	guint i;
 	
@@ -505,14 +505,14 @@ hangouts_received_presence_notification(PurpleConnection *pc, StateUpdate *state
 	ha = purple_connection_get_protocol_data(pc);
 	
 	for (i = 0; i < presence_notification->n_presence; i++) {
-		hangouts_process_presence_result(ha, presence_notification->presence[i]);
+		googlechat_process_presence_result(ha, presence_notification->presence[i]);
 	}
 }
 
 static void
-hangouts_got_http_image_for_conv(PurpleHttpConnection *connection, PurpleHttpResponse *response, gpointer user_data)
+googlechat_got_http_image_for_conv(PurpleHttpConnection *connection, PurpleHttpResponse *response, gpointer user_data)
 {
-	HangoutsAccount *ha = user_data;
+	GoogleChatAccount *ha = user_data;
 	const gchar *url;
 	const gchar *gaia_id;
 	const gchar *conv_id;
@@ -568,9 +568,9 @@ hangouts_got_http_image_for_conv(PurpleHttpConnection *connection, PurpleHttpRes
 }
 
 void
-hangouts_received_event_notification(PurpleConnection *pc, StateUpdate *state_update)
+googlechat_received_event_notification(PurpleConnection *pc, StateUpdate *state_update)
 {
-	HangoutsAccount *ha;
+	GoogleChatAccount *ha;
 	EventNotification *event_notification = state_update->event_notification;
 	Conversation *conversation = state_update->conversation;
 	Event *event;
@@ -588,11 +588,11 @@ hangouts_received_event_notification(PurpleConnection *pc, StateUpdate *state_up
 		purple_connection_set_display_name(pc, ha->self_gaia_id);
 	}
 	
-	hangouts_process_conversation_event(ha, conversation, event, current_server_time);
+	googlechat_process_conversation_event(ha, conversation, event, current_server_time);
 }
 
 void
-hangouts_process_conversation_event(HangoutsAccount *ha, Conversation *conversation, Event *event, gint64 current_server_time)
+googlechat_process_conversation_event(GoogleChatAccount *ha, Conversation *conversation, Event *event, gint64 current_server_time)
 {
 	PurpleConnection *pc = ha->pc;
 	const gchar *gaia_id;
@@ -608,7 +608,7 @@ hangouts_process_conversation_event(HangoutsAccount *ha, Conversation *conversat
 			!g_hash_table_contains(ha->group_chats, conv_id)) {
 		// New conversation we ain't seen before
 		
-		hangouts_add_conversation_to_blist(ha, conversation, NULL);
+		googlechat_add_conversation_to_blist(ha, conversation, NULL);
 	}
 	
 	gaia_id = event->sender_id->gaia_id;
@@ -666,7 +666,7 @@ hangouts_process_conversation_event(HangoutsAccount *ha, Conversation *conversat
 		for (i = 0; i < chat_message->n_annotation; i++) {
 			EventAnnotation *annotation = chat_message->annotation[i];
 			
-			if (annotation->type == HANGOUTS_MAGIC_HALF_EIGHT_SLASH_ME_TYPE) {
+			if (annotation->type == GOOGLECHAT_MAGIC_HALF_EIGHT_SLASH_ME_TYPE) {
 				//TODO strip name off the front of the first segment
 				purple_xmlnode_insert_data(html, "/me ", -1);
 				break;
@@ -777,7 +777,7 @@ hangouts_process_conversation_event(HangoutsAccount *ha, Conversation *conversat
 		}
 		
 		if (purple_conversation_has_focus(pconv)) {
-			hangouts_mark_conversation_seen(pconv, PURPLE_CONVERSATION_UPDATE_UNSEEN);
+			googlechat_mark_conversation_seen(pconv, PURPLE_CONVERSATION_UPDATE_UNSEEN);
 		}
 		
 		g_free(msg);
@@ -816,7 +816,7 @@ hangouts_process_conversation_event(HangoutsAccount *ha, Conversation *conversat
 							}
 						}
 					} else {
-						connection = purple_http_get(ha->pc, hangouts_got_http_image_for_conv, ha, image_url);
+						connection = purple_http_get(ha->pc, googlechat_got_http_image_for_conv, ha, image_url);
 						purple_http_request_set_max_len(purple_http_conn_get_request(connection), -1);
 						g_dataset_set_data_full(connection, "url", g_strdup(url), g_free);
 						g_dataset_set_data_full(connection, "gaia_id", g_strdup(gaia_id), g_free);
@@ -858,7 +858,7 @@ hangouts_process_conversation_event(HangoutsAccount *ha, Conversation *conversat
 		if (hangout_event->event_type == HANGOUT_EVENT_TYPE__HANGOUT_EVENT_TYPE_START) {
 			if (purple_account_get_bool(ha->account, "show-call-links", !purple_media_manager_get())) {
 				//No voice/video support, display URL
-				gchar *join_message = g_strdup_printf("%s https://plus.google.com/hangouts/_/CONVERSATION/%s", _("To join the call, open "), conv_id);
+				gchar *join_message = g_strdup_printf("%s https://plus.google.com/googlechat/_/CONVERSATION/%s", _("To join the call, open "), conv_id);
 				if (g_hash_table_contains(ha->group_chats, conv_id)) {
 					purple_serv_got_chat_in(ha->pc, g_str_hash(conv_id), gaia_id, PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG, join_message, message_timestamp);
 				} else {
@@ -905,9 +905,9 @@ hangouts_process_conversation_event(HangoutsAccount *ha, Conversation *conversat
 }
 
 void
-hangouts_received_typing_notification(PurpleConnection *pc, StateUpdate *state_update)
+googlechat_received_typing_notification(PurpleConnection *pc, StateUpdate *state_update)
 {
-	HangoutsAccount *ha;
+	GoogleChatAccount *ha;
 	SetTypingNotification *typing_notification = state_update->typing_notification;
 	const gchar *gaia_id;
 	const gchar *conv_id;
@@ -919,8 +919,8 @@ hangouts_received_typing_notification(PurpleConnection *pc, StateUpdate *state_u
 	
 	ha = purple_connection_get_protocol_data(pc);
 	
-	//purple_debug_info("hangouts", "Received new typing event %p\n", typing_notification);
-	//purple_debug_info("hangouts", "%s\n", pblite_dump_json((ProtobufCMessage *)typing_notification)); //leaky
+	//purple_debug_info("googlechat", "Received new typing event %p\n", typing_notification);
+	//purple_debug_info("googlechat", "%s\n", pblite_dump_json((ProtobufCMessage *)typing_notification)); //leaky
 	/* {
         "state_update_header" : {
                 "active_client_state" : ACTIVE_CLIENT_STATE_OTHER_ACTIVE,

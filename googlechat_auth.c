@@ -1,5 +1,5 @@
 /*
- * Hangouts Plugin for libpurple/Pidgin
+ * GoogleChat Plugin for libpurple/Pidgin
  * Copyright (c) 2015-2016 Eion Robb, Mike Ruprecht
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -16,14 +16,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "hangouts_auth.h"
+#include "googlechat_auth.h"
 
 #include "core.h"
 #include "debug.h"
 #include "http.h"
-#include "hangouts_json.h"
-#include "hangouts_connection.h"
-#include "hangouts_conversation.h"
+#include "googlechat_json.h"
+#include "googlechat_connection.h"
+#include "googlechat_conversation.h"
 
 
 typedef struct {
@@ -76,7 +76,7 @@ save_bitlbee_password(PurpleAccount *account, const gchar *password)
 	if (bitlbee_password_funcs_loaded == FALSE) {
 		bitlbee_module = dlopen(NULL, RTLD_LAZY);
 		if (bitlbee_module == NULL) {
-			purple_debug_error("hangouts", "Couldn't acquire address of bitlbee handle: %s\n", dlerror());
+			purple_debug_error("googlechat", "Couldn't acquire address of bitlbee handle: %s\n", dlerror());
 			g_return_if_fail(bitlbee_module);
 		}
 		
@@ -92,7 +92,7 @@ save_bitlbee_password(PurpleAccount *account, const gchar *password)
 }
 
 static void
-hangouts_save_refresh_token_password(PurpleAccount *account, const gchar *password)
+googlechat_save_refresh_token_password(PurpleAccount *account, const gchar *password)
 {
 	purple_account_set_password(account, password, NULL, NULL);
 	
@@ -103,9 +103,9 @@ hangouts_save_refresh_token_password(PurpleAccount *account, const gchar *passwo
 
 
 static void
-hangouts_oauth_refresh_token_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse *response, gpointer user_data)
+googlechat_oauth_refresh_token_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse *response, gpointer user_data)
 {
-	HangoutsAccount *ha = user_data;
+	GoogleChatAccount *ha = user_data;
 	JsonObject *obj;
 	const gchar *raw_response;
 	gsize response_len;
@@ -116,12 +116,12 @@ hangouts_oauth_refresh_token_cb(PurpleHttpConnection *http_conn, PurpleHttpRespo
 	if (purple_http_response_is_successful(response) && obj)
 	{
 		ha->access_token = g_strdup(json_object_get_string_member(obj, "access_token"));
-		hangouts_auth_get_session_cookies(ha);
+		googlechat_auth_get_session_cookies(ha);
 	} else {
 		if (obj != NULL) {
 			if (json_object_has_member(obj, "error")) {
 				if (g_strcmp0(json_object_get_string_member(obj, "error"), "invalid_grant") == 0) {
-					hangouts_save_refresh_token_password(ha->account, NULL);
+					googlechat_save_refresh_token_password(ha->account, NULL);
 					purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
 						json_object_get_string_member(obj, "error_description"));
 				} else {
@@ -141,7 +141,7 @@ hangouts_oauth_refresh_token_cb(PurpleHttpConnection *http_conn, PurpleHttpRespo
 }
 
 void
-hangouts_oauth_refresh_token(HangoutsAccount *ha)
+googlechat_oauth_refresh_token(GoogleChatAccount *ha)
 {
 	PurpleHttpRequest *request;
 	PurpleConnection *pc;
@@ -155,13 +155,13 @@ hangouts_oauth_refresh_token(HangoutsAccount *ha)
 	g_string_append_printf(postdata, "refresh_token=%s&", purple_url_encode(ha->refresh_token));
 	g_string_append(postdata, "grant_type=refresh_token&");
 	
-	request = purple_http_request_new(HANGOUTS_API_OAUTH2_TOKEN_URL);
+	request = purple_http_request_new(GOOGLECHAT_API_OAUTH2_TOKEN_URL);
 	purple_http_request_set_cookie_jar(request, ha->cookie_jar);
 	purple_http_request_set_method(request, "POST");
 	purple_http_request_header_set(request, "Content-Type", "application/x-www-form-urlencoded");
 	purple_http_request_set_contents(request, postdata->str, postdata->len);
 
-	purple_http_request(pc, request, hangouts_oauth_refresh_token_cb, ha);
+	purple_http_request(pc, request, googlechat_oauth_refresh_token_cb, ha);
 	purple_http_request_unref(request);
 	
 	g_string_free(postdata, TRUE);
@@ -169,9 +169,9 @@ hangouts_oauth_refresh_token(HangoutsAccount *ha)
 
 
 static void
-hangouts_oauth_with_code_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse *response, gpointer user_data)
+googlechat_oauth_with_code_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse *response, gpointer user_data)
 {
-	HangoutsAccount *ha = user_data;
+	GoogleChatAccount *ha = user_data;
 	JsonObject *obj;
 	const gchar *raw_response;
 	gsize response_len;
@@ -186,14 +186,14 @@ hangouts_oauth_with_code_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse 
 		ha->refresh_token = g_strdup(json_object_get_string_member(obj, "refresh_token"));
 		
 		purple_account_set_remember_password(account, TRUE);
-		hangouts_save_refresh_token_password(account, ha->refresh_token);
+		googlechat_save_refresh_token_password(account, ha->refresh_token);
 		
-		hangouts_auth_get_session_cookies(ha);
+		googlechat_auth_get_session_cookies(ha);
 	} else {
 		if (obj != NULL) {
 			if (json_object_has_member(obj, "error")) {
 				if (g_strcmp0(json_object_get_string_member(obj, "error"), "invalid_grant") == 0) {
-					hangouts_save_refresh_token_password(ha->account, NULL);
+					googlechat_save_refresh_token_password(ha->account, NULL);
 					purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
 						json_object_get_string_member(obj, "error_description"));
 				} else {
@@ -213,7 +213,7 @@ hangouts_oauth_with_code_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse 
 }
 
 void
-hangouts_oauth_with_code(HangoutsAccount *ha, const gchar *auth_code)
+googlechat_oauth_with_code(GoogleChatAccount *ha, const gchar *auth_code)
 {
 	PurpleHttpRequest *request;
 	PurpleConnection *pc;
@@ -225,16 +225,16 @@ hangouts_oauth_with_code(HangoutsAccount *ha, const gchar *auth_code)
 	g_string_append_printf(postdata, "client_id=%s&", purple_url_encode(GOOGLE_CLIENT_ID));
 	g_string_append_printf(postdata, "client_secret=%s&", purple_url_encode(GOOGLE_CLIENT_SECRET));
 	g_string_append_printf(postdata, "code=%s&", purple_url_encode(auth_code));
-	g_string_append_printf(postdata, "redirect_uri=%s&", purple_url_encode(HANGOUTS_API_OAUTH2_REDIRECT_URI));
+	g_string_append_printf(postdata, "redirect_uri=%s&", purple_url_encode(GOOGLECHAT_API_OAUTH2_REDIRECT_URI));
 	g_string_append(postdata, "grant_type=authorization_code&");
 
-	request = purple_http_request_new(HANGOUTS_API_OAUTH2_TOKEN_URL);
+	request = purple_http_request_new(GOOGLECHAT_API_OAUTH2_TOKEN_URL);
 	purple_http_request_set_cookie_jar(request, ha->cookie_jar);
 	purple_http_request_set_method(request, "POST");
 	purple_http_request_header_set(request, "Content-Type", "application/x-www-form-urlencoded");
 	purple_http_request_set_contents(request, postdata->str, postdata->len);
 
-	purple_http_request(pc, request, hangouts_oauth_with_code_cb, ha);
+	purple_http_request(pc, request, googlechat_oauth_with_code_cb, ha);
 	purple_http_request_unref(request);
 	
 	g_string_free(postdata, TRUE);
@@ -245,9 +245,9 @@ hangouts_oauth_with_code(HangoutsAccount *ha, const gchar *auth_code)
 
 
 void
-hangouts_auth_get_session_cookies_got_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse *response, gpointer user_data)
+googlechat_auth_get_session_cookies_got_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse *response, gpointer user_data)
 {
-	HangoutsAccount *ha = user_data;
+	GoogleChatAccount *ha = user_data;
 	guint64 last_event_timestamp;
 	
 	gchar *sapisid_cookie = purple_http_cookie_jar_get(ha->cookie_jar, "SAPISID");
@@ -266,21 +266,21 @@ hangouts_auth_get_session_cookies_got_cb(PurpleHttpConnection *http_conn, Purple
 	}
 	
 	// SOUND THE TRUMPETS
-	hangouts_fetch_channel_sid(ha);
+	googlechat_fetch_channel_sid(ha);
 	purple_connection_set_state(ha->pc, PURPLE_CONNECTION_CONNECTED);
 	
 	//TODO trigger event instead
-	hangouts_get_self_info(ha);
-	hangouts_get_conversation_list(ha);
-	ha->poll_buddy_status_timeout = g_timeout_add_seconds(120, hangouts_poll_buddy_status, ha);
+	googlechat_get_self_info(ha);
+	googlechat_get_conversation_list(ha);
+	ha->poll_buddy_status_timeout = g_timeout_add_seconds(120, googlechat_poll_buddy_status, ha);
 	
 	g_free(sapisid_cookie);
 }
 
 static void
-hangouts_auth_get_session_cookies_uberauth_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse *response, gpointer user_data)
+googlechat_auth_get_session_cookies_uberauth_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse *response, gpointer user_data)
 {
-	HangoutsAccount *ha = user_data;
+	GoogleChatAccount *ha = user_data;
 	PurpleHttpRequest *request;
 	const gchar *uberauth;
 
@@ -298,12 +298,12 @@ hangouts_auth_get_session_cookies_uberauth_cb(PurpleHttpConnection *http_conn, P
 	purple_http_request_header_set_printf(request, "Authorization", "Bearer %s", ha->access_token);
 	purple_http_request_set_max_redirects(request, 0);
 	
-	purple_http_request(ha->pc, request, hangouts_auth_get_session_cookies_got_cb, ha);
+	purple_http_request(ha->pc, request, googlechat_auth_get_session_cookies_got_cb, ha);
 	purple_http_request_unref(request);
 }
 
 void
-hangouts_auth_get_session_cookies(HangoutsAccount *ha)
+googlechat_auth_get_session_cookies(GoogleChatAccount *ha)
 {
 	PurpleHttpRequest *request;
 
@@ -312,6 +312,6 @@ hangouts_auth_get_session_cookies(HangoutsAccount *ha)
 	purple_http_request_set_cookie_jar(request, ha->cookie_jar);
 	purple_http_request_header_set_printf(request, "Authorization", "Bearer %s", ha->access_token);
 
-	purple_http_request(ha->pc, request, hangouts_auth_get_session_cookies_uberauth_cb, ha);
+	purple_http_request(ha->pc, request, googlechat_auth_get_session_cookies_uberauth_cb, ha);
 	purple_http_request_unref(request);
 }

@@ -21,9 +21,9 @@ ifeq ($(OS),Windows_NT)
   ifndef PROGFILES32
     PROGFILES32 = $(PROGRAMFILES)
   endif
-  HANGOUTS_TARGET = libhangouts.dll
-  HANGOUTS_DEST = "$(PROGFILES32)/Pidgin/plugins"
-  HANGOUTS_ICONS_DEST = "$(PROGFILES32)/Pidgin/pixmaps/pidgin/protocols"
+  PLUGIN_TARGET = libgooglechat.dll
+  PLUGIN_DEST = "$(PROGFILES32)/Pidgin/plugins"
+  PLUGIN_ICONS_DEST = "$(PROGFILES32)/Pidgin/pixmaps/pidgin/protocols"
   MAKENSIS = "$(PROGFILES32)/NSIS/makensis.exe"
 else
 
@@ -53,18 +53,18 @@ else
 
   ifeq ($(shell $(PKG_CONFIG) --exists purple-3 2>/dev/null && echo "true"),)
     ifeq ($(shell $(PKG_CONFIG) --exists purple 2>/dev/null && echo "true"),)
-      HANGOUTS_TARGET = FAILNOPURPLE
-      HANGOUTS_DEST =
-	  HANGOUTS_ICONS_DEST =
+      PLUGIN_TARGET = FAILNOPURPLE
+      PLUGIN_DEST =
+	  PLUGIN_ICONS_DEST =
     else
-      HANGOUTS_TARGET = libhangouts.so
-      HANGOUTS_DEST = $(DESTDIR)`$(PKG_CONFIG) --variable=plugindir purple`
-	  HANGOUTS_ICONS_DEST = $(DESTDIR)`$(PKG_CONFIG) --variable=datadir purple`/pixmaps/pidgin/protocols
+      PLUGIN_TARGET = libgooglechat.so
+      PLUGIN_DEST = $(DESTDIR)`$(PKG_CONFIG) --variable=plugindir purple`
+	  PLUGIN_ICONS_DEST = $(DESTDIR)`$(PKG_CONFIG) --variable=datadir purple`/pixmaps/pidgin/protocols
     endif
   else
-    HANGOUTS_TARGET = libhangouts3.so
-    HANGOUTS_DEST = $(DESTDIR)`$(PKG_CONFIG) --variable=plugindir purple-3`
-	HANGOUTS_ICONS_DEST = $(DESTDIR)`$(PKG_CONFIG) --variable=datadir purple-3`/pixmaps/pidgin/protocols
+    PLUGIN_TARGET = libgooglechat3.so
+    PLUGIN_DEST = $(DESTDIR)`$(PKG_CONFIG) --variable=plugindir purple-3`
+	PLUGIN_ICONS_DEST = $(DESTDIR)`$(PKG_CONFIG) --variable=datadir purple-3`/pixmaps/pidgin/protocols
   endif
 endif
 
@@ -75,59 +75,49 @@ WIN32_PIDGIN3_CFLAGS = -I$(PIDGIN3_TREE_TOP)/libpurple -I$(PIDGIN3_TREE_TOP) -I$
 WIN32_PIDGIN2_LDFLAGS = -L$(PIDGIN_TREE_TOP)/libpurple $(WIN32_LDFLAGS)
 WIN32_PIDGIN3_LDFLAGS = -L$(PIDGIN3_TREE_TOP)/libpurple -L$(WIN32_DEV_TOP)/gplugin-dev/gplugin $(WIN32_LDFLAGS) -lgplugin
 
-C_FILES := hangouts.pb-c.c hangout_media.pb-c.c gmail.pb-c.c hangouts_json.c hangouts_pblite.c hangouts_connection.c hangouts_auth.c hangouts_events.c hangouts_conversation.c hangouts_media.c
+C_FILES := googlechat.pb-c.c googlechat_json.c googlechat_pblite.c googlechat_connection.c googlechat_auth.c googlechat_events.c googlechat_conversation.c
 PURPLE_COMPAT_FILES := purple2compat/http.c purple2compat/purple-socket.c
-PURPLE_C_FILES := libhangouts.c $(C_FILES)
-TEST_C_FILES := hangouts_test.c $(C_FILES)
+PURPLE_C_FILES := libgooglechat.c $(C_FILES)
 
 
 
 .PHONY:	all install FAILNOPURPLE clean
 
-all: $(HANGOUTS_TARGET)
+all: $(PLUGIN_TARGET)
 
-hangouts.pb-c.c: hangouts.proto
-	$(PROTOC_C) --c_out=. hangouts.proto
+googlechat.pb-c.c: googlechat.proto
+	$(PROTOC_C) --c_out=. googlechat.proto
 
-hangout_media.pb-c.c: hangout_media.proto
-	$(PROTOC_C) --c_out=. hangout_media.proto
-
-gmail.pb-c.c: gmail.proto
-	$(PROTOC_C) --c_out=. gmail.proto
-
-libhangouts.so: $(PURPLE_C_FILES) $(PURPLE_COMPAT_FILES)
+libgooglechat.so: $(PURPLE_C_FILES) $(PURPLE_COMPAT_FILES)
 	$(CC) -fPIC $(CFLAGS) -shared -o $@ $^ $(LDFLAGS) $(PROTOBUF_OPTS) `$(PKG_CONFIG) purple glib-2.0 json-glib-1.0 zlib --libs --cflags` -ldl $(INCLUDES) -Ipurple2compat -g -ggdb
 
-libhangouts3.so: $(PURPLE_C_FILES)
+libgooglechat3.so: $(PURPLE_C_FILES)
 	$(CC) -fPIC $(CFLAGS) -shared -o $@ $^ $(LDFLAGS) $(PROTOBUF_OPTS) `$(PKG_CONFIG) purple-3 glib-2.0 json-glib-1.0 zlib --libs --cflags` -ldl $(INCLUDES) -g -ggdb
 
-libhangouts.dll: $(PURPLE_C_FILES) $(PURPLE_COMPAT_FILES)
+libgooglechat.dll: $(PURPLE_C_FILES) $(PURPLE_COMPAT_FILES)
 	$(WIN32_CC) -shared -o $@ $^ $(WIN32_PIDGIN2_CFLAGS) $(WIN32_PIDGIN2_LDFLAGS) -Ipurple2compat
 
-libhangouts3.dll: $(PURPLE_C_FILES)
+libgooglechat3.dll: $(PURPLE_C_FILES)
 	$(WIN32_CC) -shared -o $@ $^ $(WIN32_PIDGIN3_CFLAGS) $(WIN32_PIDGIN3_LDFLAGS)
 
-hangouts-test.exe: $(TEST_C_FILES) $(PURPLE_COMPAT_FILES)
-	$(WIN32_CC) -o $@ -DDEBUG $^ $(WIN32_PIDGIN2_CFLAGS) $(WIN32_PIDGIN2_LDFLAGS) -Ipurple2compat
+install: $(PLUGIN_TARGET) install-icons
+	mkdir -p $(PLUGIN_DEST)
+	install -p $(PLUGIN_TARGET) $(PLUGIN_DEST)
 
-install: $(HANGOUTS_TARGET) install-icons
-	mkdir -p $(HANGOUTS_DEST)
-	install -p $(HANGOUTS_TARGET) $(HANGOUTS_DEST)
-
-install-icons: hangouts16.png hangouts22.png hangouts48.png
-	mkdir -p $(HANGOUTS_ICONS_DEST)/16
-	mkdir -p $(HANGOUTS_ICONS_DEST)/22
-	mkdir -p $(HANGOUTS_ICONS_DEST)/48
-	install hangouts16.png $(HANGOUTS_ICONS_DEST)/16/hangouts.png
-	install hangouts22.png $(HANGOUTS_ICONS_DEST)/22/hangouts.png
-	install hangouts48.png $(HANGOUTS_ICONS_DEST)/48/hangouts.png
+install-icons: googlechat16.png googlechat22.png googlechat48.png
+	mkdir -p $(PLUGIN_ICONS_DEST)/16
+	mkdir -p $(PLUGIN_ICONS_DEST)/22
+	mkdir -p $(PLUGIN_ICONS_DEST)/48
+	install googlechat16.png $(PLUGIN_ICONS_DEST)/16/googlechat.png
+	install googlechat22.png $(PLUGIN_ICONS_DEST)/22/googlechat.png
+	install googlechat48.png $(PLUGIN_ICONS_DEST)/48/googlechat.png
 
 FAILNOPURPLE:
 	echo "You need libpurple development headers installed to be able to compile this plugin"
 
 clean:
-	rm -f $(HANGOUTS_TARGET) hangouts.pb-c.h hangouts.pb-c.c hangout_media.pb-c.h hangout_media.pb-c.c
+	rm -f $(PLUGIN_TARGET) googlechat.pb-c.h googlechat.pb-c.c
 
 
-installer: purple-hangouts.nsi libhangouts.dll
-	$(MAKENSIS) purple-hangouts.nsi
+installer: purple-googlechat.nsi libgooglechat.dll
+	$(MAKENSIS) purple-googlechat.nsi

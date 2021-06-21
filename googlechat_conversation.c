@@ -1,5 +1,5 @@
 /*
- * Hangouts Plugin for libpurple/Pidgin
+ * GoogleChat Plugin for libpurple/Pidgin
  * Copyright (c) 2015-2016 Eion Robb, Mike Ruprecht
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -16,11 +16,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "hangouts_conversation.h"
+#include "googlechat_conversation.h"
 
-#include "hangouts.pb-c.h"
-#include "hangouts_connection.h"
-#include "hangouts_events.h"
+#include "googlechat.pb-c.h"
+#include "googlechat_connection.h"
+#include "googlechat_events.h"
 
 #include <string.h>
 #include <glib.h>
@@ -30,11 +30,11 @@
 #include "glibcompat.h"
 #include "image-store.h"
 
-// From hangouts_pblite
+// From googlechat_pblite
 gchar *pblite_dump_json(ProtobufCMessage *message);
 
 RequestHeader *
-hangouts_get_request_header(HangoutsAccount *ha)
+googlechat_get_request_header(GoogleChatAccount *ha)
 {
 	RequestHeader *header = g_new0(RequestHeader, 1);
 	ClientVersion *version = g_new0(ClientVersion, 1);
@@ -50,7 +50,7 @@ hangouts_get_request_header(HangoutsAccount *ha)
 	}
 	
 	version->has_client_id = TRUE;
-	version->client_id = CLIENT_ID__CLIENT_ID_WEB_HANGOUTS;
+	version->client_id = CLIENT_ID__CLIENT_ID_WEB_GOOGLECHAT;
 	
 	header->client_version = version;
 	
@@ -58,7 +58,7 @@ hangouts_get_request_header(HangoutsAccount *ha)
 }
 
 void
-hangouts_request_header_free(RequestHeader *header)
+googlechat_request_header_free(RequestHeader *header)
 {
 	if (header->client_identifier) {
 		g_free(header->client_identifier->resource);
@@ -69,7 +69,7 @@ hangouts_request_header_free(RequestHeader *header)
 }
 
 EventRequestHeader *
-hangouts_get_event_request_header(HangoutsAccount *ha, const gchar *conv_id)
+googlechat_get_event_request_header(GoogleChatAccount *ha, const gchar *conv_id)
 {
 	EventRequestHeader *header = g_new0(EventRequestHeader, 1);
 	event_request_header__init(header);
@@ -107,7 +107,7 @@ hangouts_get_event_request_header(HangoutsAccount *ha, const gchar *conv_id)
 }
 
 void
-hangouts_event_request_header_free(EventRequestHeader *header)
+googlechat_event_request_header_free(EventRequestHeader *header)
 {
 	if (header->conversation_id) {
 		g_free(header->conversation_id->id);
@@ -125,7 +125,7 @@ hangouts_event_request_header_free(EventRequestHeader *header)
 }
 
 static void 
-hangouts_got_self_info(HangoutsAccount *ha, GetSelfInfoResponse *response, gpointer user_data)
+googlechat_got_self_info(GoogleChatAccount *ha, GetSelfInfoResponse *response, gpointer user_data)
 {
 	Entity *self_entity = response->self_entity;
 	PhoneData *phone_data = response->phone_data;
@@ -155,38 +155,38 @@ hangouts_got_self_info(HangoutsAccount *ha, GetSelfInfoResponse *response, gpoin
 		}
 	}
 	
-	hangouts_get_buddy_list(ha);
+	googlechat_get_buddy_list(ha);
 }
 
 void
-hangouts_get_self_info(HangoutsAccount *ha)
+googlechat_get_self_info(GoogleChatAccount *ha)
 {
 	GetSelfInfoRequest request;
 	get_self_info_request__init(&request);
 	
-	request.request_header = hangouts_get_request_header(ha);
+	request.request_header = googlechat_get_request_header(ha);
 	
-	hangouts_pblite_get_self_info(ha, &request, hangouts_got_self_info, NULL);
+	googlechat_pblite_get_self_info(ha, &request, googlechat_got_self_info, NULL);
 	
-	hangouts_request_header_free(request.request_header);
+	googlechat_request_header_free(request.request_header);
 	
 	if (ha->last_event_timestamp != 0) {
-		hangouts_get_all_events(ha, ha->last_event_timestamp);
+		googlechat_get_all_events(ha, ha->last_event_timestamp);
 	}
 }
 
 static void
-hangouts_got_users_presence(HangoutsAccount *ha, QueryPresenceResponse *response, gpointer user_data)
+googlechat_got_users_presence(GoogleChatAccount *ha, QueryPresenceResponse *response, gpointer user_data)
 {
 	guint i;
 	
 	for (i = 0; i < response->n_presence_result; i++) {
-		hangouts_process_presence_result(ha, response->presence_result[i]);
+		googlechat_process_presence_result(ha, response->presence_result[i]);
 	}
 }
 
 void
-hangouts_get_users_presence(HangoutsAccount *ha, GList *user_ids)
+googlechat_get_users_presence(GoogleChatAccount *ha, GList *user_ids)
 {
 	QueryPresenceRequest request;
 	ParticipantId **participant_id;
@@ -195,7 +195,7 @@ hangouts_get_users_presence(HangoutsAccount *ha, GList *user_ids)
 	guint i;
 	
 	query_presence_request__init(&request);
-	request.request_header = hangouts_get_request_header(ha);
+	request.request_header = googlechat_get_request_header(ha);
 	
 	n_participant_id = g_list_length(user_ids);
 	participant_id = g_new0(ParticipantId *, n_participant_id);
@@ -203,7 +203,7 @@ hangouts_get_users_presence(HangoutsAccount *ha, GList *user_ids)
 	for (i = 0, cur = user_ids; cur && cur->data && i < n_participant_id; (cur = cur->next), i++) {
 		gchar *who = (gchar *) cur->data;
 		
-		if (G_UNLIKELY(!hangouts_is_valid_id(who))) {
+		if (G_UNLIKELY(!googlechat_is_valid_id(who))) {
 			i--;
 			n_participant_id--;
 		} else {
@@ -226,9 +226,9 @@ hangouts_get_users_presence(HangoutsAccount *ha, GList *user_ids)
 	request.field_mask[5] = FIELD_MASK__FIELD_MASK_DEVICE;
 	request.field_mask[6] = FIELD_MASK__FIELD_MASK_LAST_SEEN;
 
-	hangouts_pblite_query_presence(ha, &request, hangouts_got_users_presence, NULL);
+	googlechat_pblite_query_presence(ha, &request, googlechat_got_users_presence, NULL);
 	
-	hangouts_request_header_free(request.request_header);
+	googlechat_request_header_free(request.request_header);
 	for (i = 0; i < n_participant_id; i++) {
 		g_free(participant_id[i]);
 	}
@@ -237,9 +237,9 @@ hangouts_get_users_presence(HangoutsAccount *ha, GList *user_ids)
 }
 
 gboolean
-hangouts_poll_buddy_status(gpointer userdata)
+googlechat_poll_buddy_status(gpointer userdata)
 {
-	HangoutsAccount *ha = userdata;
+	GoogleChatAccount *ha = userdata;
 	GSList *buddies, *i;
 	GList *user_list = NULL;
 	
@@ -253,7 +253,7 @@ hangouts_poll_buddy_status(gpointer userdata)
 		user_list = g_list_prepend(user_list, (gpointer) purple_buddy_get_name(buddy));
 	}
 	
-	hangouts_get_users_presence(ha, user_list);
+	googlechat_get_users_presence(ha, user_list);
 	
 	g_slist_free(buddies);
 	g_list_free(user_list);
@@ -261,10 +261,10 @@ hangouts_poll_buddy_status(gpointer userdata)
 	return TRUE;
 }
 
-static void hangouts_got_buddy_photo(PurpleHttpConnection *connection, PurpleHttpResponse *response, gpointer user_data);
+static void googlechat_got_buddy_photo(PurpleHttpConnection *connection, PurpleHttpResponse *response, gpointer user_data);
 
 static void
-hangouts_got_users_information(HangoutsAccount *ha, GetEntityByIdResponse *response, gpointer user_data)
+googlechat_got_users_information(GoogleChatAccount *ha, GetEntityByIdResponse *response, gpointer user_data)
 {
 	guint i;
 	
@@ -301,7 +301,7 @@ hangouts_got_users_information(HangoutsAccount *ha, GetEntityByIdResponse *respo
 					}
 					purple_http_request_set_keepalive_pool(photo_request, ha->icons_keepalive_pool);
 					
-					purple_http_request(ha->pc, photo_request, hangouts_got_buddy_photo, buddy);
+					purple_http_request(ha->pc, photo_request, googlechat_got_buddy_photo, buddy);
 					purple_http_request_unref(photo_request);
 				}
 				g_free(photo);
@@ -315,7 +315,7 @@ hangouts_got_users_information(HangoutsAccount *ha, GetEntityByIdResponse *respo
 }
 
 void
-hangouts_get_users_information(HangoutsAccount *ha, GList *user_ids)
+googlechat_get_users_information(GoogleChatAccount *ha, GList *user_ids)
 {
 	GetEntityByIdRequest request;
 	size_t n_batch_lookup_spec;
@@ -324,7 +324,7 @@ hangouts_get_users_information(HangoutsAccount *ha, GList *user_ids)
 	guint i;
 	
 	get_entity_by_id_request__init(&request);
-	request.request_header = hangouts_get_request_header(ha);
+	request.request_header = googlechat_get_request_header(ha);
 	
 	n_batch_lookup_spec = g_list_length(user_ids);
 	batch_lookup_spec = g_new0(EntityLookupSpec *, n_batch_lookup_spec);
@@ -339,9 +339,9 @@ hangouts_get_users_information(HangoutsAccount *ha, GList *user_ids)
 	request.batch_lookup_spec = batch_lookup_spec;
 	request.n_batch_lookup_spec = n_batch_lookup_spec;
 	
-	hangouts_pblite_get_entity_by_id(ha, &request, hangouts_got_users_information, NULL);
+	googlechat_pblite_get_entity_by_id(ha, &request, googlechat_got_users_information, NULL);
 	
-	hangouts_request_header_free(request.request_header);
+	googlechat_request_header_free(request.request_header);
 	for (i = 0; i < n_batch_lookup_spec; i++) {
 		g_free(batch_lookup_spec[i]);
 	}
@@ -349,7 +349,7 @@ hangouts_get_users_information(HangoutsAccount *ha, GList *user_ids)
 }
 
 static void
-hangouts_got_user_info(HangoutsAccount *ha, GetEntityByIdResponse *response, gpointer user_data)
+googlechat_got_user_info(GoogleChatAccount *ha, GetEntityByIdResponse *response, gpointer user_data)
 {
 	Entity *entity;
 	EntityProperties *props;
@@ -374,7 +374,7 @@ hangouts_got_user_info(HangoutsAccount *ha, GetEntityByIdResponse *response, gpo
 	const gchar *type_str;
 	switch (entity->entity_type) {
 		case PARTICIPANT_TYPE__PARTICIPANT_TYPE_OFF_NETWORK_PHONE: type_str = _("SMS"); break;
-		case PARTICIPANT_TYPE__PARTICIPANT_TYPE_GAIA: type_str = _("Hangouts (Gaia)"); break;
+		case PARTICIPANT_TYPE__PARTICIPANT_TYPE_GAIA: type_str = _("GoogleChat (Gaia)"); break;
 		default: type_str = _("Unknown"); break;
 	}
 	purple_notify_user_info_add_pair_html(user_info, _("Type"), type_str);
@@ -416,16 +416,16 @@ hangouts_got_user_info(HangoutsAccount *ha, GetEntityByIdResponse *response, gpo
 
 
 void
-hangouts_get_info(PurpleConnection *pc, const gchar *who)
+googlechat_get_info(PurpleConnection *pc, const gchar *who)
 {
-	HangoutsAccount *ha = purple_connection_get_protocol_data(pc);
+	GoogleChatAccount *ha = purple_connection_get_protocol_data(pc);
 	GetEntityByIdRequest request;
 	EntityLookupSpec entity_lookup_spec;
 	EntityLookupSpec *batch_lookup_spec;
 	gchar *who_dup = g_strdup(who);
 	
 	get_entity_by_id_request__init(&request);
-	request.request_header = hangouts_get_request_header(ha);
+	request.request_header = googlechat_get_request_header(ha);
 	
 	entity_lookup_spec__init(&entity_lookup_spec);
 	entity_lookup_spec.gaia_id = who_dup;
@@ -434,13 +434,13 @@ hangouts_get_info(PurpleConnection *pc, const gchar *who)
 	request.batch_lookup_spec = &batch_lookup_spec;
 	request.n_batch_lookup_spec = 1;
 	
-	hangouts_pblite_get_entity_by_id(ha, &request, hangouts_got_user_info, who_dup);
+	googlechat_pblite_get_entity_by_id(ha, &request, googlechat_got_user_info, who_dup);
 	
-	hangouts_request_header_free(request.request_header);
+	googlechat_request_header_free(request.request_header);
 }
 
 static void
-hangouts_got_conversation_events(HangoutsAccount *ha, GetConversationResponse *response, gpointer user_data)
+googlechat_got_conversation_events(GoogleChatAccount *ha, GetConversationResponse *response, gpointer user_data)
 {
 	Conversation *conversation;
 	const gchar *conv_id;
@@ -464,7 +464,7 @@ hangouts_got_conversation_events(HangoutsAccount *ha, GetConversationResponse *r
 	g_return_if_fail(conversation != NULL);
 	conv_id = conversation->conversation_id->id;
 	
-	//purple_debug_info("hangouts", "got conversation events %s\n", pblite_dump_json((ProtobufCMessage *)response));
+	//purple_debug_info("googlechat", "got conversation events %s\n", pblite_dump_json((ProtobufCMessage *)response));
 	
 	if (conversation->type == CONVERSATION_TYPE__CONVERSATION_TYPE_GROUP) {
 		chatconv = purple_conversations_find_chat_with_account(conv_id, ha->account);
@@ -509,10 +509,10 @@ hangouts_got_conversation_events(HangoutsAccount *ha, GetConversationResponse *r
 				// Bitlbee doesn't have the above two functions, lets do an even worse hack
 				PurpleBuddy *fakebuddy;
 				if (temp_group == NULL) {
-					temp_group = purple_blist_find_group("Hangouts Temporary Chat Buddies");
+					temp_group = purple_blist_find_group("GoogleChat Temporary Chat Buddies");
 					if (!temp_group)
 					{
-						temp_group = purple_group_new("Hangouts Temporary Chat Buddies");
+						temp_group = purple_group_new("GoogleChat Temporary Chat Buddies");
 						purple_blist_add_group(temp_group, NULL);
 					}
 				}
@@ -530,17 +530,17 @@ hangouts_got_conversation_events(HangoutsAccount *ha, GetConversationResponse *r
 		// Ignore join/parts when loading history
 		if (!event->membership_change) {
 			if(event->chat_message != NULL && event->chat_message->message_content->n_attachment && !purple_account_get_bool(ha->account, "fetch_image_history", TRUE)) {
-				purple_debug_info("hangouts", "skipping attachment due to fetch_image_history disabled\n");
+				purple_debug_info("googlechat", "skipping attachment due to fetch_image_history disabled\n");
 				continue;
 			}
-			//Send event to the hangouts_events.c slaughterhouse
-			hangouts_process_conversation_event(ha, conversation, event, response->response_header->current_server_time);
+			//Send event to the googlechat_events.c slaughterhouse
+			googlechat_process_conversation_event(ha, conversation, event, response->response_header->current_server_time);
 		}
 	}
 }
 
 void
-hangouts_get_conversation_events(HangoutsAccount *ha, const gchar *conv_id, gint64 since_timestamp)
+googlechat_get_conversation_events(GoogleChatAccount *ha, const gchar *conv_id, gint64 since_timestamp)
 {
 	//since_timestamp is in microseconds
 	GetConversationRequest request;
@@ -549,7 +549,7 @@ hangouts_get_conversation_events(HangoutsAccount *ha, const gchar *conv_id, gint
 	EventContinuationToken event_continuation_token;
 	
 	get_conversation_request__init(&request);
-	request.request_header = hangouts_get_request_header(ha);
+	request.request_header = googlechat_get_request_header(ha);
 	
 	conversation_spec__init(&conversation_spec);
 	request.conversation_spec = &conversation_spec;
@@ -569,19 +569,19 @@ hangouts_get_conversation_events(HangoutsAccount *ha, const gchar *conv_id, gint
 		request.event_continuation_token = &event_continuation_token;
 	}
 	
-	hangouts_pblite_get_conversation(ha, &request, hangouts_got_conversation_events, NULL);
+	googlechat_pblite_get_conversation(ha, &request, googlechat_got_conversation_events, NULL);
 	
-	hangouts_request_header_free(request.request_header);
+	googlechat_request_header_free(request.request_header);
 	
 }
 
 static void
-hangouts_got_all_events(HangoutsAccount *ha, SyncAllNewEventsResponse *response, gpointer user_data)
+googlechat_got_all_events(GoogleChatAccount *ha, SyncAllNewEventsResponse *response, gpointer user_data)
 {
 	guint i, j;
 	guint64 sync_timestamp;
 	
-	//purple_debug_info("hangouts", "%s\n", pblite_dump_json((ProtobufCMessage *)response));
+	//purple_debug_info("googlechat", "%s\n", pblite_dump_json((ProtobufCMessage *)response));
 	/*
 struct  _SyncAllNewEventsResponse
 {
@@ -612,20 +612,20 @@ struct  _ConversationState
 		for (j = 0; j < conversation_state->n_event; j++) {
 			Event *event = conversation_state->event[j];
 			
-			hangouts_process_conversation_event(ha, conversation, event, sync_timestamp);
+			googlechat_process_conversation_event(ha, conversation, event, sync_timestamp);
 		}
 	}
 }
 
 void
-hangouts_get_all_events(HangoutsAccount *ha, guint64 since_timestamp)
+googlechat_get_all_events(GoogleChatAccount *ha, guint64 since_timestamp)
 {
 	SyncAllNewEventsRequest request;
 	
 	g_return_if_fail(since_timestamp > 0);
 	
 	sync_all_new_events_request__init(&request);
-	request.request_header = hangouts_get_request_header(ha);
+	request.request_header = googlechat_get_request_header(ha);
 	
 	request.has_last_sync_timestamp = TRUE;
 	request.last_sync_timestamp = since_timestamp;
@@ -633,13 +633,13 @@ hangouts_get_all_events(HangoutsAccount *ha, guint64 since_timestamp)
 	request.has_max_response_size_bytes = TRUE;
 	request.max_response_size_bytes = 1048576; // 1 mibbily bite
 	
-	hangouts_pblite_sync_all_new_events(ha, &request, hangouts_got_all_events, NULL);
+	googlechat_pblite_sync_all_new_events(ha, &request, googlechat_got_all_events, NULL);
 	
-	hangouts_request_header_free(request.request_header);
+	googlechat_request_header_free(request.request_header);
 }
 
 GList *
-hangouts_chat_info(PurpleConnection *pc)
+googlechat_chat_info(PurpleConnection *pc)
 {
 	GList *m = NULL;
 	PurpleProtocolChatEntry *pce;
@@ -654,7 +654,7 @@ hangouts_chat_info(PurpleConnection *pc)
 }
 
 GHashTable *
-hangouts_chat_info_defaults(PurpleConnection *pc, const char *chatname)
+googlechat_chat_info_defaults(PurpleConnection *pc, const char *chatname)
 {
 	GHashTable *defaults = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, g_free);
 	
@@ -667,9 +667,9 @@ hangouts_chat_info_defaults(PurpleConnection *pc, const char *chatname)
 }
 
 void
-hangouts_join_chat(PurpleConnection *pc, GHashTable *data)
+googlechat_join_chat(PurpleConnection *pc, GHashTable *data)
 {
-	HangoutsAccount *ha = purple_connection_get_protocol_data(pc);
+	GoogleChatAccount *ha = purple_connection_get_protocol_data(pc);
 	gchar *conv_id;
 	PurpleChatConversation *chatconv;
 	
@@ -691,40 +691,40 @@ hangouts_join_chat(PurpleConnection *pc, GHashTable *data)
 	purple_conversation_present(PURPLE_CONVERSATION(chatconv));
 	
 	//TODO store and use timestamp of last event
-	hangouts_get_conversation_events(ha, conv_id, 0);
+	googlechat_get_conversation_events(ha, conv_id, 0);
 }
 
 static void
-hangouts_got_join_chat_from_url(HangoutsAccount *ha, OpenGroupConversationFromUrlResponse *response, gpointer user_data)
+googlechat_got_join_chat_from_url(GoogleChatAccount *ha, OpenGroupConversationFromUrlResponse *response, gpointer user_data)
 {
 	if (!response || !response->conversation_id || !response->conversation_id->id) {
 		purple_notify_error(ha->pc, _("Join from URL Error"), _("Could not join group from URL"), response && response->response_header ? response->response_header->error_description : _("Unknown Error"), purple_request_cpar_from_connection(ha->pc));
 		return;
 	}
 	
-	hangouts_get_conversation_events(ha, response->conversation_id->id, 0);
+	googlechat_get_conversation_events(ha, response->conversation_id->id, 0);
 }
 
 void
-hangouts_join_chat_from_url(HangoutsAccount *ha, const gchar *url)
+googlechat_join_chat_from_url(GoogleChatAccount *ha, const gchar *url)
 {
 	OpenGroupConversationFromUrlRequest request;
 	
 	g_return_if_fail(url != NULL);
 	
 	open_group_conversation_from_url_request__init(&request);
-	request.request_header = hangouts_get_request_header(ha);
+	request.request_header = googlechat_get_request_header(ha);
 	
 	request.url = (gchar *) url;
 	
-	hangouts_pblite_open_group_conversation_from_url(ha, &request, hangouts_got_join_chat_from_url, NULL);
+	googlechat_pblite_open_group_conversation_from_url(ha, &request, googlechat_got_join_chat_from_url, NULL);
 	
-	hangouts_request_header_free(request.request_header);
+	googlechat_request_header_free(request.request_header);
 }
 
 
 gchar *
-hangouts_get_chat_name(GHashTable *data)
+googlechat_get_chat_name(GHashTable *data)
 {
 	gchar *temp;
 
@@ -740,27 +740,27 @@ hangouts_get_chat_name(GHashTable *data)
 }
 
 void
-hangouts_add_person_to_blist(HangoutsAccount *ha, gchar *gaia_id, gchar *alias)
+googlechat_add_person_to_blist(GoogleChatAccount *ha, gchar *gaia_id, gchar *alias)
 {
-	PurpleGroup *hangouts_group = purple_blist_find_group("Hangouts");
+	PurpleGroup *googlechat_group = purple_blist_find_group("GoogleChat");
 	
 	if (purple_account_get_bool(ha->account, "hide_self", FALSE) && purple_strequal(gaia_id, ha->self_gaia_id)) {
 		return;
 	}
 	
-	if (!hangouts_group)
+	if (!googlechat_group)
 	{
-		hangouts_group = purple_group_new("Hangouts");
-		purple_blist_add_group(hangouts_group, NULL);
+		googlechat_group = purple_group_new("GoogleChat");
+		purple_blist_add_group(googlechat_group, NULL);
 	}
-	purple_blist_add_buddy(purple_buddy_new(ha->account, gaia_id, alias), NULL, hangouts_group, NULL);
+	purple_blist_add_buddy(purple_buddy_new(ha->account, gaia_id, alias), NULL, googlechat_group, NULL);
 }
 
 
 void
-hangouts_add_conversation_to_blist(HangoutsAccount *ha, Conversation *conversation, GHashTable *unique_user_ids)
+googlechat_add_conversation_to_blist(GoogleChatAccount *ha, Conversation *conversation, GHashTable *unique_user_ids)
 {
-	PurpleGroup *hangouts_group = NULL;
+	PurpleGroup *googlechat_group = NULL;
 	guint i;
 	gchar *conv_id = conversation->conversation_id->id;
 	
@@ -788,14 +788,14 @@ hangouts_add_conversation_to_blist(HangoutsAccount *ha, Conversation *conversati
 		g_hash_table_replace(ha->one_to_ones_rev, g_strdup(other_person), g_strdup(conv_id));
 		
 		if (!purple_blist_find_buddy(ha->account, other_person)) {
-			hangouts_add_person_to_blist(ha, other_person, other_person_alias);
+			googlechat_add_person_to_blist(ha, other_person, other_person_alias);
 		} else {
 			purple_serv_got_alias(ha->pc, other_person, other_person_alias);
 		}
 		
 		if (unique_user_ids == NULL) {
 			GList *user_list = g_list_prepend(NULL, other_person);
-			hangouts_get_users_presence(ha, user_list);
+			googlechat_get_users_presence(ha, user_list);
 			g_list_free(user_list);
 		}
 	} else {
@@ -806,11 +806,11 @@ hangouts_add_conversation_to_blist(HangoutsAccount *ha, Conversation *conversati
 		g_hash_table_replace(ha->group_chats, g_strdup(conv_id), NULL);
 		
 		if (chat == NULL) {
-			hangouts_group = purple_blist_find_group("Hangouts");
-			if (!hangouts_group)
+			googlechat_group = purple_blist_find_group("GoogleChat");
+			if (!googlechat_group)
 			{
-				hangouts_group = purple_group_new("Hangouts");
-				purple_blist_add_group(hangouts_group, NULL);
+				googlechat_group = purple_group_new("GoogleChat");
+				purple_blist_add_group(googlechat_group, NULL);
 			}
 			
 			if (!has_name) {
@@ -826,7 +826,7 @@ hangouts_add_conversation_to_blist(HangoutsAccount *ha, Conversation *conversati
 				name = g_strjoinv(", ", name_set);
 				g_free(name_set);
 			}
-			purple_blist_add_chat(purple_chat_new(ha->account, name, hangouts_chat_info_defaults(ha->pc, conv_id)), hangouts_group, NULL);
+			purple_blist_add_chat(purple_chat_new(ha->account, name, googlechat_chat_info_defaults(ha->pc, conv_id)), googlechat_group, NULL);
 			if (!has_name)
 				g_free(name);
 		} else {
@@ -842,7 +842,7 @@ hangouts_add_conversation_to_blist(HangoutsAccount *ha, Conversation *conversati
 		
 		if (participant_data->participant_type != PARTICIPANT_TYPE__PARTICIPANT_TYPE_UNKNOWN) {
 			if (!purple_blist_find_buddy(ha->account, participant_data->id->gaia_id)) {
-				hangouts_add_person_to_blist(ha, participant_data->id->gaia_id, participant_data->fallback_name);
+				googlechat_add_person_to_blist(ha, participant_data->id->gaia_id, participant_data->fallback_name);
 			}
 			if (participant_data->fallback_name != NULL) {
 				purple_serv_got_alias(ha->pc, participant_data->id->gaia_id, participant_data->fallback_name);
@@ -855,7 +855,7 @@ hangouts_add_conversation_to_blist(HangoutsAccount *ha, Conversation *conversati
 }
 
 static void
-hangouts_got_conversation_list(HangoutsAccount *ha, SyncRecentConversationsResponse *response, gpointer user_data)
+googlechat_got_conversation_list(GoogleChatAccount *ha, SyncRecentConversationsResponse *response, gpointer user_data)
 {
 	guint i;
 	GHashTable *unique_user_ids = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, NULL);
@@ -866,8 +866,8 @@ hangouts_got_conversation_list(HangoutsAccount *ha, SyncRecentConversationsRespo
 		ConversationState *conversation_state = response->conversation_state[i];
 		Conversation *conversation = conversation_state->conversation;
 		
-		//purple_debug_info("hangouts", "got conversation state %s\n", pblite_dump_json((ProtobufCMessage *)conversation_state));
-		hangouts_add_conversation_to_blist(ha, conversation, unique_user_ids);
+		//purple_debug_info("googlechat", "got conversation state %s\n", pblite_dump_json((ProtobufCMessage *)conversation_state));
+		googlechat_add_conversation_to_blist(ha, conversation, unique_user_ids);
 	}
 	
 	//Add missing people from the buddy list
@@ -887,20 +887,20 @@ hangouts_got_conversation_list(HangoutsAccount *ha, SyncRecentConversationsRespo
 	}
 	
 	unique_user_ids_list = g_hash_table_get_keys(unique_user_ids);
-	hangouts_get_users_presence(ha, unique_user_ids_list);
-	hangouts_get_users_information(ha, unique_user_ids_list);
+	googlechat_get_users_presence(ha, unique_user_ids_list);
+	googlechat_get_users_information(ha, unique_user_ids_list);
 	g_list_free(unique_user_ids_list);
 	g_hash_table_unref(unique_user_ids);
 }
 
 void
-hangouts_get_conversation_list(HangoutsAccount *ha)
+googlechat_get_conversation_list(GoogleChatAccount *ha)
 {
 	SyncRecentConversationsRequest request;
 	SyncFilter sync_filter[1];
 	sync_recent_conversations_request__init(&request);
 	
-	request.request_header = hangouts_get_request_header(ha);
+	request.request_header = googlechat_get_request_header(ha);
 	request.has_max_conversations = TRUE;
 	request.max_conversations = 100;
 	request.has_max_events_per_conversation = TRUE;
@@ -910,14 +910,14 @@ hangouts_get_conversation_list(HangoutsAccount *ha)
 	request.sync_filter = sync_filter;
 	request.n_sync_filter = 1;  // Back streets back, alright!
 	
-	hangouts_pblite_sync_recent_conversations(ha, &request, hangouts_got_conversation_list, NULL);
+	googlechat_pblite_sync_recent_conversations(ha, &request, googlechat_got_conversation_list, NULL);
 	
-	hangouts_request_header_free(request.request_header);
+	googlechat_request_header_free(request.request_header);
 }
 
 
 static void
-hangouts_got_buddy_photo(PurpleHttpConnection *connection, PurpleHttpResponse *response, gpointer user_data)
+googlechat_got_buddy_photo(PurpleHttpConnection *connection, PurpleHttpResponse *response, gpointer user_data)
 {
 	PurpleBuddy *buddy = user_data;
 	PurpleAccount *account = purple_buddy_get_account(buddy);
@@ -929,7 +929,7 @@ hangouts_got_buddy_photo(PurpleHttpConnection *connection, PurpleHttpResponse *r
 	gpointer response_dup;
 	
 	if (purple_http_response_get_error(response) != NULL) {
-		purple_debug_error("hangouts", "Failed to get buddy photo for %s from %s\n", name, photo_url);
+		purple_debug_error("googlechat", "Failed to get buddy photo for %s from %s\n", name, photo_url);
 		return;
 	}
 	
@@ -939,10 +939,10 @@ hangouts_got_buddy_photo(PurpleHttpConnection *connection, PurpleHttpResponse *r
 }
 
 static void
-hangouts_got_buddy_list(PurpleHttpConnection *http_conn, PurpleHttpResponse *response, gpointer user_data)
+googlechat_got_buddy_list(PurpleHttpConnection *http_conn, PurpleHttpResponse *response, gpointer user_data)
 {
-	HangoutsAccount *ha = user_data;
-	PurpleGroup *hangouts_group = NULL;
+	GoogleChatAccount *ha = user_data;
+	PurpleGroup *googlechat_group = NULL;
 	const gchar *response_str;
 	gsize response_len;
 	JsonObject *obj;
@@ -986,7 +986,7 @@ hangouts_got_buddy_list(PurpleHttpConnection *http_conn, PurpleHttpResponse *res
 		}
 */
 	if (purple_http_response_get_error(response) != NULL) {
-		purple_debug_error("hangouts", "Failed to download buddy list: %s\n", purple_http_response_get_error(response));
+		purple_debug_error("googlechat", "Failed to download buddy list: %s\n", purple_http_response_get_error(response));
 		return;
 	}
 	
@@ -1001,18 +1001,18 @@ hangouts_got_buddy_list(PurpleHttpConnection *http_conn, PurpleHttpResponse *res
 		gchar *alias;
 		gchar *photo;
 		PurpleBuddy *buddy;
-		gchar *reachableAppType = hangouts_json_path_query_string(node, "$.inAppReachability[*].appType", NULL);
+		gchar *reachableAppType = googlechat_json_path_query_string(node, "$.inAppReachability[*].appType", NULL);
 		
 		if (!purple_strequal(reachableAppType, "BABEL")) {
-			//Not a hangouts user
+			//Not a googlechat user
 			g_free(reachableAppType);
 			continue;
 		}
 		g_free(reachableAppType);
 		
 		name = json_object_get_string_member(person, "personId");
-		alias = hangouts_json_path_query_string(node, "$.name[*].displayName", NULL);
-		photo = hangouts_json_path_query_string(node, "$.photo[*].url", NULL);
+		alias = googlechat_json_path_query_string(node, "$.name[*].displayName", NULL);
+		photo = googlechat_json_path_query_string(node, "$.photo[*].url", NULL);
 		buddy = purple_blist_find_buddy(ha->account, name);
 		
 		if (purple_account_get_bool(ha->account, "hide_self", FALSE) && purple_strequal(ha->self_gaia_id, name)) {
@@ -1026,16 +1026,16 @@ hangouts_got_buddy_list(PurpleHttpConnection *http_conn, PurpleHttpResponse *res
 		}
 		
 		if (buddy == NULL) {
-			if (hangouts_group == NULL) {
-				hangouts_group = purple_blist_find_group("Hangouts");
-				if (!hangouts_group)
+			if (googlechat_group == NULL) {
+				googlechat_group = purple_blist_find_group("GoogleChat");
+				if (!googlechat_group)
 				{
-					hangouts_group = purple_group_new("Hangouts");
-					purple_blist_add_group(hangouts_group, NULL);
+					googlechat_group = purple_group_new("GoogleChat");
+					purple_blist_add_group(googlechat_group, NULL);
 				}
 			}
 			buddy = purple_buddy_new(ha->account, name, alias);
-			purple_blist_add_buddy(buddy, NULL, hangouts_group, NULL);
+			purple_blist_add_buddy(buddy, NULL, googlechat_group, NULL);
 		} else {
 			purple_serv_got_alias(ha->pc, name, alias);
 		}
@@ -1049,7 +1049,7 @@ hangouts_got_buddy_list(PurpleHttpConnection *http_conn, PurpleHttpResponse *res
 			}
 			purple_http_request_set_keepalive_pool(photo_request, ha->icons_keepalive_pool);
 			
-			purple_http_request(ha->pc, photo_request, hangouts_got_buddy_photo, buddy);
+			purple_http_request(ha->pc, photo_request, googlechat_got_buddy_photo, buddy);
 			purple_http_request_unref(photo_request);
 		}
 		
@@ -1061,7 +1061,7 @@ hangouts_got_buddy_list(PurpleHttpConnection *http_conn, PurpleHttpResponse *res
 }
 
 void
-hangouts_get_buddy_list(HangoutsAccount *ha)
+googlechat_get_buddy_list(GoogleChatAccount *ha)
 {
 	gchar *request_data;
 	/*
@@ -1077,7 +1077,7 @@ Cache-Control: no-cache
 */
 	request_data = g_strdup_printf("{\"method\":\"plusi.ozinternal.listmergedpeople\",\"id\":\"ListMergedPeople\",\"apiVersion\":\"v2\",\"jsonrpc\":\"2.0\",\"params\":{\"pageSelection\":{\"maxResults\":1000},\"params\":{\"personId\":\"%s\",\"collection\":6,\"hasField\":[8,11],\"requestMask\":{\"includeField\":[1,2,3,8,9,11,32]},\"commonParams\":{\"includeAffinity\":[3]},\"extensionSet\":{\"extensionNames\":[4]}}}}", ha->self_gaia_id);
 	
-	hangouts_client6_request(ha, "/rpc/plusi?key=" GOOGLE_GPLUS_KEY, HANGOUTS_CONTENT_TYPE_JSON, request_data, -1, HANGOUTS_CONTENT_TYPE_JSON, hangouts_got_buddy_list, ha);
+	googlechat_client6_request(ha, "/rpc/plusi?key=" GOOGLE_GPLUS_KEY, GOOGLECHAT_CONTENT_TYPE_JSON, request_data, -1, GOOGLECHAT_CONTENT_TYPE_JSON, googlechat_got_buddy_list, ha);
 	
 	g_free(request_data);
 
@@ -1086,33 +1086,33 @@ Cache-Control: no-cache
 }
 
 void
-hangouts_block_user(PurpleConnection *pc, const char *who)
+googlechat_block_user(PurpleConnection *pc, const char *who)
 {
-	HangoutsAccount *ha = purple_connection_get_protocol_data(pc);
+	GoogleChatAccount *ha = purple_connection_get_protocol_data(pc);
 	gchar *request_data;
 	
 	request_data = g_strdup_printf("{\"method\":\"plusi.ozinternal.blockuser\",\"id\":\"blockUser\",\"apiVersion\":\"v2\",\"jsonrpc\":\"2.0\",\"params\":{\"membersToBlock\": {\"members\":[{\"memberId\":{\"obfuscatedGaiaId\":\"%s\"}}],\"block\":true}}}", who);
 	
-	hangouts_client6_request(ha, "/rpc/plusi?key=" GOOGLE_GPLUS_KEY, HANGOUTS_CONTENT_TYPE_JSON, request_data, -1, HANGOUTS_CONTENT_TYPE_JSON, NULL, ha);
+	googlechat_client6_request(ha, "/rpc/plusi?key=" GOOGLE_GPLUS_KEY, GOOGLECHAT_CONTENT_TYPE_JSON, request_data, -1, GOOGLECHAT_CONTENT_TYPE_JSON, NULL, ha);
 	
 	g_free(request_data);
 }
 
 void
-hangouts_unblock_user(PurpleConnection *pc, const char *who)
+googlechat_unblock_user(PurpleConnection *pc, const char *who)
 {
-	HangoutsAccount *ha = purple_connection_get_protocol_data(pc);
+	GoogleChatAccount *ha = purple_connection_get_protocol_data(pc);
 	gchar *request_data;
 	
 	request_data = g_strdup_printf("{\"method\":\"plusi.ozinternal.blockuser\",\"id\":\"unblockUser\",\"apiVersion\":\"v2\",\"jsonrpc\":\"2.0\",\"params\":{\"membersToBlock\": {\"members\":[{\"memberId\":{\"obfuscatedGaiaId\":\"%s\"}}],\"block\":false},\"legacyChatUnblock\":true}}", who);
 	
-	hangouts_client6_request(ha, "/rpc/plusi?key=" GOOGLE_GPLUS_KEY, HANGOUTS_CONTENT_TYPE_JSON, request_data, -1, HANGOUTS_CONTENT_TYPE_JSON, NULL, ha);
+	googlechat_client6_request(ha, "/rpc/plusi?key=" GOOGLE_GPLUS_KEY, GOOGLECHAT_CONTENT_TYPE_JSON, request_data, -1, GOOGLECHAT_CONTENT_TYPE_JSON, NULL, ha);
 	
 	g_free(request_data);
 }
 
 static Segment **
-hangouts_convert_html_to_segments(HangoutsAccount *ha, const gchar *html_message, guint *segments_count)
+googlechat_convert_html_to_segments(GoogleChatAccount *ha, const gchar *html_message, guint *segments_count)
 {
 	guint n_segments;
 	Segment **segments;
@@ -1306,7 +1306,7 @@ hangouts_convert_html_to_segments(HangoutsAccount *ha, const gchar *html_message
 }
 
 static void
-hangouts_free_segments(Segment **segments)
+googlechat_free_segments(Segment **segments)
 {
 	guint i;
 	
@@ -1330,9 +1330,9 @@ hangouts_free_segments(Segment **segments)
 
 //Received the photoid of the sent image to be able to attach to an outgoing message
 static void
-hangouts_conversation_send_image_part2_cb(PurpleHttpConnection *connection, PurpleHttpResponse *response, gpointer user_data)
+googlechat_conversation_send_image_part2_cb(PurpleHttpConnection *connection, PurpleHttpResponse *response, gpointer user_data)
 {
-	HangoutsAccount *ha;
+	GoogleChatAccount *ha;
 	gchar *conv_id;
 	gchar *photoid;
 	const gchar *response_raw;
@@ -1351,39 +1351,39 @@ hangouts_conversation_send_image_part2_cb(PurpleHttpConnection *connection, Purp
 	
 	ha = user_data;
 	response_raw = purple_http_response_get_data(response, &response_len);
-	purple_debug_info("hangouts", "image_part2_cb %s\n", response_raw);
+	purple_debug_info("googlechat", "image_part2_cb %s\n", response_raw);
 	node = json_decode(response_raw, response_len);
 	
-	photoid = hangouts_json_path_query_string(node, "$..photoid", NULL);
+	photoid = googlechat_json_path_query_string(node, "$..photoid", NULL);
 	conv_id = g_dataset_get_data(connection, "conv_id");
 	
 	send_chat_message_request__init(&request);
 	existing_media__init(&existing_media);
 	photo__init(&photo);
 	
-	request.request_header = hangouts_get_request_header(ha);
-	request.event_request_header = hangouts_get_event_request_header(ha, conv_id);
+	request.request_header = googlechat_get_request_header(ha);
+	request.event_request_header = googlechat_get_event_request_header(ha, conv_id);
 	
 	photo.photo_id = photoid;
 	existing_media.photo = &photo;
 	request.existing_media = &existing_media;
 	
-	hangouts_pblite_send_chat_message(ha, &request, NULL, NULL);
+	googlechat_pblite_send_chat_message(ha, &request, NULL, NULL);
 	
 	g_hash_table_insert(ha->sent_message_ids, g_strdup_printf("%" G_GUINT64_FORMAT, request.event_request_header->client_generated_id), NULL);
 	
 	g_free(photoid);
 	g_dataset_destroy(connection);
-	hangouts_request_header_free(request.request_header);
-	hangouts_event_request_header_free(request.event_request_header);
+	googlechat_request_header_free(request.request_header);
+	googlechat_event_request_header_free(request.event_request_header);
 	json_node_free(node);
 }
 
 //Received the url to upload the image data to
 static void
-hangouts_conversation_send_image_part1_cb(PurpleHttpConnection *connection, PurpleHttpResponse *response, gpointer user_data)
+googlechat_conversation_send_image_part1_cb(PurpleHttpConnection *connection, PurpleHttpResponse *response, gpointer user_data)
 {
-	HangoutsAccount *ha;
+	GoogleChatAccount *ha;
 	gchar *conv_id;
 	PurpleImage *image;
 	gchar *upload_url;
@@ -1405,10 +1405,10 @@ hangouts_conversation_send_image_part1_cb(PurpleHttpConnection *connection, Purp
 	image = g_dataset_get_data(connection, "image");
 	
 	response_raw = purple_http_response_get_data(response, &response_len);
-	purple_debug_info("hangouts", "image_part1_cb %s\n", response_raw);
+	purple_debug_info("googlechat", "image_part1_cb %s\n", response_raw);
 	node = json_decode(response_raw, response_len);
 	
-	upload_url = hangouts_json_path_query_string(node, "$..putInfo.url", NULL);
+	upload_url = googlechat_json_path_query_string(node, "$..putInfo.url", NULL);
 	
 	request = purple_http_request_new(upload_url);
 	purple_http_request_set_cookie_jar(request, ha->cookie_jar);
@@ -1416,7 +1416,7 @@ hangouts_conversation_send_image_part1_cb(PurpleHttpConnection *connection, Purp
 	purple_http_request_set_method(request, "POST");
 	purple_http_request_set_contents(request, purple_image_get_data(image), purple_image_get_data_size(image));
 	
-	new_connection = purple_http_request(ha->pc, request, hangouts_conversation_send_image_part2_cb, ha);
+	new_connection = purple_http_request(ha->pc, request, googlechat_conversation_send_image_part2_cb, ha);
 	purple_http_request_unref(request);
 	
 	g_dataset_set_data_full(new_connection, "conv_id", g_strdup(conv_id), g_free);
@@ -1427,7 +1427,7 @@ hangouts_conversation_send_image_part1_cb(PurpleHttpConnection *connection, Purp
 }
 
 static void
-hangouts_conversation_send_image(HangoutsAccount *ha, const gchar *conv_id, PurpleImage *image)
+googlechat_conversation_send_image(GoogleChatAccount *ha, const gchar *conv_id, PurpleImage *image)
 {
 	PurpleHttpRequest *request;
 	PurpleHttpConnection *connection;
@@ -1441,16 +1441,16 @@ hangouts_conversation_send_image(HangoutsAccount *ha, const gchar *conv_id, Purp
 		filename = g_strdup_printf("purple%u.%s", g_random_int(), purple_image_get_extension(image));
 	}
 	
-	postdata = g_strdup_printf("{\"protocolVersion\":\"0.8\",\"createSessionRequest\":{\"fields\":[{\"external\":{\"name\":\"file\",\"filename\":\"%s\",\"put\":{},\"size\":%" G_GSIZE_FORMAT "}},{\"inlined\":{\"name\":\"client\",\"content\":\"hangouts\",\"contentType\":\"text/plain\"}}]}}", filename, (gsize) purple_image_get_data_size(image));
+	postdata = g_strdup_printf("{\"protocolVersion\":\"0.8\",\"createSessionRequest\":{\"fields\":[{\"external\":{\"name\":\"file\",\"filename\":\"%s\",\"put\":{},\"size\":%" G_GSIZE_FORMAT "}},{\"inlined\":{\"name\":\"client\",\"content\":\"googlechat\",\"contentType\":\"text/plain\"}}]}}", filename, (gsize) purple_image_get_data_size(image));
 	
-	request = purple_http_request_new(HANGOUTS_IMAGE_UPLOAD_URL);
+	request = purple_http_request_new(GOOGLECHAT_IMAGE_UPLOAD_URL);
 	purple_http_request_set_cookie_jar(request, ha->cookie_jar);
 	purple_http_request_header_set(request, "Content-Type", "application/x-www-form-urlencoded;charset=UTF-8");
 	purple_http_request_set_method(request, "POST");
 	purple_http_request_set_contents(request, postdata, -1);
 	purple_http_request_set_max_redirects(request, 0);
 	
-	connection = purple_http_request(ha->pc, request, hangouts_conversation_send_image_part1_cb, ha);
+	connection = purple_http_request(ha->pc, request, googlechat_conversation_send_image_part1_cb, ha);
 	purple_http_request_unref(request);
 	
 	g_dataset_set_data_full(connection, "conv_id", g_strdup(conv_id), g_free);
@@ -1461,7 +1461,7 @@ hangouts_conversation_send_image(HangoutsAccount *ha, const gchar *conv_id, Purp
 }
 
 static void
-hangouts_conversation_check_message_for_images(HangoutsAccount *ha, const gchar *conv_id, const gchar *message)
+googlechat_conversation_check_message_for_images(GoogleChatAccount *ha, const gchar *conv_id, const gchar *message)
 {
 	const gchar *img;
 	
@@ -1475,7 +1475,7 @@ hangouts_conversation_check_message_for_images(HangoutsAccount *ha, const gchar 
 			PurpleImage *image = purple_image_store_get(imgid);
 			
 			if (image != NULL) {
-				hangouts_conversation_send_image(ha, conv_id, image);
+				googlechat_conversation_send_image(ha, conv_id, image);
 			}
 		} else if (((src = strstr(img, "SRC=\"")) || (src = strstr(img, "src=\""))) &&
 				src < close) {
@@ -1485,7 +1485,7 @@ hangouts_conversation_check_message_for_images(HangoutsAccount *ha, const gchar 
 				PurpleImage *image = purple_image_store_get(imgid);
 				
 				if (image != NULL) {
-					hangouts_conversation_send_image(ha, conv_id, image);
+					googlechat_conversation_send_image(ha, conv_id, image);
 				}
 			}
 		}
@@ -1493,7 +1493,7 @@ hangouts_conversation_check_message_for_images(HangoutsAccount *ha, const gchar 
 }
 
 static gint
-hangouts_conversation_send_message(HangoutsAccount *ha, const gchar *conv_id, const gchar *message)
+googlechat_conversation_send_message(GoogleChatAccount *ha, const gchar *conv_id, const gchar *message)
 {
 	SendChatMessageRequest request;
 	MessageContent message_content;
@@ -1503,7 +1503,7 @@ hangouts_conversation_send_message(HangoutsAccount *ha, const gchar *conv_id, co
 	gchar *message_dup = g_strdup(message);
 	
 	//Check for any images to send first
-	hangouts_conversation_check_message_for_images(ha, conv_id, message_dup);
+	googlechat_conversation_check_message_for_images(ha, conv_id, message_dup);
 	
 	send_chat_message_request__init(&request);
 	message_content__init(&message_content);
@@ -1513,31 +1513,31 @@ hangouts_conversation_send_message(HangoutsAccount *ha, const gchar *conv_id, co
 		
 		event_annotation__init(&event_annotation);
 		event_annotation.has_type = TRUE;
-		event_annotation.type = HANGOUTS_MAGIC_HALF_EIGHT_SLASH_ME_TYPE;
+		event_annotation.type = GOOGLECHAT_MAGIC_HALF_EIGHT_SLASH_ME_TYPE;
 		
 		request.n_annotation = 1;
 		request.annotation = g_new0(EventAnnotation *, 1);
 		request.annotation[0] = &event_annotation;
 	}
 	
-	segments = hangouts_convert_html_to_segments(ha, message_dup, &n_segments);
+	segments = googlechat_convert_html_to_segments(ha, message_dup, &n_segments);
 	message_content.segment = segments;
 	message_content.n_segment = n_segments;
 	
-	request.request_header = hangouts_get_request_header(ha);
-	request.event_request_header = hangouts_get_event_request_header(ha, conv_id);
+	request.request_header = googlechat_get_request_header(ha);
+	request.event_request_header = googlechat_get_event_request_header(ha, conv_id);
 	request.message_content = &message_content;
 	
-	//purple_debug_info("hangouts", "%s\n", pblite_dump_json((ProtobufCMessage *)&request)); //leaky
+	//purple_debug_info("googlechat", "%s\n", pblite_dump_json((ProtobufCMessage *)&request)); //leaky
 	
 	//TODO listen to response
-	hangouts_pblite_send_chat_message(ha, &request, NULL, NULL);
+	googlechat_pblite_send_chat_message(ha, &request, NULL, NULL);
 	
 	g_hash_table_insert(ha->sent_message_ids, g_strdup_printf("%" G_GUINT64_FORMAT, request.event_request_header->client_generated_id), NULL);
 	
-	hangouts_free_segments(segments);
-	hangouts_request_header_free(request.request_header);
-	hangouts_event_request_header_free(request.event_request_header);
+	googlechat_free_segments(segments);
+	googlechat_request_header_free(request.request_header);
+	googlechat_event_request_header_free(request.event_request_header);
 
 	g_free(message_dup);
 	
@@ -1546,7 +1546,7 @@ hangouts_conversation_send_message(HangoutsAccount *ha, const gchar *conv_id, co
 
 
 gint
-hangouts_send_im(PurpleConnection *pc, 
+googlechat_send_im(PurpleConnection *pc, 
 #if PURPLE_VERSION_CHECK(3, 0, 0)
 PurpleMessage *msg)
 {
@@ -1557,26 +1557,26 @@ const gchar *who, const gchar *message, PurpleMessageFlags flags)
 {
 #endif
 	
-	HangoutsAccount *ha;
+	GoogleChatAccount *ha;
 	const gchar *conv_id;
 	
 	ha = purple_connection_get_protocol_data(pc);
 	conv_id = g_hash_table_lookup(ha->one_to_ones_rev, who);
 	if (conv_id == NULL) {
-		if (G_UNLIKELY(!hangouts_is_valid_id(who))) {
-			hangouts_search_users_text(ha, who);
+		if (G_UNLIKELY(!googlechat_is_valid_id(who))) {
+			googlechat_search_users_text(ha, who);
 			return -1;
 		}
 		
 		//We don't have any known conversations for this person
-		hangouts_create_conversation(ha, TRUE, who, message);
+		googlechat_create_conversation(ha, TRUE, who, message);
 	}
 	
-	return hangouts_conversation_send_message(ha, conv_id, message);
+	return googlechat_conversation_send_message(ha, conv_id, message);
 }
 
 gint
-hangouts_chat_send(PurpleConnection *pc, gint id, 
+googlechat_chat_send(PurpleConnection *pc, gint id, 
 #if PURPLE_VERSION_CHECK(3, 0, 0)
 PurpleMessage *msg)
 {
@@ -1586,7 +1586,7 @@ const gchar *message, PurpleMessageFlags flags)
 {
 #endif
 	
-	HangoutsAccount *ha;
+	GoogleChatAccount *ha;
 	const gchar *conv_id;
 	PurpleChatConversation *chatconv;
 	gint ret;
@@ -1601,7 +1601,7 @@ const gchar *message, PurpleMessageFlags flags)
 	}
 	g_return_val_if_fail(g_hash_table_contains(ha->group_chats, conv_id), -1);
 	
-	ret = hangouts_conversation_send_message(ha, conv_id, message);
+	ret = googlechat_conversation_send_message(ha, conv_id, message);
 	if (ret > 0) {
 		purple_serv_got_chat_in(pc, g_str_hash(conv_id), ha->self_gaia_id, PURPLE_MESSAGE_SEND, message, time(NULL));
 	}
@@ -1609,20 +1609,20 @@ const gchar *message, PurpleMessageFlags flags)
 }
 
 guint
-hangouts_send_typing(PurpleConnection *pc, const gchar *who, PurpleIMTypingState state)
+googlechat_send_typing(PurpleConnection *pc, const gchar *who, PurpleIMTypingState state)
 {
-	HangoutsAccount *ha;
+	GoogleChatAccount *ha;
 	PurpleConversation *conv;
 	
 	ha = purple_connection_get_protocol_data(pc);
 	conv = PURPLE_CONVERSATION(purple_conversations_find_im_with_account(who, purple_connection_get_account(pc)));
 	g_return_val_if_fail(conv, -1);
 	
-	return hangouts_conv_send_typing(conv, state, ha);
+	return googlechat_conv_send_typing(conv, state, ha);
 }
 
 guint
-hangouts_conv_send_typing(PurpleConversation *conv, PurpleIMTypingState state, HangoutsAccount *ha)
+googlechat_conv_send_typing(PurpleConversation *conv, PurpleIMTypingState state, GoogleChatAccount *ha)
 {
 	PurpleConnection *pc;
 	const gchar *conv_id;
@@ -1634,7 +1634,7 @@ hangouts_conv_send_typing(PurpleConversation *conv, PurpleIMTypingState state, H
 	if (!PURPLE_CONNECTION_IS_CONNECTED(pc))
 		return 0;
 	
-	if (!purple_strequal(purple_protocol_get_id(purple_connection_get_protocol(pc)), HANGOUTS_PLUGIN_ID))
+	if (!purple_strequal(purple_protocol_get_id(purple_connection_get_protocol(pc)), GOOGLECHAT_PLUGIN_ID))
 		return 0;
 	
 	if (ha == NULL) {
@@ -1652,7 +1652,7 @@ hangouts_conv_send_typing(PurpleConversation *conv, PurpleIMTypingState state, H
 	g_return_val_if_fail(conv_id, -1); //TODO create new conversation for this new person
 	
 	set_typing_request__init(&request);
-	request.request_header = hangouts_get_request_header(ha);
+	request.request_header = googlechat_get_request_header(ha);
 	
 	conversation_id__init(&conversation_id);
 	conversation_id.id = (gchar *) conv_id;
@@ -1676,17 +1676,17 @@ hangouts_conv_send_typing(PurpleConversation *conv, PurpleIMTypingState state, H
 	
 	//TODO listen to response
 	//TODO dont send STOPPED if we just sent a message
-	hangouts_pblite_set_typing(ha, &request, NULL, NULL);
+	googlechat_pblite_set_typing(ha, &request, NULL, NULL);
 	
-	hangouts_request_header_free(request.request_header);
+	googlechat_request_header_free(request.request_header);
 	
 	return 20;
 }
 
 void
-hangouts_chat_leave_by_conv_id(PurpleConnection *pc, const gchar *conv_id, const gchar *who)
+googlechat_chat_leave_by_conv_id(PurpleConnection *pc, const gchar *conv_id, const gchar *who)
 {
-	HangoutsAccount *ha;
+	GoogleChatAccount *ha;
 	RemoveUserRequest request;
 	ParticipantId participant_id;
 	
@@ -1704,14 +1704,14 @@ hangouts_chat_leave_by_conv_id(PurpleConnection *pc, const gchar *conv_id, const
 		request.participant_id = &participant_id;
 	}
 	
-	request.request_header = hangouts_get_request_header(ha);
-	request.event_request_header = hangouts_get_event_request_header(ha, conv_id);
+	request.request_header = googlechat_get_request_header(ha);
+	request.event_request_header = googlechat_get_event_request_header(ha, conv_id);
 	
 	//XX do we need to see if this was successful, or does it just come through as a new event?
-	hangouts_pblite_remove_user(ha, &request, NULL, NULL);
+	googlechat_pblite_remove_user(ha, &request, NULL, NULL);
 	
-	hangouts_request_header_free(request.request_header);
-	hangouts_event_request_header_free(request.event_request_header);
+	googlechat_request_header_free(request.request_header);
+	googlechat_event_request_header_free(request.event_request_header);
 	
 	if (who == NULL) {
 		g_hash_table_remove(ha->group_chats, conv_id);
@@ -1719,7 +1719,7 @@ hangouts_chat_leave_by_conv_id(PurpleConnection *pc, const gchar *conv_id, const
 }
 
 void 
-hangouts_chat_leave(PurpleConnection *pc, int id)
+googlechat_chat_leave(PurpleConnection *pc, int id)
 {
 	const gchar *conv_id;
 	PurpleChatConversation *chatconv;
@@ -1731,11 +1731,11 @@ hangouts_chat_leave(PurpleConnection *pc, int id)
 		conv_id = purple_conversation_get_name(PURPLE_CONVERSATION(chatconv));
 	}
 	
-	return hangouts_chat_leave_by_conv_id(pc, conv_id, NULL);
+	return googlechat_chat_leave_by_conv_id(pc, conv_id, NULL);
 }
 
 void
-hangouts_chat_kick(PurpleConnection *pc, int id, const gchar *who)
+googlechat_chat_kick(PurpleConnection *pc, int id, const gchar *who)
 {
 	const gchar *conv_id;
 	PurpleChatConversation *chatconv;
@@ -1747,44 +1747,44 @@ hangouts_chat_kick(PurpleConnection *pc, int id, const gchar *who)
 		conv_id = purple_conversation_get_name(PURPLE_CONVERSATION(chatconv));
 	}
 	
-	return hangouts_chat_leave_by_conv_id(pc, conv_id, who);
+	return googlechat_chat_leave_by_conv_id(pc, conv_id, who);
 }
 
 static void 
-hangouts_created_conversation(HangoutsAccount *ha, CreateConversationResponse *response, gpointer user_data)
+googlechat_created_conversation(GoogleChatAccount *ha, CreateConversationResponse *response, gpointer user_data)
 {
 	Conversation *conversation = response->conversation;
 	gchar *message = user_data;
 	const gchar *conv_id;
 	
 	gchar *dump = pblite_dump_json((ProtobufCMessage *) response);
-	purple_debug_info("hangouts", "%s\n", dump);
+	purple_debug_info("googlechat", "%s\n", dump);
 	g_free(dump);
 	
 	if (conversation == NULL) {
-		purple_debug_error("hangouts", "Could not create conversation\n");
+		purple_debug_error("googlechat", "Could not create conversation\n");
 		g_free(message);
 		return;
 	}
 	
-	hangouts_add_conversation_to_blist(ha, conversation, NULL);
+	googlechat_add_conversation_to_blist(ha, conversation, NULL);
 	conv_id = conversation->conversation_id->id;
-	hangouts_get_conversation_events(ha, conv_id, 0);
+	googlechat_get_conversation_events(ha, conv_id, 0);
 	
 	if (message != NULL) {
-		hangouts_conversation_send_message(ha, conv_id, message);
+		googlechat_conversation_send_message(ha, conv_id, message);
 		g_free(message);
 	}
 }
 
 void
-hangouts_create_conversation(HangoutsAccount *ha, gboolean is_one_to_one, const char *who, const gchar *optional_message)
+googlechat_create_conversation(GoogleChatAccount *ha, gboolean is_one_to_one, const char *who, const gchar *optional_message)
 {
 	CreateConversationRequest request;
 	gchar *message_dup = NULL;
 	
 	create_conversation_request__init(&request);
-	request.request_header = hangouts_get_request_header(ha);
+	request.request_header = googlechat_get_request_header(ha);
 	
 	request.has_type = TRUE;
 	if (is_one_to_one) {
@@ -1806,16 +1806,16 @@ hangouts_create_conversation(HangoutsAccount *ha, gboolean is_one_to_one, const 
 		message_dup = g_strdup(optional_message);
 	}
 	
-	hangouts_pblite_create_conversation(ha, &request, hangouts_created_conversation, message_dup);
+	googlechat_pblite_create_conversation(ha, &request, googlechat_created_conversation, message_dup);
 	
 	g_free(request.invitee_id[0]->gaia_id);
 	g_free(request.invitee_id[0]);
 	g_free(request.invitee_id);
-	hangouts_request_header_free(request.request_header);
+	googlechat_request_header_free(request.request_header);
 }
 
 void
-hangouts_archive_conversation(HangoutsAccount *ha, const gchar *conv_id)
+googlechat_archive_conversation(GoogleChatAccount *ha, const gchar *conv_id)
 {
 	ModifyConversationViewRequest request;
 	ConversationId conversation_id;
@@ -1829,16 +1829,16 @@ hangouts_archive_conversation(HangoutsAccount *ha, const gchar *conv_id)
 	
 	conversation_id.id = (gchar *)conv_id;
 	
-	request.request_header = hangouts_get_request_header(ha);
+	request.request_header = googlechat_get_request_header(ha);
 	request.conversation_id = &conversation_id;
 	request.has_new_view = TRUE;
 	request.new_view = CONVERSATION_VIEW__CONVERSATION_VIEW_ARCHIVED;
 	request.has_last_event_timestamp = TRUE;
 	request.last_event_timestamp = ha->last_event_timestamp;
 	
-	hangouts_pblite_modify_conversation_view(ha, &request, NULL, NULL);
+	googlechat_pblite_modify_conversation_view(ha, &request, NULL, NULL);
 	
-	hangouts_request_header_free(request.request_header);
+	googlechat_request_header_free(request.request_header);
 	
 	if (g_hash_table_contains(ha->one_to_ones, conv_id)) {
 		gchar *buddy_id = g_hash_table_lookup(ha->one_to_ones, conv_id);
@@ -1851,12 +1851,12 @@ hangouts_archive_conversation(HangoutsAccount *ha, const gchar *conv_id)
 }
 
 void
-hangouts_initiate_chat_from_node(PurpleBlistNode *node, gpointer userdata)
+googlechat_initiate_chat_from_node(PurpleBlistNode *node, gpointer userdata)
 {
 	if(PURPLE_IS_BUDDY(node))
 	{
 		PurpleBuddy *buddy = (PurpleBuddy *) node;
-		HangoutsAccount *ha;
+		GoogleChatAccount *ha;
 		
 		if (userdata) {
 			ha = userdata;
@@ -1865,14 +1865,14 @@ hangouts_initiate_chat_from_node(PurpleBlistNode *node, gpointer userdata)
 			ha = purple_connection_get_protocol_data(pc);
 		}
 		
-		hangouts_create_conversation(ha, FALSE, purple_buddy_get_name(buddy), NULL);
+		googlechat_create_conversation(ha, FALSE, purple_buddy_get_name(buddy), NULL);
 	}
 }
 
 void
-hangouts_chat_invite(PurpleConnection *pc, int id, const char *message, const char *who)
+googlechat_chat_invite(PurpleConnection *pc, int id, const char *message, const char *who)
 {
-	HangoutsAccount *ha;
+	GoogleChatAccount *ha;
 	const gchar *conv_id;
 	PurpleChatConversation *chatconv;
 	AddUserRequest request;
@@ -1886,8 +1886,8 @@ hangouts_chat_invite(PurpleConnection *pc, int id, const char *message, const ch
 	
 	add_user_request__init(&request);
 	
-	request.request_header = hangouts_get_request_header(ha);
-	request.event_request_header = hangouts_get_event_request_header(ha, conv_id);
+	request.request_header = googlechat_get_request_header(ha);
+	request.event_request_header = googlechat_get_event_request_header(ha, conv_id);
 	
 	request.n_invitee_id = 1;
 	request.invitee_id = g_new0(InviteeID *, 1);
@@ -1895,24 +1895,24 @@ hangouts_chat_invite(PurpleConnection *pc, int id, const char *message, const ch
 	invitee_id__init(request.invitee_id[0]);
 	request.invitee_id[0]->gaia_id = g_strdup(who);
 	
-	hangouts_pblite_add_user(ha, &request, NULL, NULL);
+	googlechat_pblite_add_user(ha, &request, NULL, NULL);
 	
 	g_free(request.invitee_id[0]->gaia_id);
 	g_free(request.invitee_id[0]);
 	g_free(request.invitee_id);
-	hangouts_request_header_free(request.request_header);
-	hangouts_event_request_header_free(request.event_request_header);
+	googlechat_request_header_free(request.request_header);
+	googlechat_event_request_header_free(request.event_request_header);
 }
 
 #define PURPLE_CONVERSATION_IS_VALID(conv) (g_list_find(purple_conversations_get_all(), conv) != NULL)
 
 gboolean
-hangouts_mark_conversation_focused_timeout(gpointer convpointer)
+googlechat_mark_conversation_focused_timeout(gpointer convpointer)
 {
 	PurpleConversation *conv = convpointer;
 	PurpleConnection *pc;
 	PurpleAccount *account;
-	HangoutsAccount *ha;
+	GoogleChatAccount *ha;
 	SetFocusRequest request;
 	ConversationId conversation_id;
 	const gchar *conv_id = NULL;
@@ -1936,7 +1936,7 @@ hangouts_mark_conversation_focused_timeout(gpointer convpointer)
 		return FALSE;
 	
 	set_focus_request__init(&request);
-	request.request_header = hangouts_get_request_header(ha);
+	request.request_header = googlechat_get_request_header(ha);
 	
 	conv_id = purple_conversation_get_data(conv, "conv_id");
 	if (conv_id == NULL) {
@@ -1961,20 +1961,20 @@ hangouts_mark_conversation_focused_timeout(gpointer convpointer)
 	}
 	request.has_type = TRUE;
 	
-	hangouts_pblite_set_focus(ha, &request, (HangoutsPbliteSetFocusResponseFunc)hangouts_default_response_dump, NULL);
+	googlechat_pblite_set_focus(ha, &request, (GoogleChatPbliteSetFocusResponseFunc)googlechat_default_response_dump, NULL);
 	
-	hangouts_request_header_free(request.request_header);
+	googlechat_request_header_free(request.request_header);
 	
 	return FALSE;
 }
 
 gboolean
-hangouts_mark_conversation_seen_timeout(gpointer convpointer)
+googlechat_mark_conversation_seen_timeout(gpointer convpointer)
 {
 	PurpleConversation *conv = convpointer;
 	PurpleAccount *account;
 	PurpleConnection *pc;
-	HangoutsAccount *ha;
+	GoogleChatAccount *ha;
 	UpdateWatermarkRequest request;
 	ConversationId conversation_id;
 	const gchar *conv_id = NULL;
@@ -2015,7 +2015,7 @@ hangouts_mark_conversation_seen_timeout(gpointer convpointer)
 	}
 	
 	update_watermark_request__init(&request);
-	request.request_header = hangouts_get_request_header(ha);
+	request.request_header = googlechat_get_request_header(ha);
 	
 	conv_id = purple_conversation_get_data(conv, "conv_id");
 	if (conv_id == NULL) {
@@ -2032,9 +2032,9 @@ hangouts_mark_conversation_seen_timeout(gpointer convpointer)
 	request.has_last_read_timestamp = TRUE;
 	request.last_read_timestamp = last_event_timestamp;
 	
-	hangouts_pblite_update_watermark(ha, &request, (HangoutsPbliteUpdateWatermarkResponseFunc)hangouts_default_response_dump, NULL);
+	googlechat_pblite_update_watermark(ha, &request, (GoogleChatPbliteUpdateWatermarkResponseFunc)googlechat_default_response_dump, NULL);
 	
-	hangouts_request_header_free(request.request_header);
+	googlechat_request_header_free(request.request_header);
 	
 	if (last_read_timestamp_ptr == NULL) {
 		last_read_timestamp_ptr = g_new0(gint64, 1);
@@ -2046,7 +2046,7 @@ hangouts_mark_conversation_seen_timeout(gpointer convpointer)
 }
 
 void
-hangouts_mark_conversation_seen(PurpleConversation *conv, PurpleConversationUpdateType type)
+googlechat_mark_conversation_seen(PurpleConversation *conv, PurpleConversationUpdateType type)
 {
 	gint mark_seen_timeout;
 	PurpleConnection *pc;
@@ -2058,7 +2058,7 @@ hangouts_mark_conversation_seen(PurpleConversation *conv, PurpleConversationUpda
 	if (!PURPLE_CONNECTION_IS_CONNECTED(pc))
 		return;
 	
-	if (!purple_strequal(purple_protocol_get_id(purple_connection_get_protocol(pc)), HANGOUTS_PLUGIN_ID))
+	if (!purple_strequal(purple_protocol_get_id(purple_connection_get_protocol(pc)), GOOGLECHAT_PLUGIN_ID))
 		return;
 	
 	mark_seen_timeout = GPOINTER_TO_INT(purple_conversation_get_data(conv, "mark_seen_timeout"));
@@ -2067,21 +2067,21 @@ hangouts_mark_conversation_seen(PurpleConversation *conv, PurpleConversationUpda
 		g_source_remove(mark_seen_timeout);
 	}
 	
-	mark_seen_timeout = g_timeout_add_seconds(1, hangouts_mark_conversation_seen_timeout, conv);
+	mark_seen_timeout = g_timeout_add_seconds(1, googlechat_mark_conversation_seen_timeout, conv);
 	
 	purple_conversation_set_data(conv, "mark_seen_timeout", GINT_TO_POINTER(mark_seen_timeout));
 	
-	g_timeout_add_seconds(1, hangouts_mark_conversation_focused_timeout, conv);
+	g_timeout_add_seconds(1, googlechat_mark_conversation_focused_timeout, conv);
 	
-	hangouts_set_active_client(pc);
+	googlechat_set_active_client(pc);
 }
 
 void
-hangouts_set_status(PurpleAccount *account, PurpleStatus *status)
+googlechat_set_status(PurpleAccount *account, PurpleStatus *status)
 {
 	SetPresenceRequest request;
 	PurpleConnection *pc = purple_account_get_connection(account);
-	HangoutsAccount *ha = purple_connection_get_protocol_data(pc);
+	GoogleChatAccount *ha = purple_connection_get_protocol_data(pc);
 	Segment **segments = NULL;
 	const gchar *message;
 	DndSetting dnd_setting;
@@ -2092,7 +2092,7 @@ hangouts_set_status(PurpleAccount *account, PurpleStatus *status)
 	guint n_segments;
 
 	set_presence_request__init(&request);
-	request.request_header = hangouts_get_request_header(ha);
+	request.request_header = googlechat_get_request_header(ha);
 	
 	//available:
 	if (purple_status_type_get_primitive(purple_status_get_status_type(status)) == PURPLE_STATUS_AVAILABLE) {
@@ -2134,7 +2134,7 @@ hangouts_set_status(PurpleAccount *account, PurpleStatus *status)
 	
 	message = purple_status_get_attr_string(status, "message");
 	if (message && *message) {
-		segments = hangouts_convert_html_to_segments(ha, message, &n_segments);
+		segments = googlechat_convert_html_to_segments(ha, message, &n_segments);
 		mood_content.segment = segments;
 		mood_content.n_segment = n_segments;
 	}
@@ -2143,15 +2143,15 @@ hangouts_set_status(PurpleAccount *account, PurpleStatus *status)
 	mood_setting.mood_message = &mood_message;
 	request.mood_setting = &mood_setting;
 
-	hangouts_pblite_set_presence(ha, &request, (HangoutsPbliteSetPresenceResponseFunc)hangouts_default_response_dump, NULL);
+	googlechat_pblite_set_presence(ha, &request, (GoogleChatPbliteSetPresenceResponseFunc)googlechat_default_response_dump, NULL);
 	
-	hangouts_request_header_free(request.request_header);
-	hangouts_free_segments(segments);
+	googlechat_request_header_free(request.request_header);
+	googlechat_free_segments(segments);
 }
 
 
 static void
-hangouts_roomlist_got_list(HangoutsAccount *ha, SyncRecentConversationsResponse *response, gpointer user_data)
+googlechat_roomlist_got_list(GoogleChatAccount *ha, SyncRecentConversationsResponse *response, gpointer user_data)
 {
 	PurpleRoomlist *roomlist = user_data;
 	guint i, j;
@@ -2191,9 +2191,9 @@ hangouts_roomlist_got_list(HangoutsAccount *ha, SyncRecentConversationsResponse 
 }
 
 PurpleRoomlist *
-hangouts_roomlist_get_list(PurpleConnection *pc)
+googlechat_roomlist_get_list(PurpleConnection *pc)
 {
-	HangoutsAccount *ha = purple_connection_get_protocol_data(pc);
+	GoogleChatAccount *ha = purple_connection_get_protocol_data(pc);
 	PurpleRoomlist *roomlist;
 	GList *fields = NULL;
 	PurpleRoomlistField *f;
@@ -2213,12 +2213,12 @@ hangouts_roomlist_get_list(PurpleConnection *pc)
 	purple_roomlist_set_in_progress(roomlist, TRUE);
 	
 	{
-		//Stolen from hangouts_get_conversation_list()
+		//Stolen from googlechat_get_conversation_list()
 		SyncRecentConversationsRequest request;
 		SyncFilter sync_filter[1];
 		sync_recent_conversations_request__init(&request);
 		
-		request.request_header = hangouts_get_request_header(ha);
+		request.request_header = googlechat_get_request_header(ha);
 		request.has_max_conversations = TRUE;
 		request.max_conversations = 100;
 		request.has_max_events_per_conversation = TRUE;
@@ -2228,9 +2228,9 @@ hangouts_roomlist_get_list(PurpleConnection *pc)
 		request.sync_filter = sync_filter;
 		request.n_sync_filter = 1;  // Back streets back, alright!
 		
-		hangouts_pblite_sync_recent_conversations(ha, &request, hangouts_roomlist_got_list, roomlist);
+		googlechat_pblite_sync_recent_conversations(ha, &request, googlechat_roomlist_got_list, roomlist);
 		
-		hangouts_request_header_free(request.request_header);
+		googlechat_request_header_free(request.request_header);
 	}
 	
 	
@@ -2238,19 +2238,19 @@ hangouts_roomlist_get_list(PurpleConnection *pc)
 }
 
 void
-hangouts_rename_conversation(HangoutsAccount *ha, const gchar *conv_id, const gchar *alias)
+googlechat_rename_conversation(GoogleChatAccount *ha, const gchar *conv_id, const gchar *alias)
 {
 	RenameConversationRequest request;
 	
 	rename_conversation_request__init(&request);
-	request.request_header = hangouts_get_request_header(ha);
-	request.event_request_header = hangouts_get_event_request_header(ha, conv_id);
+	request.request_header = googlechat_get_request_header(ha);
+	request.event_request_header = googlechat_get_event_request_header(ha, conv_id);
 	
 	request.new_name = (gchar *) alias;
 	
-	hangouts_pblite_rename_conversation(ha, &request, NULL, NULL);
+	googlechat_pblite_rename_conversation(ha, &request, NULL, NULL);
 	
-	hangouts_request_header_free(request.request_header);
-	hangouts_event_request_header_free(request.event_request_header);
+	googlechat_request_header_free(request.request_header);
+	googlechat_event_request_header_free(request.event_request_header);
 }
 

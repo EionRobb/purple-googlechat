@@ -1,5 +1,5 @@
 /*
- * Hangouts Plugin for libpurple/Pidgin
+ * GoogleChat Plugin for libpurple/Pidgin
  * Copyright (c) 2015-2016 Eion Robb, Mike Ruprecht
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -19,14 +19,14 @@
 
 
 
-#ifndef _LIBHANGOUTS_H_
-#define _LIBHANGOUTS_H_
+#ifndef _LIBGOOGLECHAT_H_
+#define _LIBGOOGLECHAT_H_
 
 #ifndef PURPLE_PLUGINS
 #	define PURPLE_PLUGINS
 #endif
 
-#define PROTOBUF_C_UNPACK_ERROR(...) purple_debug_error("hangouts-protobuf", __VA_ARGS__)
+#define PROTOBUF_C_UNPACK_ERROR(...) purple_debug_error("googlechat-protobuf", __VA_ARGS__)
 
 #include "purplecompat.h"
 
@@ -34,12 +34,12 @@
 #include "connection.h"
 #include "http.h"
 
-#include "hangouts.pb-c.h"
+#include "googlechat.pb-c.h"
 
-#define HANGOUTS_PLUGIN_ID "prpl-hangouts"
-#define HANGOUTS_PLUGIN_VERSION "0.1"
+#define GOOGLECHAT_PLUGIN_ID "prpl-googlechat"
+#define GOOGLECHAT_PLUGIN_VERSION "0.1"
 
-#define HANGOUTS_BUFFER_DEFAULT_SIZE 4096
+#define GOOGLECHAT_BUFFER_DEFAULT_SIZE 4096
 
 #ifndef N_
 #	define N_(a) (a)
@@ -48,7 +48,7 @@
 #	define _(a) (a)
 #endif
 
-#define HANGOUTS_API_OAUTH2_TOKEN_URL "https://www.googleapis.com/oauth2/v3/token"
+#define GOOGLECHAT_API_OAUTH2_TOKEN_URL "https://www.googleapis.com/oauth2/v3/token"
 
 // #define GOOGLE_CLIENT_ID "1055179169992-mvb9smig5gflo8bq6m5pao05jqmov76h.apps.googleusercontent.com"
 // #define GOOGLE_CLIENT_SECRET "Hj5Cv38ZM__uO1bTQxOtWwkT"
@@ -58,16 +58,16 @@
 #define GOOGLE_GPLUS_KEY "AIzaSyAfFJCeph-euFSwtmqFZi0kaKk-cZ5wufM"
 
 #define MINIFIED_OAUTH_URL "https://goo.gl/eJHvDX"
-#define HANGOUTS_API_OAUTH2_REDIRECT_URI "urn:ietf:wg:oauth:2.0:oob"
-// #define HANGOUTS_API_OAUTH2_AUTHORIZATION_CODE_URL MINIFIED_OAUTH_URL
+#define GOOGLECHAT_API_OAUTH2_REDIRECT_URI "urn:ietf:wg:oauth:2.0:oob"
+// #define GOOGLECHAT_API_OAUTH2_AUTHORIZATION_CODE_URL MINIFIED_OAUTH_URL
 
-#define HANGOUTS_API_OAUTH2_AUTHORIZATION_CODE_URL "https://accounts.google.com/o/oauth2/auth?client_id=" GOOGLE_CLIENT_ID "&scope=https://www.google.com/accounts/OAuthLogin&redirect_uri=urn:ietf:wg:oauth:2.0:oob&response_type=code&device_name=purple-hangouts"
+#define GOOGLECHAT_API_OAUTH2_AUTHORIZATION_CODE_URL "https://accounts.google.com/o/oauth2/auth?client_id=" GOOGLE_CLIENT_ID "&scope=https://www.google.com/accounts/OAuthLogin&redirect_uri=urn:ietf:wg:oauth:2.0:oob&response_type=code&device_name=purple-googlechat"
 
-#define HANGOUTS_IMAGE_UPLOAD_URL "https://docs.google.com/upload/photos/resumable?authuser=0"
+#define GOOGLECHAT_IMAGE_UPLOAD_URL "https://docs.google.com/upload/photos/resumable?authuser=0"
 
-#define HANGOUTS_ACTIVE_CLIENT_TIMEOUT 120
+#define GOOGLECHAT_ACTIVE_CLIENT_TIMEOUT 120
 
-#define HANGOUTS_MAGIC_HALF_EIGHT_SLASH_ME_TYPE 4
+#define GOOGLECHAT_MAGIC_HALF_EIGHT_SLASH_ME_TYPE 4
 
 typedef struct {
 	PurpleAccount *account;
@@ -101,25 +101,25 @@ typedef struct {
 	GHashTable *group_chats;     // A store of known conv_id's
 	GHashTable *sent_message_ids;// A store of message id's that we generated from this instance
 	GHashTable *google_voice_conversations; // A store of known SMS conv_id's
-} HangoutsAccount;
+} GoogleChatAccount;
 
 
 typedef enum
 {
-    HANGOUTS_DEVICE_TYPE_UNKNOWN = 0x0000,
-    HANGOUTS_DEVICE_TYPE_MOBILE  = 0x0001,
-    HANGOUTS_DEVICE_TYPE_DESKTOP = 0x0002,
-    HANGOUTS_DEVICE_TYPE_TABLET  = 0x0004
-} HangoutsDeviceTypeFlags;
+    GOOGLECHAT_DEVICE_TYPE_UNKNOWN = 0x0000,
+    GOOGLECHAT_DEVICE_TYPE_MOBILE  = 0x0001,
+    GOOGLECHAT_DEVICE_TYPE_DESKTOP = 0x0002,
+    GOOGLECHAT_DEVICE_TYPE_TABLET  = 0x0004
+} GoogleChatDeviceTypeFlags;
 
 typedef struct {
 	PurpleBuddy *buddy;
 	gboolean in_call;
 	gint64 last_seen;
-	HangoutsDeviceTypeFlags device_type;
-} HangoutsBuddy;
+	GoogleChatDeviceTypeFlags device_type;
+} GoogleChatBuddy;
 
 
-gboolean hangouts_is_valid_id(const gchar *id);
+gboolean googlechat_is_valid_id(const gchar *id);
 
-#endif /*_LIBHANGOUTS_H_*/
+#endif /*_LIBGOOGLECHAT_H_*/

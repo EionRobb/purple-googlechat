@@ -1,5 +1,5 @@
 /*
- * Hangouts Plugin for libpurple/Pidgin
+ * GoogleChat Plugin for libpurple/Pidgin
  * Copyright (c) 2015-2016 Eion Robb, Mike Ruprecht
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -17,8 +17,8 @@
  */
 
 
-#ifndef _HANGOUTS_JSON_H_
-#define _HANGOUTS_JSON_H_
+#ifndef _GOOGLECHAT_JSON_H_
+#define _GOOGLECHAT_JSON_H_
 
 #include <glib.h>
 #include <json-glib/json-glib.h>
@@ -85,11 +85,11 @@ JsonArray *json_decode_array(const gchar *data, gssize len);
 JsonObject *json_decode_object(const gchar *data, gssize len);
 
 
-JsonNode *hangouts_json_path_query(JsonNode *root, const gchar *expr, GError **error);
+JsonNode *googlechat_json_path_query(JsonNode *root, const gchar *expr, GError **error);
 
-gchar *hangouts_json_path_query_string(JsonNode *root, const gchar *expr, GError **error);
+gchar *googlechat_json_path_query_string(JsonNode *root, const gchar *expr, GError **error);
 
-gint64 hangouts_json_path_query_int(JsonNode *root, const gchar *expr, GError **error);
+gint64 googlechat_json_path_query_int(JsonNode *root, const gchar *expr, GError **error);
 
 
 /**
@@ -102,6 +102,6 @@ gint64 hangouts_json_path_query_int(JsonNode *root, const gchar *expr, GError **
  * \return
  *      The JSON-encoded string that has been tidied or NULL if there was an error.  You are required to g_free() this when you are done.
  */
-gchar *hangouts_json_tidy_blank_arrays(const gchar *json);
+gchar *googlechat_json_tidy_blank_arrays(const gchar *json);
 
-#endif /* _HANGOUTS_JSON_H_ */
+#endif /* _GOOGLECHAT_JSON_H_ */

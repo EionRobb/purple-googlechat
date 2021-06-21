@@ -11,4 +11,20 @@
 #define purple_image_get_data             purple_imgstore_get_data
 #define purple_image_get_extension        purple_imgstore_get_extension
 
+
+static inline const gchar *
+purple_image_get_mimetype(PurpleImage *image)
+{
+	const gchar *extension = purple_image_get_extension(image);
+	
+	if (purple_strequal(extension, "jpg") || purple_strequal(extension, "jpeg")) {
+		return "image/jpeg";
+	} else if (purple_strequal(extension, "png")) {
+		return "image/png";
+	} else if (purple_strequal(extension, "gif")) {
+		return "image/gif";
+	}
+	return "image/*";
+}
+
 #endif /* _IMAGE_H_ */

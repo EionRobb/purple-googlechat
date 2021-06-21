@@ -1,5 +1,5 @@
 /*
- * Hangouts Plugin for libpurple/Pidgin
+ * GoogleChat Plugin for libpurple/Pidgin
  * Copyright (c) 2015-2016 Eion Robb, Mike Ruprecht
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -17,14 +17,14 @@
  */
 
 
-#ifndef _HANGOUTS_PBLITE_H_
-#define _HANGOUTS_PBLITE_H_
+#ifndef _GOOGLECHAT_PBLITE_H_
+#define _GOOGLECHAT_PBLITE_H_
 
 #include <protobuf-c/protobuf-c.h>
 
 
-#include "hangouts_json.h"
-#include "hangouts.pb-c.h"
+#include "googlechat_json.h"
+#include "googlechat.pb-c.h"
 
 /**
  * Decode a JsonArray into a ProtobufCMessage.
@@ -53,4 +53,4 @@ JsonArray *pblite_encode(ProtobufCMessage *message);
 
 gchar *pblite_dump_json(ProtobufCMessage *message);
 
-#endif /* _HANGOUTS_PBLITE_H_ */
+#endif /* _GOOGLECHAT_PBLITE_H_ */

@@ -1,5 +1,5 @@
 /*
- * Hangouts Plugin for libpurple/Pidgin
+ * GoogleChat Plugin for libpurple/Pidgin
  * Copyright (c) 2015-2016 Eion Robb, Mike Ruprecht
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -16,35 +16,28 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "libhangouts.h"
+#include "libgooglechat.h"
 
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <glib.h>
 
-#include "accountopt.h"
-#include "cmds.h"
-#include "debug.h"
-#include "mediamanager.h"
-#include "plugins.h"
-#include "request.h"
-#include "version.h"
+#include <purple.h>
 
-#include "hangouts_auth.h"
-#include "hangouts_pblite.h"
-#include "hangouts_json.h"
-#include "hangouts_events.h"
-#include "hangouts_connection.h"
-#include "hangouts_conversation.h"
-#include "hangouts_media.h"
+#include "googlechat_auth.h"
+#include "googlechat_pblite.h"
+#include "googlechat_json.h"
+#include "googlechat_events.h"
+#include "googlechat_connection.h"
+#include "googlechat_conversation.h"
 
 
 /*****************************************************************************/
 //TODO move to nicer place
 
 gboolean
-hangouts_is_valid_id(const gchar *id)
+googlechat_is_valid_id(const gchar *id)
 {
 	gint i;
 	
@@ -58,26 +51,26 @@ hangouts_is_valid_id(const gchar *id)
 }
 
 PurpleMediaCaps
-hangouts_get_media_caps(PurpleAccount *account, const char *who)
+googlechat_get_media_caps(PurpleAccount *account, const char *who)
 {
 	return PURPLE_MEDIA_CAPS_AUDIO | PURPLE_MEDIA_CAPS_VIDEO | PURPLE_MEDIA_CAPS_AUDIO_VIDEO | PURPLE_MEDIA_CAPS_MODIFY_SESSION;
 }
 
 void
-hangouts_set_idle(PurpleConnection *pc, int time)
+googlechat_set_idle(PurpleConnection *pc, int time)
 {
-	HangoutsAccount *ha;
+	GoogleChatAccount *ha;
 	
 	ha = purple_connection_get_protocol_data(pc);
 	
-	if (time < HANGOUTS_ACTIVE_CLIENT_TIMEOUT) {
-		hangouts_set_active_client(pc);
+	if (time < GOOGLECHAT_ACTIVE_CLIENT_TIMEOUT) {
+		googlechat_set_active_client(pc);
 	}
 	ha->idle_time = time;
 }
 
 static GList *
-hangouts_add_account_options(GList *account_options)
+googlechat_add_account_options(GList *account_options)
 {
 	PurpleAccountOption *option;
 	
@@ -100,7 +93,7 @@ hangouts_add_account_options(GList *account_options)
 }
 
 static void
-hangouts_blist_node_removed(PurpleBlistNode *node)
+googlechat_blist_node_removed(PurpleBlistNode *node)
 {
 	PurpleChat *chat = NULL;
 	PurpleBuddy *buddy = NULL;
@@ -121,7 +114,7 @@ hangouts_blist_node_removed(PurpleBlistNode *node)
 		return;
 	}
 	
-	if (!purple_strequal(purple_account_get_protocol_id(account), HANGOUTS_PLUGIN_ID)) {
+	if (!purple_strequal(purple_account_get_protocol_id(account), GOOGLECHAT_PLUGIN_ID)) {
 		return;
 	}
 	
@@ -137,13 +130,13 @@ hangouts_blist_node_removed(PurpleBlistNode *node)
 			conv_id = purple_chat_get_name_only(chat);
 		}
 		
-		hangouts_chat_leave_by_conv_id(pc, conv_id, NULL);
+		googlechat_chat_leave_by_conv_id(pc, conv_id, NULL);
 	} else {
-		HangoutsAccount *ha = purple_connection_get_protocol_data(pc);
+		GoogleChatAccount *ha = purple_connection_get_protocol_data(pc);
 		const gchar *gaia_id = purple_buddy_get_name(buddy);
 		conv_id = g_hash_table_lookup(ha->one_to_ones_rev, gaia_id);
 		
-		hangouts_archive_conversation(ha, conv_id);
+		googlechat_archive_conversation(ha, conv_id);
 		
 		if (purple_strequal(gaia_id, ha->self_gaia_id)) {
 			purple_account_set_bool(account, "hide_self", TRUE);
@@ -152,14 +145,14 @@ hangouts_blist_node_removed(PurpleBlistNode *node)
 }
 
 static void
-hangouts_blist_node_aliased(PurpleBlistNode *node, const char *old_alias)
+googlechat_blist_node_aliased(PurpleBlistNode *node, const char *old_alias)
 {
 	PurpleChat *chat = NULL;
 	PurpleAccount *account = NULL;
 	PurpleConnection *pc;
 	const gchar *conv_id;
 	GHashTable *components;
-	HangoutsAccount *ha;
+	GoogleChatAccount *ha;
 	const gchar *new_alias;
 	
 	if (PURPLE_IS_CHAT(node)) {
@@ -171,7 +164,7 @@ hangouts_blist_node_aliased(PurpleBlistNode *node, const char *old_alias)
 		return;
 	}
 	
-	if (!purple_strequal(purple_account_get_protocol_id(account), HANGOUTS_PLUGIN_ID)) {
+	if (!purple_strequal(purple_account_get_protocol_id(account), GOOGLECHAT_PLUGIN_ID)) {
 		return;
 	}
 	
@@ -196,17 +189,17 @@ hangouts_blist_node_aliased(PurpleBlistNode *node, const char *old_alias)
 				conv_id = purple_chat_get_name_only(chat);
 			}
 			
-			hangouts_rename_conversation(ha, conv_id, new_alias);
+			googlechat_rename_conversation(ha, conv_id, new_alias);
 		}
 	}
 }
 
 static void
-hangouts_chat_set_topic(PurpleConnection *pc, int id, const char *topic)
+googlechat_chat_set_topic(PurpleConnection *pc, int id, const char *topic)
 {
 	const gchar *conv_id;
 	PurpleChatConversation *chatconv;
-	HangoutsAccount *ha;
+	GoogleChatAccount *ha;
 	
 	ha = purple_connection_get_protocol_data(pc);
 	chatconv = purple_conversations_find_chat(pc, id);
@@ -216,11 +209,11 @@ hangouts_chat_set_topic(PurpleConnection *pc, int id, const char *topic)
 		conv_id = purple_conversation_get_name(PURPLE_CONVERSATION(chatconv));
 	}
 	
-	return hangouts_rename_conversation(ha, conv_id, topic);
+	return googlechat_rename_conversation(ha, conv_id, topic);
 }
 
 static PurpleCmdRet
-hangouts_cmd_leave(PurpleConversation *conv, const gchar *cmd, gchar **args, gchar **error, void *data)
+googlechat_cmd_leave(PurpleConversation *conv, const gchar *cmd, gchar **args, gchar **error, void *data)
 {
 	PurpleConnection *pc = NULL;
 	int id = -1;
@@ -231,13 +224,13 @@ hangouts_cmd_leave(PurpleConversation *conv, const gchar *cmd, gchar **args, gch
 	if (pc == NULL || id == -1)
 		return PURPLE_CMD_RET_FAILED;
 	
-	hangouts_chat_leave(pc, id);
+	googlechat_chat_leave(pc, id);
 	
 	return PURPLE_CMD_RET_OK;
 }
 
 static PurpleCmdRet
-hangouts_cmd_kick(PurpleConversation *conv, const gchar *cmd, gchar **args, gchar **error, void *data)
+googlechat_cmd_kick(PurpleConversation *conv, const gchar *cmd, gchar **args, gchar **error, void *data)
 {
 	PurpleConnection *pc = NULL;
 	int id = -1;
@@ -248,13 +241,13 @@ hangouts_cmd_kick(PurpleConversation *conv, const gchar *cmd, gchar **args, gcha
 	if (pc == NULL || id == -1)
 		return PURPLE_CMD_RET_FAILED;
 	
-	hangouts_chat_kick(pc, id, args[0]);
+	googlechat_chat_kick(pc, id, args[0]);
 	
 	return PURPLE_CMD_RET_OK;
 }
 
 static GList *
-hangouts_node_menu(PurpleBlistNode *node)
+googlechat_node_menu(PurpleBlistNode *node)
 {
 	GList *m = NULL;
 	PurpleMenuAction *act;
@@ -262,12 +255,12 @@ hangouts_node_menu(PurpleBlistNode *node)
 	if(PURPLE_IS_BUDDY(node))
 	{
 		act = purple_menu_action_new(_("Initiate _Chat"),
-					PURPLE_CALLBACK(hangouts_initiate_chat_from_node),
+					PURPLE_CALLBACK(googlechat_initiate_chat_from_node),
 					NULL, NULL);
 		m = g_list_append(m, act);
 	} else if (PURPLE_IS_CHAT(node)) {
 		act = purple_menu_action_new(_("_Leave Chat"),
-					PURPLE_CALLBACK(hangouts_blist_node_removed), // A strange coinkidink
+					PURPLE_CALLBACK(googlechat_blist_node_removed), // A strange coinkidink
 					NULL, NULL);
 		m = g_list_append(m, act);
 	}
@@ -276,16 +269,16 @@ hangouts_node_menu(PurpleBlistNode *node)
 }
 
 static void
-hangouts_join_chat_by_url_action(PurpleProtocolAction *action)
+googlechat_join_chat_by_url_action(PurpleProtocolAction *action)
 {
 	PurpleConnection *pc = purple_protocol_action_get_connection(action);
-	HangoutsAccount *ha = purple_connection_get_protocol_data(pc);
+	GoogleChatAccount *ha = purple_connection_get_protocol_data(pc);
 	
 	purple_request_input(pc, _("Join chat..."),
-					   _("Join a Hangouts group chat from the invite URL..."),
+					   _("Join a GoogleChat group chat from the invite URL..."),
 					   NULL,
-					   NULL, FALSE, FALSE, "https://hangouts.google.com/group/...",
-					   _("_Join"), G_CALLBACK(hangouts_join_chat_from_url),
+					   NULL, FALSE, FALSE, "https://googlechat.google.com/group/...",
+					   _("_Join"), G_CALLBACK(googlechat_join_chat_from_url),
 					   _("_Cancel"), NULL,
 					   purple_request_cpar_from_connection(pc),
 					   ha);
@@ -293,7 +286,7 @@ hangouts_join_chat_by_url_action(PurpleProtocolAction *action)
 }
 
 static GList *
-hangouts_actions(
+googlechat_actions(
 #if !PURPLE_VERSION_CHECK(3, 0, 0)
 PurplePlugin *plugin, gpointer context
 #else
@@ -304,29 +297,29 @@ PurpleConnection *pc
 	GList *m = NULL;
 	PurpleProtocolAction *act;
 
-	act = purple_protocol_action_new(_("Search for friends..."), hangouts_search_users);
+	act = purple_protocol_action_new(_("Search for friends..."), googlechat_search_users);
 	m = g_list_append(m, act);
 
-	act = purple_protocol_action_new(_("Join a group chat by URL..."), hangouts_join_chat_by_url_action);
+	act = purple_protocol_action_new(_("Join a group chat by URL..."), googlechat_join_chat_by_url_action);
 	m = g_list_append(m, act);
 
 	return m;
 }
 
 static void
-hangouts_authcode_input_cb(gpointer user_data, const gchar *auth_code)
+googlechat_authcode_input_cb(gpointer user_data, const gchar *auth_code)
 {
-	HangoutsAccount *ha = user_data;
+	GoogleChatAccount *ha = user_data;
 	PurpleConnection *pc = ha->pc;
 
 	purple_connection_update_progress(pc, _("Authenticating"), 1, 3);
-	hangouts_oauth_with_code(ha, auth_code);
+	googlechat_oauth_with_code(ha, auth_code);
 }
 
 static void
-hangouts_authcode_input_cancel_cb(gpointer user_data)
+googlechat_authcode_input_cancel_cb(gpointer user_data)
 {
-	HangoutsAccount *ha = user_data;
+	GoogleChatAccount *ha = user_data;
 	purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_AUTHENTICATION_IMPOSSIBLE, 
 		_("User cancelled authorization"));
 }
@@ -338,7 +331,7 @@ static gulong deleting_chat_buddy_signal = 0;
 
 // See workaround for purple_chat_conversation_find_user() in purplecompat.h
 static void
-hangouts_deleting_chat_buddy(PurpleConvChatBuddy *cb)
+googlechat_deleting_chat_buddy(PurpleConvChatBuddy *cb)
 {
 	if (g_dataset_get_data(cb, "chat") != NULL) {
 		g_dataset_destroy(cb);
@@ -347,10 +340,10 @@ hangouts_deleting_chat_buddy(PurpleConvChatBuddy *cb)
 #endif
 
 static void
-hangouts_login(PurpleAccount *account)
+googlechat_login(PurpleAccount *account)
 {
 	PurpleConnection *pc;
-	HangoutsAccount *ha; //hahaha
+	GoogleChatAccount *ha; //hahaha
 	const gchar *password;
 	const gchar *self_gaia_id;
 	PurpleConnectionFlags pc_flags;
@@ -365,11 +358,11 @@ hangouts_login(PurpleAccount *account)
 	pc_flags &= ~PURPLE_CONNECTION_FLAG_NO_IMAGES;
 	purple_connection_set_flags(pc, pc_flags);
 	
-	ha = g_new0(HangoutsAccount, 1);
+	ha = g_new0(GoogleChatAccount, 1);
 	ha->account = account;
 	ha->pc = pc;
 	ha->cookie_jar = purple_http_cookie_jar_new();
-	ha->channel_buffer = g_byte_array_sized_new(HANGOUTS_BUFFER_DEFAULT_SIZE);
+	ha->channel_buffer = g_byte_array_sized_new(GOOGLECHAT_BUFFER_DEFAULT_SIZE);
 	ha->channel_keepalive_pool = purple_http_keepalive_pool_new();
 	ha->client6_keepalive_pool = purple_http_keepalive_pool_new();
 	ha->sent_message_ids = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
@@ -390,38 +383,38 @@ hangouts_login(PurpleAccount *account)
 	if (password && *password) {
 		ha->refresh_token = g_strdup(password);
 		purple_connection_update_progress(pc, _("Authenticating"), 1, 3);
-		hangouts_oauth_refresh_token(ha);
+		googlechat_oauth_refresh_token(ha);
 	} else {
 		//TODO get this code automatically
 		purple_notify_uri(pc, "https://www.youtube.com/watch?v=hlDhp-eNLMU");
 		purple_request_input(pc, _("Authorization Code"), "https://www.youtube.com/watch?v=hlDhp-eNLMU",
 			_ ("Please follow the YouTube video to get the OAuth code"),
 			_ ("and then paste the Google OAuth code here"), FALSE, FALSE, NULL, 
-			_("OK"), G_CALLBACK(hangouts_authcode_input_cb), 
-			_("Cancel"), G_CALLBACK(hangouts_authcode_input_cancel_cb), 
+			_("OK"), G_CALLBACK(googlechat_authcode_input_cb), 
+			_("Cancel"), G_CALLBACK(googlechat_authcode_input_cancel_cb), 
 			purple_request_cpar_from_connection(pc), ha);
 	}
 	
-	purple_signal_connect(purple_blist_get_handle(), "blist-node-removed", account, PURPLE_CALLBACK(hangouts_blist_node_removed), NULL);
-	purple_signal_connect(purple_blist_get_handle(), "blist-node-aliased", account, PURPLE_CALLBACK(hangouts_blist_node_aliased), NULL);
-	purple_signal_connect(purple_conversations_get_handle(), "conversation-updated", account, PURPLE_CALLBACK(hangouts_mark_conversation_seen), NULL);
+	purple_signal_connect(purple_blist_get_handle(), "blist-node-removed", account, PURPLE_CALLBACK(googlechat_blist_node_removed), NULL);
+	purple_signal_connect(purple_blist_get_handle(), "blist-node-aliased", account, PURPLE_CALLBACK(googlechat_blist_node_aliased), NULL);
+	purple_signal_connect(purple_conversations_get_handle(), "conversation-updated", account, PURPLE_CALLBACK(googlechat_mark_conversation_seen), NULL);
 	if (!chat_conversation_typing_signal) {
-		chat_conversation_typing_signal = purple_signal_connect(purple_conversations_get_handle(), "chat-conversation-typing", purple_connection_get_protocol(pc), PURPLE_CALLBACK(hangouts_conv_send_typing), NULL);
+		chat_conversation_typing_signal = purple_signal_connect(purple_conversations_get_handle(), "chat-conversation-typing", purple_connection_get_protocol(pc), PURPLE_CALLBACK(googlechat_conv_send_typing), NULL);
 	}
 
 #if !PURPLE_VERSION_CHECK(3, 0, 0)
 	if (!deleting_chat_buddy_signal) {
-		deleting_chat_buddy_signal = purple_signal_connect(purple_conversations_get_handle(), "deleting-chat-buddy", purple_connection_get_protocol(pc), PURPLE_CALLBACK(hangouts_deleting_chat_buddy), NULL);
+		deleting_chat_buddy_signal = purple_signal_connect(purple_conversations_get_handle(), "deleting-chat-buddy", purple_connection_get_protocol(pc), PURPLE_CALLBACK(googlechat_deleting_chat_buddy), NULL);
 	}
 #endif
 	
-	ha->active_client_timeout = g_timeout_add_seconds(HANGOUTS_ACTIVE_CLIENT_TIMEOUT, ((GSourceFunc) hangouts_set_active_client), pc);
+	ha->active_client_timeout = g_timeout_add_seconds(GOOGLECHAT_ACTIVE_CLIENT_TIMEOUT, ((GSourceFunc) googlechat_set_active_client), pc);
 }
 
 static void
-hangouts_close(PurpleConnection *pc)
+googlechat_close(PurpleConnection *pc)
 {
-	HangoutsAccount *ha; //not so funny anymore
+	GoogleChatAccount *ha; //not so funny anymore
 	
 	ha = purple_connection_get_protocol_data(pc);
 	purple_signals_disconnect_by_handle(ha->account);
@@ -460,18 +453,18 @@ hangouts_close(PurpleConnection *pc)
 
 
 static const char *
-hangouts_list_icon(PurpleAccount *account, PurpleBuddy *buddy)
+googlechat_list_icon(PurpleAccount *account, PurpleBuddy *buddy)
 {
-	return "hangouts";
+	return "googlechat";
 }
 
 static void
-hangouts_tooltip_text(PurpleBuddy *buddy, PurpleNotifyUserInfo *user_info, gboolean full)
+googlechat_tooltip_text(PurpleBuddy *buddy, PurpleNotifyUserInfo *user_info, gboolean full)
 {
 	PurplePresence *presence;
 	PurpleStatus *status;
 	const gchar *message;
-	HangoutsBuddy *hbuddy;
+	GoogleChatBuddy *hbuddy;
 	
 	g_return_if_fail(buddy != NULL);
 	
@@ -498,16 +491,16 @@ hangouts_tooltip_text(PurpleBuddy *buddy, PurpleNotifyUserInfo *user_info, gbool
 		
 		if (hbuddy->device_type) {
 			purple_notify_user_info_add_pair_html(user_info, _("Device Type"), 
-				hbuddy->device_type & HANGOUTS_DEVICE_TYPE_DESKTOP ? _("Desktop") :
-				hbuddy->device_type & HANGOUTS_DEVICE_TYPE_TABLET ? _("Tablet") :
-				hbuddy->device_type & HANGOUTS_DEVICE_TYPE_MOBILE ? _("Mobile") :
+				hbuddy->device_type & GOOGLECHAT_DEVICE_TYPE_DESKTOP ? _("Desktop") :
+				hbuddy->device_type & GOOGLECHAT_DEVICE_TYPE_TABLET ? _("Tablet") :
+				hbuddy->device_type & GOOGLECHAT_DEVICE_TYPE_MOBILE ? _("Mobile") :
 				_("Unknown"));
 		}
 	}
 }
 
 GList *
-hangouts_status_types(PurpleAccount *account)
+googlechat_status_types(PurpleAccount *account)
 {
 	GList *types = NULL;
 	PurpleStatusType *status;
@@ -540,7 +533,7 @@ hangouts_status_types(PurpleAccount *account)
 }
 
 static gchar *
-hangouts_status_text(PurpleBuddy *buddy)
+googlechat_status_text(PurpleBuddy *buddy)
 {
 	const gchar *message = purple_status_get_attr_string(purple_presence_get_active_status(purple_buddy_get_presence(buddy)), "message");
 	
@@ -552,9 +545,9 @@ hangouts_status_text(PurpleBuddy *buddy)
 }
 
 static void
-hangouts_buddy_free(PurpleBuddy *buddy)
+googlechat_buddy_free(PurpleBuddy *buddy)
 {
-	HangoutsBuddy *hbuddy = purple_buddy_get_protocol_data(buddy);
+	GoogleChatBuddy *hbuddy = purple_buddy_get_protocol_data(buddy);
 	
 	g_return_if_fail(hbuddy != NULL);
 	
@@ -562,7 +555,7 @@ hangouts_buddy_free(PurpleBuddy *buddy)
 }
 
 static gboolean
-hangouts_offline_message(const PurpleBuddy *buddy)
+googlechat_offline_message(const PurpleBuddy *buddy)
 {
 	return TRUE;
 }
@@ -575,12 +568,12 @@ plugin_load(PurplePlugin *plugin, GError **error)
 {
 	purple_cmd_register("leave", "", PURPLE_CMD_P_PLUGIN, PURPLE_CMD_FLAG_CHAT |
 						PURPLE_CMD_FLAG_PROTOCOL_ONLY | PURPLE_CMD_FLAG_ALLOW_WRONG_ARGS,
-						HANGOUTS_PLUGIN_ID, hangouts_cmd_leave,
+						GOOGLECHAT_PLUGIN_ID, googlechat_cmd_leave,
 						_("leave:  Leave the group chat"), NULL);
 						
 	purple_cmd_register("kick", "s", PURPLE_CMD_P_PLUGIN, PURPLE_CMD_FLAG_CHAT |
 						PURPLE_CMD_FLAG_PROTOCOL_ONLY | PURPLE_CMD_FLAG_ALLOW_WRONG_ARGS,
-						HANGOUTS_PLUGIN_ID, hangouts_cmd_kick,
+						GOOGLECHAT_PLUGIN_ID, googlechat_cmd_kick,
 						_("kick <user>:  Kick a user from the room."), NULL);
 	
 	return TRUE;
@@ -596,149 +589,149 @@ plugin_unload(PurplePlugin *plugin, GError **error)
 
 #if PURPLE_VERSION_CHECK(3, 0, 0)
 
-G_MODULE_EXPORT GType hangouts_protocol_get_type(void);
-#define HANGOUTS_TYPE_PROTOCOL			(hangouts_protocol_get_type())
-#define HANGOUTS_PROTOCOL(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), HANGOUTS_TYPE_PROTOCOL, HangoutsProtocol))
-#define HANGOUTS_PROTOCOL_CLASS(klass)		(G_TYPE_CHECK_CLASS_CAST((klass), HANGOUTS_TYPE_PROTOCOL, HangoutsProtocolClass))
-#define HANGOUTS_IS_PROTOCOL(obj)		(G_TYPE_CHECK_INSTANCE_TYPE((obj), HANGOUTS_TYPE_PROTOCOL))
-#define HANGOUTS_IS_PROTOCOL_CLASS(klass)	(G_TYPE_CHECK_CLASS_TYPE((klass), HANGOUTS_TYPE_PROTOCOL))
-#define HANGOUTS_PROTOCOL_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS((obj), HANGOUTS_TYPE_PROTOCOL, HangoutsProtocolClass))
+G_MODULE_EXPORT GType googlechat_protocol_get_type(void);
+#define GOOGLECHAT_TYPE_PROTOCOL			(googlechat_protocol_get_type())
+#define GOOGLECHAT_PROTOCOL(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), GOOGLECHAT_TYPE_PROTOCOL, GoogleChatProtocol))
+#define GOOGLECHAT_PROTOCOL_CLASS(klass)		(G_TYPE_CHECK_CLASS_CAST((klass), GOOGLECHAT_TYPE_PROTOCOL, GoogleChatProtocolClass))
+#define GOOGLECHAT_IS_PROTOCOL(obj)		(G_TYPE_CHECK_INSTANCE_TYPE((obj), GOOGLECHAT_TYPE_PROTOCOL))
+#define GOOGLECHAT_IS_PROTOCOL_CLASS(klass)	(G_TYPE_CHECK_CLASS_TYPE((klass), GOOGLECHAT_TYPE_PROTOCOL))
+#define GOOGLECHAT_PROTOCOL_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS((obj), GOOGLECHAT_TYPE_PROTOCOL, GoogleChatProtocolClass))
 
-typedef struct _HangoutsProtocol
+typedef struct _GoogleChatProtocol
 {
 	PurpleProtocol parent;
-} HangoutsProtocol;
+} GoogleChatProtocol;
 
-typedef struct _HangoutsProtocolClass
+typedef struct _GoogleChatProtocolClass
 {
 	PurpleProtocolClass parent_class;
-} HangoutsProtocolClass;
+} GoogleChatProtocolClass;
 
 static void
-hangouts_protocol_init(PurpleProtocol *prpl_info)
+googlechat_protocol_init(PurpleProtocol *prpl_info)
 {
 	PurpleProtocol *plugin = prpl_info, *info = prpl_info;
 
-	info->id = HANGOUTS_PLUGIN_ID;
-	info->name = "Hangouts";
+	info->id = GOOGLECHAT_PLUGIN_ID;
+	info->name = "GoogleChat";
 
 	prpl_info->options = OPT_PROTO_NO_PASSWORD | OPT_PROTO_CHAT_TOPIC | OPT_PROTO_MAIL_CHECK;
-	prpl_info->account_options = hangouts_add_account_options(prpl_info->account_options);
+	prpl_info->account_options = googlechat_add_account_options(prpl_info->account_options);
 	
-	purple_signal_register(plugin, "hangouts-received-stateupdate",
+	purple_signal_register(plugin, "googlechat-received-stateupdate",
 			purple_marshal_VOID__POINTER_POINTER, G_TYPE_NONE, 2,
 			PURPLE_TYPE_CONNECTION,
 			G_TYPE_OBJECT);
 	
-	purple_signal_register(plugin, "hangouts-gmail-notification",
+	purple_signal_register(plugin, "googlechat-gmail-notification",
 			purple_marshal_VOID__POINTER_POINTER_POINTER, G_TYPE_NONE, 3,
 			PURPLE_TYPE_CONNECTION,
 			G_TYPE_STRING,
 			G_TYPE_OBJECT);
 
-	hangouts_register_events(plugin);
+	googlechat_register_events(plugin);
 }
 
 static void
-hangouts_protocol_class_init(PurpleProtocolClass *prpl_info)
+googlechat_protocol_class_init(PurpleProtocolClass *prpl_info)
 {
-	prpl_info->login = hangouts_login;
-	prpl_info->close = hangouts_close;
-	prpl_info->status_types = hangouts_status_types;
-	prpl_info->list_icon = hangouts_list_icon;
+	prpl_info->login = googlechat_login;
+	prpl_info->close = googlechat_close;
+	prpl_info->status_types = googlechat_status_types;
+	prpl_info->list_icon = googlechat_list_icon;
 }
 
 static void
-hangouts_protocol_client_iface_init(PurpleProtocolClientIface *prpl_info)
+googlechat_protocol_client_iface_init(PurpleProtocolClientIface *prpl_info)
 {
-	prpl_info->get_actions = hangouts_actions;
-	prpl_info->blist_node_menu = hangouts_node_menu;
-	prpl_info->status_text = hangouts_status_text;
-	prpl_info->tooltip_text = hangouts_tooltip_text;
-	prpl_info->buddy_free = hangouts_buddy_free;
- 	prpl_info->offline_message = hangouts_offline_message;
+	prpl_info->get_actions = googlechat_actions;
+	prpl_info->blist_node_menu = googlechat_node_menu;
+	prpl_info->status_text = googlechat_status_text;
+	prpl_info->tooltip_text = googlechat_tooltip_text;
+	prpl_info->buddy_free = googlechat_buddy_free;
+ 	prpl_info->offline_message = googlechat_offline_message;
 }
 
 static void
-hangouts_protocol_server_iface_init(PurpleProtocolServerIface *prpl_info)
+googlechat_protocol_server_iface_init(PurpleProtocolServerIface *prpl_info)
 {
-	prpl_info->get_info = hangouts_get_info;
-	prpl_info->set_status = hangouts_set_status;
-	prpl_info->set_idle = hangouts_set_idle;
+	prpl_info->get_info = googlechat_get_info;
+	prpl_info->set_status = googlechat_set_status;
+	prpl_info->set_idle = googlechat_set_idle;
 }
 
 static void
-hangouts_protocol_privacy_iface_init(PurpleProtocolPrivacyIface *prpl_info)
+googlechat_protocol_privacy_iface_init(PurpleProtocolPrivacyIface *prpl_info)
 {
-	prpl_info->add_deny = hangouts_block_user;
-	prpl_info->rem_deny = hangouts_unblock_user;
+	prpl_info->add_deny = googlechat_block_user;
+	prpl_info->rem_deny = googlechat_unblock_user;
 }
 
 static void 
-hangouts_protocol_im_iface_init(PurpleProtocolIMIface *prpl_info)
+googlechat_protocol_im_iface_init(PurpleProtocolIMIface *prpl_info)
 {
-	prpl_info->send = hangouts_send_im;
-	prpl_info->send_typing = hangouts_send_typing;
+	prpl_info->send = googlechat_send_im;
+	prpl_info->send_typing = googlechat_send_typing;
 }
 
 static void 
-hangouts_protocol_chat_iface_init(PurpleProtocolChatIface *prpl_info)
+googlechat_protocol_chat_iface_init(PurpleProtocolChatIface *prpl_info)
 {
-	prpl_info->send = hangouts_chat_send;
-	prpl_info->info = hangouts_chat_info;
-	prpl_info->info_defaults = hangouts_chat_info_defaults;
-	prpl_info->join = hangouts_join_chat;
-	prpl_info->get_name = hangouts_get_chat_name;
-	prpl_info->invite = hangouts_chat_invite;
-	prpl_info->set_topic = hangouts_chat_set_topic;
+	prpl_info->send = googlechat_chat_send;
+	prpl_info->info = googlechat_chat_info;
+	prpl_info->info_defaults = googlechat_chat_info_defaults;
+	prpl_info->join = googlechat_join_chat;
+	prpl_info->get_name = googlechat_get_chat_name;
+	prpl_info->invite = googlechat_chat_invite;
+	prpl_info->set_topic = googlechat_chat_set_topic;
 }
 
 static void 
-hangouts_protocol_media_iface_init(PurpleProtocolMediaIface *prpl_info)
+googlechat_protocol_media_iface_init(PurpleProtocolMediaIface *prpl_info)
 {
-	prpl_info->get_caps = hangouts_get_media_caps;
-	prpl_info->initiate_session = hangouts_initiate_media;
+	prpl_info->get_caps = googlechat_get_media_caps;
+	prpl_info->initiate_session = googlechat_initiate_media;
 }
 
 static void 
-hangouts_protocol_roomlist_iface_init(PurpleProtocolRoomlistIface *prpl_info)
+googlechat_protocol_roomlist_iface_init(PurpleProtocolRoomlistIface *prpl_info)
 {
-	prpl_info->get_list = hangouts_roomlist_get_list;
+	prpl_info->get_list = googlechat_roomlist_get_list;
 }
 
-static PurpleProtocol *hangouts_protocol;
+static PurpleProtocol *googlechat_protocol;
 
 PURPLE_DEFINE_TYPE_EXTENDED(
-	HangoutsProtocol, hangouts_protocol, PURPLE_TYPE_PROTOCOL, 0,
+	GoogleChatProtocol, googlechat_protocol, PURPLE_TYPE_PROTOCOL, 0,
 
 	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_IM_IFACE,
-	                                  hangouts_protocol_im_iface_init)
+	                                  googlechat_protocol_im_iface_init)
 
 	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CHAT_IFACE,
-	                                  hangouts_protocol_chat_iface_init)
+	                                  googlechat_protocol_chat_iface_init)
 
 	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CLIENT_IFACE,
-	                                  hangouts_protocol_client_iface_init)
+	                                  googlechat_protocol_client_iface_init)
 
 	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_SERVER_IFACE,
-	                                  hangouts_protocol_server_iface_init)
+	                                  googlechat_protocol_server_iface_init)
 
 	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_PRIVACY_IFACE,
-	                                  hangouts_protocol_privacy_iface_init)
+	                                  googlechat_protocol_privacy_iface_init)
 
 	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_MEDIA_IFACE,
-	                                  hangouts_protocol_media_iface_init)
+	                                  googlechat_protocol_media_iface_init)
 
 	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_ROOMLIST_IFACE,
-	                                  hangouts_protocol_roomlist_iface_init)
+	                                  googlechat_protocol_roomlist_iface_init)
 );
 
 static gboolean
 libpurple3_plugin_load(PurplePlugin *plugin, GError **error)
 {
-	hangouts_protocol_register_type(plugin);
-	hangouts_protocol = purple_protocols_add(HANGOUTS_TYPE_PROTOCOL, error);
-	if (!hangouts_protocol)
+	googlechat_protocol_register_type(plugin);
+	googlechat_protocol = purple_protocols_add(GOOGLECHAT_TYPE_PROTOCOL, error);
+	if (!googlechat_protocol)
 		return FALSE;
 
 	return plugin_load(plugin, error);
@@ -750,7 +743,7 @@ libpurple3_plugin_unload(PurplePlugin *plugin, GError **error)
 	if (!plugin_unload(plugin, error))
 		return FALSE;
 
-	if (!purple_protocols_remove(hangouts_protocol, error))
+	if (!purple_protocols_remove(googlechat_protocol, error))
 		return FALSE;
 
 	return TRUE;
@@ -760,13 +753,13 @@ static PurplePluginInfo *
 plugin_query(GError **error)
 {
 	return purple_plugin_info_new(
-		"id",          HANGOUTS_PLUGIN_ID,
-		"name",        "Hangouts",
-		"version",     HANGOUTS_PLUGIN_VERSION,
+		"id",          GOOGLECHAT_PLUGIN_ID,
+		"name",        "GoogleChat",
+		"version",     GOOGLECHAT_PLUGIN_VERSION,
 		"category",    N_("Protocol"),
-		"summary",     N_("Hangouts Protocol Plugins."),
-		"description", N_("Adds Hangouts protocol support to libpurple."),
-		"website",     "https://bitbucket.org/EionRobb/purple-hangouts/",
+		"summary",     N_("GoogleChat Protocol Plugins."),
+		"description", N_("Adds GoogleChat protocol support to libpurple."),
+		"website",     "https://bitbucket.org/EionRobb/purple-googlechat/",
 		"abi-version", PURPLE_ABI_VERSION,
 		"flags",       PURPLE_PLUGIN_INFO_FLAGS_INTERNAL |
 		               PURPLE_PLUGIN_INFO_FLAGS_AUTO_LOAD,
@@ -774,7 +767,7 @@ plugin_query(GError **error)
 	);
 }
 
-PURPLE_PLUGIN_INIT(hangouts, plugin_query,
+PURPLE_PLUGIN_INIT(googlechat, plugin_query,
 		libpurple3_plugin_load, libpurple3_plugin_unload);
 
 #else
@@ -813,15 +806,15 @@ static PurplePluginInfo info =
 	NULL,                                               /**< dependencies   */
 	PURPLE_PRIORITY_DEFAULT,                            /**< priority       */
 
-	HANGOUTS_PLUGIN_ID,                                 /**< id             */
-	N_("Hangouts"),                                     /**< name           */
-	HANGOUTS_PLUGIN_VERSION,                            /**< version        */
+	GOOGLECHAT_PLUGIN_ID,                                 /**< id             */
+	N_("GoogleChat"),                                     /**< name           */
+	GOOGLECHAT_PLUGIN_VERSION,                            /**< version        */
 	                                 
-	N_("Hangouts Protocol Plugins."),                   /**< summary        */
+	N_("GoogleChat Protocol Plugins."),                   /**< summary        */
 	                                                  
-	N_("Adds Hangouts protocol support to libpurple."), /**< description    */
-	"Eion Robb <eionrobb+hangouts@gmail.com>",          /**< author         */
-	"https://bitbucket.org/EionRobb/purple-hangouts/",  /**< homepage       */
+	N_("Adds GoogleChat protocol support to libpurple."), /**< description    */
+	"Eion Robb <eionrobb+googlechat@gmail.com>",          /**< author         */
+	"https://bitbucket.org/EionRobb/purple-googlechat/",  /**< homepage       */
 
 	libpurple2_plugin_load,                             /**< load           */
 	libpurple2_plugin_unload,                           /**< unload         */
@@ -851,53 +844,53 @@ init_plugin(PurplePlugin *plugin)
 	}
 	
 	prpl_info->options = OPT_PROTO_NO_PASSWORD | OPT_PROTO_IM_IMAGE | OPT_PROTO_CHAT_TOPIC | OPT_PROTO_MAIL_CHECK;
-	prpl_info->protocol_options = hangouts_add_account_options(prpl_info->protocol_options);
+	prpl_info->protocol_options = googlechat_add_account_options(prpl_info->protocol_options);
 	
-	purple_signal_register(plugin, "hangouts-received-stateupdate",
+	purple_signal_register(plugin, "googlechat-received-stateupdate",
 			purple_marshal_VOID__POINTER_POINTER, NULL, 2,
 			PURPLE_TYPE_CONNECTION,
 			purple_value_new(PURPLE_TYPE_OBJECT));
 			
-	purple_signal_register(plugin, "hangouts-gmail-notification",
+	purple_signal_register(plugin, "googlechat-gmail-notification",
 			purple_marshal_VOID__POINTER_POINTER_POINTER, NULL, 3,
 			PURPLE_TYPE_CONNECTION,
 			purple_value_new(PURPLE_TYPE_STRING),
 			purple_value_new(PURPLE_TYPE_OBJECT));
 
-	hangouts_register_events(plugin);
+	googlechat_register_events(plugin);
 
-	prpl_info->login = hangouts_login;
-	prpl_info->close = hangouts_close;
-	prpl_info->status_types = hangouts_status_types;
-	prpl_info->list_icon = hangouts_list_icon;
-	prpl_info->status_text = hangouts_status_text;
-	prpl_info->tooltip_text = hangouts_tooltip_text;
-	prpl_info->buddy_free = hangouts_buddy_free;
-	prpl_info->offline_message = hangouts_offline_message;
+	prpl_info->login = googlechat_login;
+	prpl_info->close = googlechat_close;
+	prpl_info->status_types = googlechat_status_types;
+	prpl_info->list_icon = googlechat_list_icon;
+	prpl_info->status_text = googlechat_status_text;
+	prpl_info->tooltip_text = googlechat_tooltip_text;
+	prpl_info->buddy_free = googlechat_buddy_free;
+	prpl_info->offline_message = googlechat_offline_message;
 	
-	prpl_info->get_info = hangouts_get_info;
-	prpl_info->set_status = hangouts_set_status;
-	prpl_info->set_idle = hangouts_set_idle;
+	prpl_info->get_info = googlechat_get_info;
+	prpl_info->set_status = googlechat_set_status;
+	prpl_info->set_idle = googlechat_set_idle;
 	
-	prpl_info->blist_node_menu = hangouts_node_menu;
+	prpl_info->blist_node_menu = googlechat_node_menu;
 	
-	prpl_info->send_im = hangouts_send_im;
-	prpl_info->send_typing = hangouts_send_typing;
-	prpl_info->chat_send = hangouts_chat_send;
-	prpl_info->chat_info = hangouts_chat_info;
-	prpl_info->chat_info_defaults = hangouts_chat_info_defaults;
-	prpl_info->join_chat = hangouts_join_chat;
-	prpl_info->get_chat_name = hangouts_get_chat_name;
-	prpl_info->chat_invite = hangouts_chat_invite;
-	prpl_info->set_chat_topic = hangouts_chat_set_topic;
+	prpl_info->send_im = googlechat_send_im;
+	prpl_info->send_typing = googlechat_send_typing;
+	prpl_info->chat_send = googlechat_chat_send;
+	prpl_info->chat_info = googlechat_chat_info;
+	prpl_info->chat_info_defaults = googlechat_chat_info_defaults;
+	prpl_info->join_chat = googlechat_join_chat;
+	prpl_info->get_chat_name = googlechat_get_chat_name;
+	prpl_info->chat_invite = googlechat_chat_invite;
+	prpl_info->set_chat_topic = googlechat_chat_set_topic;
 	
-	prpl_info->get_media_caps = hangouts_get_media_caps;
-	prpl_info->initiate_media = hangouts_initiate_media;
+	prpl_info->get_media_caps = googlechat_get_media_caps;
+	prpl_info->initiate_media = googlechat_initiate_media;
 	
-	prpl_info->add_deny = hangouts_block_user;
-	prpl_info->rem_deny = hangouts_unblock_user;
+	prpl_info->add_deny = googlechat_block_user;
+	prpl_info->rem_deny = googlechat_unblock_user;
 	
-	prpl_info->roomlist_get_list = hangouts_roomlist_get_list;
+	prpl_info->roomlist_get_list = googlechat_roomlist_get_list;
 	
 	info->extra_info = prpl_info;
 	#if PURPLE_MINOR_VERSION >= 5
@@ -907,9 +900,9 @@ init_plugin(PurplePlugin *plugin)
 		//prpl_info->add_buddy_with_invite = skypeweb_add_buddy_with_invite;
 	#endif
 	
-	info->actions = hangouts_actions;
+	info->actions = googlechat_actions;
 }
 	
-PURPLE_INIT_PLUGIN(hangouts, init_plugin, info);
+PURPLE_INIT_PLUGIN(googlechat, init_plugin, info);
 
 #endif

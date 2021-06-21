@@ -1,5 +1,5 @@
 /*
- * Hangouts Plugin for libpurple/Pidgin
+ * GoogleChat Plugin for libpurple/Pidgin
  * Copyright (c) 2015-2016 Eion Robb, Mike Ruprecht
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -17,13 +17,13 @@
  */
 
 
-#ifndef _HANGOUTS_AUTH_H_
-#define _HANGOUTS_AUTH_H_
+#ifndef _GOOGLECHAT_AUTH_H_
+#define _GOOGLECHAT_AUTH_H_
 
-#include "libhangouts.h"
+#include "libgooglechat.h"
 
-void hangouts_oauth_with_code(HangoutsAccount *ha, const gchar *auth_code);
-void hangouts_oauth_refresh_token(HangoutsAccount *ha);
-void hangouts_auth_get_session_cookies(HangoutsAccount *ha);
+void googlechat_oauth_with_code(GoogleChatAccount *ha, const gchar *auth_code);
+void googlechat_oauth_refresh_token(GoogleChatAccount *ha);
+void googlechat_auth_get_session_cookies(GoogleChatAccount *ha);
 
-#endif /*_HANGOUTS_AUTH_H_*/
+#endif /*_GOOGLECHAT_AUTH_H_*/

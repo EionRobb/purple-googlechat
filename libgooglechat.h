@@ -76,12 +76,12 @@ typedef struct {
 	PurpleHttpCookieJar *cookie_jar;
 	gchar *refresh_token;
 	gchar *access_token;
-	gchar *gsessionid_param;
+	gchar *csessionid_param;
 	gchar *sid_param;
 	gchar *client_id;
 	gchar *self_gaia_id;
 	gchar *self_phone;
-	ActiveClientState active_client_state;
+	
 	gint64 last_event_timestamp;
 	PurpleConversation *last_conversation_focused;
 	guint poll_buddy_status_timeout;
@@ -91,7 +91,7 @@ typedef struct {
 	PurpleHttpConnection *channel_connection;
 	PurpleHttpKeepalivePool *channel_keepalive_pool;
 	PurpleHttpKeepalivePool *icons_keepalive_pool;
-	PurpleHttpKeepalivePool *client6_keepalive_pool;
+	PurpleHttpKeepalivePool *api_keepalive_pool;
 	gint idle_time;
 	gint active_client_timeout;
 	gint last_data_received; // A timestamp of when we last received data from the stream
@@ -100,7 +100,6 @@ typedef struct {
 	GHashTable *one_to_ones_rev; // A store of known gaia_id's->conv_id's
 	GHashTable *group_chats;     // A store of known conv_id's
 	GHashTable *sent_message_ids;// A store of message id's that we generated from this instance
-	GHashTable *google_voice_conversations; // A store of known SMS conv_id's
 } GoogleChatAccount;
 
 

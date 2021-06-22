@@ -52,28 +52,6 @@ googlechat_register_events(gpointer plugin)
 	purple_signal_connect(plugin, "googlechat-gmail-notification", plugin, PURPLE_CALLBACK(googlechat_received_gmail_notification), NULL);
 }
 
-/*
-struct  _StateUpdate
-{
-  ProtobufCMessage base;
-  StateUpdateHeader *state_update_header;
-  Conversation *conversation;
-  EventNotification *event_notification;
-  SetFocusNotification *focus_notification;
-  SetTypingNotification *typing_notification;
-  SetConversationNotificationLevelNotification *notification_level_notification;
-  ReplyToInviteNotification *reply_to_invite_notification;
-  WatermarkNotification *watermark_notification;
-  ConversationViewModification *view_modification;
-  EasterEggNotification *easter_egg_notification;
-  SelfPresenceNotification *self_presence_notification;
-  DeleteActionNotification *delete_notification;
-  PresenceNotification *presence_notification;
-  BlockNotification *block_notification;
-  SetNotificationSettingNotification *notification_setting_notification;
-  RichPresenceEnabledStateNotification *rich_presence_enabled_state_notification;
-};*/
-
 void
 googlechat_received_state_update(PurpleConnection *pc, StateUpdate *state_update)
 {

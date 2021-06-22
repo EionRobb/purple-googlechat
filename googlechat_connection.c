@@ -63,85 +63,21 @@ googlechat_process_data_chunks(GoogleChatAccount *ha, const gchar *data, gsize l
 #endif
 			}
 		} else {
-			const gchar *p = json_object_get_string_member(json_node_get_object(array0), "p");
-			JsonObject *wrapper = json_decode_object(p, -1);
-			
-			if (wrapper == NULL) {
+			JsonObject *obj = json_node_get_object(array0);
+			if (json_object_has_member(obj, "data")) {
+				//Contains protobuf data, base64 encoded
+				StreamEventsResponse events_response = STREAM_EVENTS_RESPONSE__INIT;
+				guchar *decoded_response;
+				gsize response_len;
+				gchar *data = json_object_get_string_member(obj, "data");
+				
+				decoded_response = g_base64_decode(raw_response, &response_len);
+				unpacked_message = protobuf_c_message_unpack(events_response->descriptor, NULL, response_len, decoded_response);
+				
+				purple_signal_emit(purple_connection_get_protocol(ha->pc), "googlechat-received-event", ha->pc, events_response.event);
+				
 				continue;
 			}
-			
-			if (json_object_has_member(wrapper, "3")) {
-				const gchar *new_client_id = json_object_get_string_member(json_object_get_object_member(wrapper, "3"), "2");
-				purple_debug_info("googlechat", "Received new client_id: %s\n", new_client_id);
-				
-				g_free(ha->client_id);
-				ha->client_id = g_strdup(new_client_id);
-				
-				googlechat_add_channel_services(ha);
-				googlechat_set_active_client(ha->pc);
-				googlechat_set_status(ha->account, purple_account_get_active_status(ha->account));
-			}
-			if (json_object_has_member(wrapper, "2")) {
-				const gchar *wrapper22 = json_object_get_string_member(json_object_get_object_member(wrapper, "2"), "2");
-				JsonArray *pblite_message = json_decode_array(wrapper22, -1);
-				const gchar *message_type;
-
-				if (pblite_message == NULL) {
-#ifdef DEBUG
-					printf("bad wrapper22 %s\n", wrapper22);
-#endif
-					json_object_unref(wrapper);
-					continue;
-				}
-				
-				message_type = json_array_get_string_element(pblite_message, 0);
-				
-				//cbu == ClientBatchUpdate
-				if (purple_strequal(message_type, "cbu")) {
-					BatchUpdate batch_update = BATCH_UPDATE__INIT;
-					guint j;
-					
-#ifdef DEBUG
-					printf("----------------------\n");
-#endif
-					pblite_decode((ProtobufCMessage *) &batch_update, pblite_message, TRUE);
-#ifdef DEBUG
-					printf("======================\n");
-					printf("Is valid? %s\n", protobuf_c_message_check((ProtobufCMessage *) &batch_update) ? "Yes" : "No");
-					printf("======================\n");
-					printf("CBU %s", pblite_dump_json((ProtobufCMessage *)&batch_update));
-					JsonArray *debug = pblite_encode((ProtobufCMessage *) &batch_update);
-					JsonNode *node = json_node_new(JSON_NODE_ARRAY);
-					json_node_take_array(node, debug);
-					gchar *json = json_encode(node, NULL);
-					printf("Old: %s\nNew: %s\n", wrapper22, json);
-					
-					
-					pblite_decode((ProtobufCMessage *) &batch_update, debug, TRUE);
-					debug = pblite_encode((ProtobufCMessage *) &batch_update);
-					json_node_take_array(node, debug);
-					gchar *json2 = json_encode(node, NULL);
-					printf("Mine1: %s\nMine2: %s\n", json, json2);
-					
-					g_free(json);
-					g_free(json2);
-					printf("----------------------\n");
-#endif
-					for(j = 0; j < batch_update.n_state_update; j++) {
-						purple_signal_emit(purple_connection_get_protocol(ha->pc), "googlechat-received-stateupdate", ha->pc, batch_update.state_update[j]);
-					}
-				} else if (purple_strequal(message_type, "n_nm")) {
-					GmailNotification gmail_notification = GMAIL_NOTIFICATION__INIT;
-					const gchar *username = json_object_get_string_member(json_object_get_object_member(json_object_get_object_member(wrapper, "2"), "1"), "2");
-					
-					pblite_decode((ProtobufCMessage *) &gmail_notification, pblite_message, TRUE);
-					purple_signal_emit(purple_connection_get_protocol(ha->pc), "googlechat-gmail-notification", ha->pc, username, &gmail_notification);
-				}
-				
-				json_array_unref(pblite_message);
-			}
-			
-			json_object_unref(wrapper);
 		}
 	}
 	
@@ -252,36 +188,12 @@ googlechat_process_channel_buffer(GoogleChatAccount *ha)
 static void
 googlechat_set_auth_headers(GoogleChatAccount *ha, PurpleHttpRequest *request)
 {
-	gint64 mstime;
-	gchar *mstime_str;
-	GTimeVal time;
-	GChecksum *hash;
-	const gchar *sha1;
-	gchar *sapisid_cookie;
+	purple_http_request_header_set_printf(request, "Authorization", "Bearer %s", ha->access_token);
 	
-	g_get_current_time(&time);
-	mstime = (((gint64) time.tv_sec) * 1000) + (time.tv_usec / 1000);
-	mstime_str = g_strdup_printf("%" G_GINT64_FORMAT, mstime);
-	sapisid_cookie = purple_http_cookie_jar_get(ha->cookie_jar, "SAPISID");
-	
-	hash = g_checksum_new(G_CHECKSUM_SHA1);
-	g_checksum_update(hash, (guchar *) mstime_str, strlen(mstime_str));
-	g_checksum_update(hash, (guchar *) " ", 1);
-	if (sapisid_cookie && *sapisid_cookie) {
-		// Should we just bail out if we dont have the cookie?
-		g_checksum_update(hash, (guchar *) sapisid_cookie, strlen(sapisid_cookie));
+	const gchar *request_url = purple_http_request_get_url(request);
+	if (g_str_has_prefix(request_url, "https://chat.google.com/webchannel/") && ha->csessionid_param) {
+		purple_http_request_header_set_printf(request, "Cookie", "COMPASS=dynamite=%s", ha->csessionid_param);
 	}
-	g_checksum_update(hash, (guchar *) " ", 1);
-	g_checksum_update(hash, (guchar *) GOOGLECHAT_PBLITE_XORIGIN_URL, strlen(GOOGLECHAT_PBLITE_XORIGIN_URL));
-	sha1 = g_checksum_get_string(hash);
-	
-	purple_http_request_header_set_printf(request, "Authorization", "SAPISIDHASH %s_%s", mstime_str, sha1);
-	purple_http_request_header_set(request, "X-Origin", GOOGLECHAT_PBLITE_XORIGIN_URL);
-	purple_http_request_header_set(request, "X-Goog-AuthUser", "0");
-	
-	g_free(sapisid_cookie);
-	g_free(mstime_str);
-	g_checksum_free(hash);
 }
 
 
@@ -363,16 +275,17 @@ googlechat_longpoll_request(GoogleChatAccount *ha)
 {
 	PurpleHttpRequest *request;
 	GString *url;
-
 	
-	url = g_string_new(GOOGLECHAT_CHANNEL_URL_PREFIX "channel/bind" "?");
+	url = g_string_new("https://chat.google.com/webchannel/events_encoded" "?");
+	if (ha->csessionid_param) {
+		g_string_append_printf(url, "csessionid=%s&", purple_url_encode(ha->csessionid_param)); //TODO optional?
+	}
 	g_string_append(url, "VER=8&");           // channel protocol version
-	g_string_append_printf(url, "gsessionid=%s&", purple_url_encode(ha->gsessionid_param));
 	g_string_append(url, "RID=rpc&");         // request identifier
-	g_string_append(url, "t=1&");             // trial
 	g_string_append_printf(url, "SID=%s&", purple_url_encode(ha->sid_param));  // session ID
+	//g_string_append_printf(url, "AID=%s&", purple_url_encode(ha->last_aid));  // TODO acknoledge message ID
 	g_string_append(url, "CI=0&");            // 0 if streaming/chunked requests should be used
-	g_string_append(url, "ctype=googlechat&");  // client type
+	g_string_append(url, "t=1&");             // trial
 	g_string_append(url, "TYPE=xmlhttp&");    // type of request
 	
 	request = purple_http_request_new(NULL);
@@ -394,49 +307,23 @@ googlechat_longpoll_request(GoogleChatAccount *ha)
 	ha->channel_watchdog = g_timeout_add_seconds(1, channel_watchdog_check, ha->pc);
 }
 
-
-
 static void
-googlechat_send_maps_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse *response, gpointer user_data)
+googlechat_fetch_channel_sid_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse *response, gpointer user_data)
 {
-	/*111
-	 * [
-	 * [0,["c","<sid>","",8]],
-	 * [1,[{"gsid":"<gsid>"}]]
-	 * ]
-	 */
-	JsonNode *node;
 	GoogleChatAccount *ha = user_data;
-	const gchar *res_raw;
-	gchar *json_start;
-	size_t res_len;
-	gchar *gsid;
+	const gchar *initial_response;
+	JsonNode *node;
 	gchar *sid;
 	
-	if (purple_http_response_get_error(response) != NULL) {
-		purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, purple_http_response_get_error(response));
-		return;
-	}
-
-	res_raw = purple_http_response_get_data(response, &res_len);
-	json_start = g_strstr_len(res_raw, res_len, "\n");
-	if (json_start == NULL) {
-		purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, "Blank maps response");
-		return;
-	}
-	*json_start = '\0';
-	json_start++;
-	node = json_decode(json_start, atoi(res_raw));
+	// [[0,["c","<sid>","",8,12,30000]]]);
+	initial_response = purple_http_response_get_header(response, "X-HTTP-Initial-Response");
+	
+	node = json_decode(initial_response, -1);
 	sid = googlechat_json_path_query_string(node, "$[0][1][1]", NULL);
-	gsid = googlechat_json_path_query_string(node, "$[1][1][0].gsid", NULL);
 
 	if (sid != NULL) {
 		g_free(ha->sid_param);
 		ha->sid_param = sid;
-	}
-	if (gsid != NULL) {
-		g_free(ha->gsessionid_param);
-		ha->gsessionid_param = gsid;
 	}
 
 	json_node_free(node);
@@ -447,12 +334,68 @@ googlechat_send_maps_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse *res
 void
 googlechat_fetch_channel_sid(GoogleChatAccount *ha)
 {
-	g_free(ha->sid_param);
-	g_free(ha->gsessionid_param);
-	ha->sid_param = NULL;
-	ha->gsessionid_param = NULL;
+	PurpleHttpRequest *request;
+	gchar *url;
 	
-	googlechat_send_maps(ha, NULL, googlechat_send_maps_cb);
+	g_free(ha->sid_param);
+	ha->sid_param = NULL;
+	
+	
+	url = g_string_new("https://chat.google.com/webchannel/events_encoded" "?");
+	g_string_append(url, "VER=8&");           // channel protocol version
+	g_string_append(url, "RID=0&");           // request identifier
+	g_string_append(url, "CVER=22&");         // client type
+	g_string_append(url, "TYPE=init&");       // type of request
+	g_string_append(url, "$req=count%3D0&");  // noop request
+	g_string_append(url, "SID=null&");        
+	g_string_append(url, "t=1&");             // trial
+	
+	request = purple_http_request_new(NULL);
+	purple_http_request_set_cookie_jar(request, ha->cookie_jar);
+	purple_http_request_set_url(request, url->str);
+	purple_http_request_set_timeout(request, -1);  // to infinity and beyond!
+	purple_http_request_set_keepalive_pool(request, ha->channel_keepalive_pool);
+	
+	googlechat_set_auth_headers(ha, request);
+	
+	purple_http_request(ha->pc, request, googlechat_fetch_channel_sid_cb, ha);
+	purple_http_request_unref(request);
+	
+	g_string_free(url, TRUE);
+}
+
+static void
+googlechat_register_webchannel_callback(PurpleHttpConnection *http_conn, PurpleHttpResponse *response, gpointer user_data)
+{
+	GoogleChatAccount *ha = user_data;
+	gchar *compass_cookie = purple_http_cookie_jar_get(ha->cookie_jar, "COMPASS");
+	
+	if (g_str_has_prefix(compass_cookie, "dynamite=")) {
+		const gchar *csessionid = &compass_cookie[9];
+		if (csessionid && *csessionid) {
+			g_free(ha->csessionid_param);
+			ha->csessionid_param = g_strdup(csessionid);
+		}
+	}
+	
+	googlechat_fetch_channel_sid(ha);
+}
+
+void
+googlechat_register_webchannel(GoogleChatAccount *ha)
+{
+	PurpleHttpRequest *request;
+	
+	request = purple_http_request_new(NULL);
+	purple_http_request_set_cookie_jar(request, ha->cookie_jar);
+	purple_http_request_set_url(request, "https://chat.google.com/webchannel/register");
+	purple_http_request_set_method(request, "POST");
+	purple_http_request_header_set(request, "Content-Type", "application/x-protobuf");
+	
+	googlechat_set_auth_headers(ha, request);
+	
+	purple_http_request(ha->pc, request, googlechat_register_webchannel_callback, ha);
+	purple_http_request_unref(request);
 }
 
 void
@@ -622,7 +565,7 @@ googlechat_pblite_request_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse
 }
 
 PurpleHttpConnection *
-googlechat_client6_request(GoogleChatAccount *ha, const gchar *path, GoogleChatContentType request_type, const gchar *request_data, gssize request_len, GoogleChatContentType response_type, PurpleHttpCallback callback, gpointer user_data)
+googlechat_raw_request(GoogleChatAccount *ha, const gchar *path, GoogleChatContentType request_type, const gchar *request_data, gssize request_len, GoogleChatContentType response_type, PurpleHttpCallback callback, gpointer user_data)
 {
 	PurpleHttpRequest *request;
 	PurpleHttpConnection *connection;
@@ -643,7 +586,7 @@ googlechat_client6_request(GoogleChatAccount *ha, const gchar *path, GoogleChatC
 	}
 	
 	request = purple_http_request_new(NULL);
-	purple_http_request_set_url_printf(request, GOOGLECHAT_PBLITE_API_URL "%s%ckey=" GOOGLE_GPLUS_KEY "&alt=%s", path, (strchr(path, '?') ? '&' : '?'), response_type_str);
+	purple_http_request_set_url_printf(request, GOOGLECHAT_PBLITE_API_URL "%s%calt=%s", path, (strchr(path, '?') ? '&' : '?'), response_type_str);
 	purple_http_request_set_cookie_jar(request, ha->cookie_jar);
 	purple_http_request_set_keepalive_pool(request, ha->client6_keepalive_pool);
 	purple_http_request_set_max_len(request, G_MAXINT32 - 1);
@@ -669,7 +612,7 @@ googlechat_client6_request(GoogleChatAccount *ha, const gchar *path, GoogleChatC
 }
 
 void
-googlechat_pblite_request(GoogleChatAccount *ha, const gchar *endpoint, ProtobufCMessage *request_message, GoogleChatPbliteResponseFunc callback, ProtobufCMessage *response_message, gpointer user_data)
+googlechat_api_request(GoogleChatAccount *ha, const gchar *endpoint, ProtobufCMessage *request_message, GoogleChatPbliteResponseFunc callback, ProtobufCMessage *response_message, gpointer user_data)
 {
 	gsize request_len;
 	gchar *request_data;
@@ -692,7 +635,7 @@ googlechat_pblite_request(GoogleChatAccount *ha, const gchar *endpoint, Protobuf
 		g_free(pretty_json);
 	}
 	
-	googlechat_client6_request(ha, endpoint, GOOGLECHAT_CONTENT_TYPE_PBLITE, request_data, request_len, GOOGLECHAT_CONTENT_TYPE_PBLITE, googlechat_pblite_request_cb, request_info);
+	googlechat_raw_request(ha, endpoint, GOOGLECHAT_CONTENT_TYPE_PROTOBUF, request_data, request_len, GOOGLECHAT_CONTENT_TYPE_PROTOBUF, googlechat_pblite_request_cb, request_info);
 	
 	g_free(request_data);
 }

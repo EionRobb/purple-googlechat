@@ -154,6 +154,10 @@ message GetUserPresenceRequest {
 	optional bool include_user_status = 3;
 }
 
+message GetUserPresenceResponse {
+	repeated UserPresence user_presences = 1;
+}
+
 message MessageParentId {
 	oneof Parent {
 		TopicId topic_id = 4;
@@ -180,7 +184,7 @@ message Message {
 	optional int64 delete_time = 8;
 	optional int64 last_edit_time = 17;
 	optional string text_body = 10;
-	//repeated DYNProtoAnnotation annotations = 11;
+	repeated Annotation annotations = 11;
 	//repeated DYNProtoBotResponse bot_responses = 19;
 	optional string local_id = 14;
 	//repeated DYNProtoAttachment attachments = 15;
@@ -212,7 +216,7 @@ message Message {
 }
 
 message Annotation {
-	//optional DYNProtoAnnotationType type;
+	optional AnnotationType type = 1;
 	//optional int32 start_index;
 	//optional int32 length;
 	//optional DYNProtoUserMentionMetadata user_mention_metadata;
@@ -326,7 +330,7 @@ message CreateTopicRequest {
 	optional RequestHeader request_header = 100;
 	optional GroupId group_id = 5;
 	optional string text_body = 2;
-	//repeated DYNProtoAnnotation annotations = 3;
+	repeated Annotation annotations = 3;
 	//optional DYNProtoRetentionSettings retention_settings = 6;
 	optional string local_id = 4;
 	optional string topic_and_message_id = 7;
@@ -383,8 +387,11 @@ message TypingStateChangedEvent {
 	optional int64 start_timestamp_usec = 4;
 }
 
-
-
+message StreamEventsResponse {
+	optional Event event = 1;
+	optional string sample_id = 2;
+	//optional ClockSyncResponse clock_sync_response = ?;
+}
 
 message Event {
 	optional GroupId group_id = 1;

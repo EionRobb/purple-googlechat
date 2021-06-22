@@ -431,7 +431,7 @@ googlechat_close(PurpleConnection *pc)
 	g_free(ha->self_phone);
 	g_free(ha->refresh_token);
 	g_free(ha->access_token);
-	g_free(ha->gsessionid_param);
+	g_free(ha->csessionid_param);
 	g_free(ha->sid_param);
 	g_free(ha->client_id);
 	purple_http_cookie_jar_unref(ha->cookie_jar);
@@ -613,7 +613,7 @@ googlechat_protocol_init(PurpleProtocol *prpl_info)
 	PurpleProtocol *plugin = prpl_info, *info = prpl_info;
 
 	info->id = GOOGLECHAT_PLUGIN_ID;
-	info->name = "GoogleChat";
+	info->name = "Google Chat";
 
 	prpl_info->options = OPT_PROTO_NO_PASSWORD | OPT_PROTO_CHAT_TOPIC | OPT_PROTO_MAIL_CHECK;
 	prpl_info->account_options = googlechat_add_account_options(prpl_info->account_options);
@@ -754,12 +754,12 @@ plugin_query(GError **error)
 {
 	return purple_plugin_info_new(
 		"id",          GOOGLECHAT_PLUGIN_ID,
-		"name",        "GoogleChat",
+		"name",        "Google Chat",
 		"version",     GOOGLECHAT_PLUGIN_VERSION,
 		"category",    N_("Protocol"),
-		"summary",     N_("GoogleChat Protocol Plugins."),
-		"description", N_("Adds GoogleChat protocol support to libpurple."),
-		"website",     "https://bitbucket.org/EionRobb/purple-googlechat/",
+		"summary",     N_("Google Chat Protocol Plugin."),
+		"description", N_("Adds Google Chat support to libpurple."),
+		"website",     "https://github.com/EionRobb/purple-googlechat/",
 		"abi-version", PURPLE_ABI_VERSION,
 		"flags",       PURPLE_PLUGIN_INFO_FLAGS_INTERNAL |
 		               PURPLE_PLUGIN_INFO_FLAGS_AUTO_LOAD,
@@ -806,15 +806,15 @@ static PurplePluginInfo info =
 	NULL,                                               /**< dependencies   */
 	PURPLE_PRIORITY_DEFAULT,                            /**< priority       */
 
-	GOOGLECHAT_PLUGIN_ID,                                 /**< id             */
-	N_("GoogleChat"),                                     /**< name           */
-	GOOGLECHAT_PLUGIN_VERSION,                            /**< version        */
+	GOOGLECHAT_PLUGIN_ID,                               /**< id             */
+	N_("Google Chat"),                                  /**< name           */
+	GOOGLECHAT_PLUGIN_VERSION,                          /**< version        */
 	                                 
-	N_("GoogleChat Protocol Plugins."),                   /**< summary        */
+	N_("Google Chat Protocol Plugin."),                 /**< summary        */
 	                                                  
-	N_("Adds GoogleChat protocol support to libpurple."), /**< description    */
-	"Eion Robb <eionrobb+googlechat@gmail.com>",          /**< author         */
-	"https://bitbucket.org/EionRobb/purple-googlechat/",  /**< homepage       */
+	N_("Adds Google Chat support to libpurple."),       /**< description    */
+	"Eion Robb <eionrobb+googlechat@gmail.com>",        /**< author         */
+	"https://github.com/EionRobb/purple-googlechat/",   /**< homepage       */
 
 	libpurple2_plugin_load,                             /**< load           */
 	libpurple2_plugin_unload,                           /**< unload         */

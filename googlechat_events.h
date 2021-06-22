@@ -22,7 +22,6 @@
 
 #include "libgooglechat.h"
 #include "googlechat.pb-c.h"
-#include "gmail.pb-c.h"
 
 void googlechat_register_events(gpointer plugin);
 

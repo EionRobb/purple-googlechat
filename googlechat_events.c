@@ -59,11 +59,9 @@ googlechat_register_events(gpointer plugin)
 	purple_signal_connect(plugin, "googlechat-received-event", plugin, PURPLE_CALLBACK(googlechat_received_delete_notification), NULL);
 	purple_signal_connect(plugin, "googlechat-received-event", plugin, PURPLE_CALLBACK(googlechat_received_block_notification), NULL);
 	purple_signal_connect(plugin, "googlechat-received-event", plugin, PURPLE_CALLBACK(googlechat_received_other_notification), NULL);
-	
-	purple_signal_connect(plugin, "googlechat-gmail-notification", plugin, PURPLE_CALLBACK(googlechat_received_gmail_notification), NULL);
 }
 
-void
+/*void
 googlechat_received_state_update(PurpleConnection *pc, Event *event)
 {
 	GoogleChatAccount *ha = purple_connection_get_protocol_data(pc);
@@ -78,7 +76,7 @@ googlechat_received_state_update(PurpleConnection *pc, Event *event)
 		purple_account_set_int(ha->account, "last_event_timestamp_high", current_server_time >> 32);
 		purple_account_set_int(ha->account, "last_event_timestamp_low", current_server_time & 0xFFFFFFFF);
 	}
-}
+}*/
 
 static void
 googlechat_remove_conversation(GoogleChatAccount *ha, const gchar *conv_id)
@@ -103,299 +101,57 @@ googlechat_remove_conversation(GoogleChatAccount *ha, const gchar *conv_id)
 	}
 }
 
-void
-googlechat_received_view_modification(PurpleConnection *pc, Event *event)
-{
-	GoogleChatAccount *ha;
-	ConversationViewModification *view_modification = state_update->view_modification;
-	const gchar *conv_id;
-	
-	if (view_modification == NULL) {
-		return;
-	}
-	
-	if (view_modification->new_view == CONVERSATION_VIEW__CONVERSATION_VIEW_ARCHIVED) {
-		ha = purple_connection_get_protocol_data(pc);
-		conv_id = view_modification->conversation_id->id;
-	
-		googlechat_remove_conversation(ha, conv_id);
-	}
-}
-
-void
-googlechat_received_delete_notification(PurpleConnection *pc, Event *event)
-{
-	GoogleChatAccount *ha;
-	DeleteActionNotification *delete_notification = state_update->delete_notification;
-	const gchar *conv_id;
-	
-	if (delete_notification == NULL) {
-		return;
-	}
-	
-	ha = purple_connection_get_protocol_data(pc);
-	conv_id = delete_notification->conversation_id->id;
-	
-	if (delete_notification->delete_action && delete_notification->delete_action->delete_type == DELETE_TYPE__DELETE_TYPE_UPPER_BOUND) {
-		googlechat_remove_conversation(ha, conv_id);
-	}
-}
-
-void
-googlechat_received_block_notification(PurpleConnection *pc, Event *event)
-{
-	GoogleChatAccount *ha;
-	BlockNotification *block_notification = state_update->block_notification;
-	guint i;
-	
-	if (block_notification == NULL) {
-		return;
-	}
-	
-	ha = purple_connection_get_protocol_data(pc);
-	
-	for (i = 0; i < block_notification->n_block_state_change; i++) {
-		BlockStateChange *block_state_change = block_notification->block_state_change[i];
-		
-		if (block_state_change->has_new_block_state) {
-			gchar *gaia_id = block_state_change->participant_id->gaia_id;
-			if (block_state_change->new_block_state == BLOCK_STATE__BLOCK_STATE_BLOCK) {
-				purple_account_privacy_deny_add(ha->account, gaia_id, TRUE);
-			} else if (block_state_change->new_block_state == BLOCK_STATE__BLOCK_STATE_UNBLOCK) {
-				purple_account_privacy_deny_remove(ha->account, gaia_id, TRUE);
-			}
-		}
-	}
-}
-
-void
-googlechat_received_gmail_notification(PurpleConnection *pc, const gchar *username, GmailNotification *msg)
-{
-	gchar *url;
-	gchar *subject;
-	gchar *from;
-	gchar *to;
-	gchar *json_dump;
-	guint i;
-	gboolean is_unread = FALSE;
-	gboolean is_inbox = FALSE;
-	
-	if (!purple_account_get_check_mail(purple_connection_get_account(pc))) {
-		return;
-	}
-	
-	for (i = 0; i < msg->n_labels; i++) {
-		if (purple_strequal(msg->labels[i], "^u")) {
-			is_unread = TRUE;
-		} else if (purple_strequal(msg->labels[i], "^i")) {
-			is_inbox = TRUE;
-		}
-	}
-	if (is_unread == FALSE || is_inbox == FALSE) {
-		return;
-	}
-	
-	subject = purple_utf8_strip_unprintables(msg->subject);
-	from = purple_markup_escape_text(msg->sender_name, -1);
-	to = purple_markup_escape_text(username, -1);
-	
-	json_dump = pblite_dump_json((ProtobufCMessage *) msg);
-	purple_debug_info("googlechat", "Received gmail notification %s\n", json_dump);
-	
-	url = g_strconcat("https://mail.google.com/mail/u/", username, "/#inbox/", purple_url_encode(msg->thread_id), NULL);
-	
-	purple_notify_email(pc, subject, from, to, url, NULL, NULL);
-	
-	g_free(json_dump);
-	g_free(url);
-	g_free(subject);
-	g_free(from);
-	g_free(to);
-}
 
 void
 googlechat_received_other_notification(PurpleConnection *pc, Event *event)
 {
 	gchar *json_dump;
 
-	if (state_update->typing_notification != NULL ||
-		state_update->presence_notification != NULL ||
-		state_update->event_notification != NULL ||
-		state_update->watermark_notification != NULL) {
+	if (event->type == EVENT__EVENT_TYPE__MESSAGE_POSTED ||
+		event->type == EVENT__EVENT_TYPE__TYPING_STATE_CHANGED) {
 		return;
 	}
 	
-	purple_debug_info("googlechat", "Received new other event %p\n", state_update);
-	json_dump = pblite_dump_json((ProtobufCMessage *)state_update);
+	purple_debug_info("googlechat", "Received new other event %p\n", event);
+	json_dump = pblite_dump_json((ProtobufCMessage *)event);
 	purple_debug_info("googlechat", "%s\n", json_dump);
 
 	g_free(json_dump);
 }
 
-/*        "conversation" : {
-                "conversation_id" : {
-                        "id" : "UgxGdpCK_mSrhBX8hrx4AaABAQ"
-                },
-                "type" : "CONVERSATION_TYPE_ONE_TO_ONE",
-                "name" : null,
-                "self_conversation_state" : {
-                        "client_generated_id" : null,
-                        "self_read_state" : {
-                                "participant_id" : {
-                                        "gaia_id" : "110174066375061118727",
-                                        "chat_id" : "110174066375061118727"
-                                },
-                                "latest_read_timestamp" : null
-                        },
-                        "status" : "CONVERSATION_STATUS_ACTIVE",
-                        "notification_level" : "NOTIFICATION_LEVEL_RING",
-                        "view" : [
-                                "CONVERSATION_VIEW_INBOX"
-                        ],
-                        "inviter_id" : {
-                                "gaia_id" : "111523150620250165866",
-                                "chat_id" : "111523150620250165866"
-                        },
-                        "invite_timestamp" : 1367645831562000,
-                        "sort_timestamp" : 1453809415517871,
-                        "active_timestamp" : 1367645831562000,
-                        "delivery_medium_option" : [
-                                {
-                                        "delivery_medium" : {
-                                                "medium_type" : "DELIVERY_MEDIUM_BABEL",
-                                                "phone" : null
-                                        },
-                                        "current_default" : 1
-                                }
-                        ]
-                },
-                "read_state" : [
-                        {
-                                "participant_id" : {
-                                        "gaia_id" : "111523150620250165866",
-                                        "chat_id" : "111523150620250165866"
-                                },
-                                "latest_read_timestamp" : null
-                        },
-                        {
-                                "participant_id" : {
-                                        "gaia_id" : "110174066375061118727",
-                                        "chat_id" : "110174066375061118727"
-                                },
-                                "latest_read_timestamp" : null
-                        }
-                ],
-                "has_active_hangout" : null,
-                "otr_status" : "OFF_THE_RECORD_STATUS_ON_THE_RECORD",
-                "otr_toggle" : "OFF_THE_RECORD_TOGGLE_ENABLED",
-                "conversation_history_supported" : null,
-                "current_participant" : [
-                        {
-                                "gaia_id" : "110174066375061118727",
-                                "chat_id" : "110174066375061118727"
-                        },
-                        {
-                                "gaia_id" : "111523150620250165866",
-                                "chat_id" : "111523150620250165866"
-                        }
-                ],
-                "participant_data" : [
-                        {
-                                "id" : {
-                                        "gaia_id" : "111523150620250165866",
-                                        "chat_id" : "111523150620250165866"
-                                },
-                                "fallback_name" : "Mike Ruprecht",
-                                "invitation_status" : "INVITATION_STATUS_ACCEPTED",
-                                "participant_type" : "PARTICIPANT_TYPE_GAIA",
-                                "new_invitation_status" : "INVITATION_STATUS_ACCEPTED"
-                        },
-                        {
-                                "id" : {
-                                        "gaia_id" : "110174066375061118727",
-                                        "chat_id" : "110174066375061118727"
-                                },
-                                "fallback_name" : "Eion Robb",
-                                "invitation_status" : "INVITATION_STATUS_ACCEPTED",
-                                "participant_type" : "PARTICIPANT_TYPE_GAIA",
-                                "new_invitation_status" : "INVITATION_STATUS_ACCEPTED"
-                        }
-                ],
-                "network_type" : [
-                        "NETWORK_TYPE_BABEL"
-                ],
-                "force_history_state" : null
-        },*/
-
+	
 
 void
-googlechat_received_watermark_notification(PurpleConnection *pc, Event *event)
+googlechat_received_presence_notification(PurpleConnection *pc, Event *event)
 {
 	GoogleChatAccount *ha;
-	WatermarkNotification *watermark_notification = state_update->watermark_notification;
+	UserStatusUpdatedEvent *user_status_updated_event = event->body->user_status_updated_event;
 	
-	if (watermark_notification == NULL) {
+	if (user_status_updated_event == NULL) {
 		return;
 	}
 	
 	ha = purple_connection_get_protocol_data(pc);
 	
-	if (FALSE && purple_strequal(watermark_notification->sender_id->gaia_id, ha->self_gaia_id)) {
-		//We marked this message as read ourselves
-		PurpleConversation *conv = NULL;
-		const gchar *conv_id = watermark_notification->conversation_id->id;
-		gint64 *last_read_timestamp_ptr;
-		gint64 latest_read_timestamp;
-		
-		if (g_hash_table_contains(ha->one_to_ones, conv_id)) {
-			conv = PURPLE_CONVERSATION(purple_conversations_find_im_with_account(g_hash_table_lookup(ha->one_to_ones, conv_id), ha->account));
-		} else if (g_hash_table_contains(ha->group_chats, conv_id)) {
-			conv = PURPLE_CONVERSATION(purple_conversations_find_chat_with_account(conv_id, ha->account));
-		} else {
-			// Unknown conversation!
-			return;
-		}
-		if (conv == NULL) {
-			return;
-		}
-		
-		latest_read_timestamp = watermark_notification->latest_read_timestamp;
-		last_read_timestamp_ptr = (gint64 *)purple_conversation_get_data(conv, "last_read_timestamp");
-		if (last_read_timestamp_ptr == NULL) {
-			last_read_timestamp_ptr = g_new0(gint64, 1);
-		}
-		if (latest_read_timestamp > *last_read_timestamp_ptr) {
-			*last_read_timestamp_ptr = watermark_notification->latest_read_timestamp;
-			purple_conversation_set_data(conv, "last_read_timestamp", last_read_timestamp_ptr);
-		}
-	}
-}
-	
-void
-googlechat_process_presence_result(GoogleChatAccount *ha, PresenceResult *presence_result)
-{
-	const gchar *gaia_id = presence_result->user_id->gaia_id;
 	const gchar *status_id = NULL;
-	const gchar *conv_id = g_hash_table_lookup(ha->one_to_ones_rev, gaia_id);
 	gboolean reachable = FALSE;
 	gboolean available = FALSE;
 	gchar *message = NULL;
-	PurpleBuddy *buddy = purple_blist_find_buddy(ha->account, gaia_id);
-	Presence *presence = presence_result->presence;
+	UserStatus *user_status = user_status_updated_event->user_status;
+	const gchar *user_id = user_status->user_id->id;
+	PurpleBuddy *buddy = purple_blist_find_buddy(ha->account, user_id);
 	
 	if (buddy != NULL) {
 		status_id = purple_status_get_id(purple_presence_get_active_status(purple_buddy_get_presence(buddy)));
 	}
 	
-	if (g_strcmp0(status_id, "mobile") == 0 || (conv_id != NULL && g_hash_table_contains(ha->google_voice_conversations, conv_id))) {
-		// SMS contacts normally appear as 'offline'
-		status_id = "mobile";
-	} else if (presence != NULL && (presence->has_reachable || presence->has_available)) {
-		if (presence->reachable) {
+	if (user_status != NULL && user_status->dnd_settings && user_status->dnd_settings->has_dnd_state) {
+		DndSettings__DndStateState dnd_state = user_status->dnd_settings->dnd_state;
+		
+		available = TRUE;
+		if (dnd_state ==  DND_SETTINGS__DND_STATE__STATE__AVAILABLE) {
+			//TODO fetch presence separately from status
 			reachable = TRUE;
-		}
-		if (presence->available) {
-			available = TRUE;
 		}
 		
 		if (reachable && available) {
@@ -414,88 +170,21 @@ googlechat_process_presence_result(GoogleChatAccount *ha, PresenceResult *presen
 		return;
 	}
 	
-	if (presence != NULL && presence->mood_setting) {
-		MoodMessage *mood_message = presence->mood_setting->mood_message;
-		MoodContent *mood_content = mood_message ? mood_message->mood_content : NULL;
-		size_t n_segments;
-		Segment **segments;
-		GString *message_str;
-		guint i;
-
-		if (mood_content != NULL && mood_content->n_segment) {
-			n_segments = mood_content->n_segment;
-			segments = mood_content->segment;
-			message_str = g_string_new(NULL);
-			
-			for (i = 0; i < n_segments; i++) {
-				Segment *segment = segments[i];
-				if (segment->type == SEGMENT_TYPE__SEGMENT_TYPE_TEXT) {
-					g_string_append(message_str, segment->text);
-					g_string_append_c(message_str, ' ');
-				}
-			}
-			message = g_string_free(message_str, FALSE);
+	if (user_status != NULL && user_status->custom_status) {
+		const gchar *status_text = user_status->custom_status->status_text;
+		
+		if (status_text && *status_text) {
+			message = g_strdup(status_text);
 		}
 	}
 	
 	if (message != NULL) {
-		purple_protocol_got_user_status(ha->account, gaia_id, status_id, "message", message, NULL);
+		purple_protocol_got_user_status(ha->account, user_id, status_id, "message", message, NULL);
 	} else {
-		purple_protocol_got_user_status(ha->account, gaia_id, status_id, NULL);
+		purple_protocol_got_user_status(ha->account, user_id, status_id, NULL);
 	}
 	
 	g_free(message);
-	
-	if (buddy != NULL && presence != NULL) {
-		GoogleChatBuddy *hbuddy = purple_buddy_get_protocol_data(buddy);
-		GoogleChatDeviceTypeFlags device_type = GOOGLECHAT_DEVICE_TYPE_UNKNOWN;
-		
-		if (hbuddy == NULL) {
-			hbuddy = g_new0(GoogleChatBuddy, 1);
-			hbuddy->buddy = buddy;
-			purple_buddy_set_protocol_data(buddy, hbuddy);
-		}
-		
-		hbuddy->in_call = presence->in_call && presence->in_call->has_call_type && presence->in_call->call_type != CALL_TYPE__CALL_TYPE_NONE;
-		hbuddy->last_seen = presence->last_seen ? presence->last_seen->last_seen_timestamp / 1000000 : 0;
-		
-		if (presence->device_status) {
-			if (presence->device_status->mobile) {
-				device_type |= GOOGLECHAT_DEVICE_TYPE_MOBILE;
-			}
-			if (presence->device_status->desktop) {
-				device_type |= GOOGLECHAT_DEVICE_TYPE_DESKTOP;
-			}
-			if (presence->device_status->tablet) {
-				device_type |= GOOGLECHAT_DEVICE_TYPE_TABLET;
-			}
-		}
-		hbuddy->device_type = device_type;
-		
-		if (presence->last_seen && !presence->has_reachable && !presence->has_available) {
-			GList *user_list = g_list_prepend(NULL, (gchar *)gaia_id);
-			googlechat_get_users_presence(ha, user_list);
-			g_list_free(user_list);
-		}
-	}
-}
-
-void
-googlechat_received_presence_notification(PurpleConnection *pc, Event *event)
-{
-	GoogleChatAccount *ha;
-	PresenceNotification *presence_notification = state_update->presence_notification;
-	guint i;
-	
-	if (presence_notification == NULL) {
-		return;
-	}
-	
-	ha = purple_connection_get_protocol_data(pc);
-	
-	for (i = 0; i < presence_notification->n_presence; i++) {
-		googlechat_process_presence_result(ha, presence_notification->presence[i]);
-	}
 }
 
 static void
@@ -897,64 +586,29 @@ void
 googlechat_received_typing_notification(PurpleConnection *pc, Event *event)
 {
 	GoogleChatAccount *ha;
-	SetTypingNotification *typing_notification = state_update->typing_notification;
-	const gchar *gaia_id;
+	TypingStateChangedEvent *typing_notification = event->body->typing_state_changed_event;
+	const gchar *user_id;
 	const gchar *conv_id;
 	PurpleIMTypingState typing_state;
 	
+	//event->type == EVENT__EVENT_TYPE__TYPING_STATE_CHANGED
 	if (typing_notification == NULL) {
 		return;
 	}
 	
 	ha = purple_connection_get_protocol_data(pc);
 	
-	//purple_debug_info("googlechat", "Received new typing event %p\n", typing_notification);
-	//purple_debug_info("googlechat", "%s\n", pblite_dump_json((ProtobufCMessage *)typing_notification)); //leaky
-	/* {
-        "state_update_header" : {
-                "active_client_state" : ACTIVE_CLIENT_STATE_OTHER_ACTIVE,
-                "request_trace_id" : "-316846338299410553",
-                "notification_settings" : null,
-                "current_server_time" : 1453716154770000
-        },
-        "event_notification" : null,
-        "focus_notification" : null,
-        "typing_notification" : {
-                "conversation_id" : {
-                        "id" : "UgxGdpCK_mSrhBX8hrx4AaABAQ"
-                },
-                "sender_id" : {
-                        "gaia_id" : "110174066375061118727",
-                        "chat_id" : "110174066375061118727"
-                },
-                "timestamp" : 1453716154770000,
-                "type" : TYPING_TYPE_STARTED
-        },
-        "notification_level_notification" : null,
-        "reply_to_invite_notification" : null,
-        "watermark_notification" : null,
-        "view_modification" : null,
-        "easter_egg_notification" : null,
-        "conversation" : null,
-        "self_presence_notification" : null,
-        "delete_notification" : null,
-        "presence_notification" : null,
-        "block_notification" : null,
-        "notification_setting_notification" : null,
-        "rich_presence_enabled_state_notification" : null
-}*/
-	
-	gaia_id = typing_notification->sender_id->gaia_id;
-	if (ha->self_gaia_id && g_strcmp0(gaia_id, ha->self_gaia_id) == 0)
+	user_id = typing_notification->user_id->id;
+	if (ha->self_gaia_id && g_strcmp0(user_id, ha->self_gaia_id) == 0)
 		return;
 	
-	conv_id = typing_notification->conversation_id->id;
+	conv_id = typing_notification->context->topic_id->id;
 	
 	if (g_hash_table_contains(ha->group_chats, conv_id)) {
 		// This is a group conversation
 		PurpleChatConversation *chatconv = purple_conversations_find_chat_with_account(conv_id, ha->account);
 		if (chatconv != NULL) {
-			PurpleChatUser *cb = purple_chat_conversation_find_user(chatconv, gaia_id);
+			PurpleChatUser *cb = purple_chat_conversation_find_user(chatconv, user_id);
 			PurpleChatUserFlags cbflags;
 
 			if (cb == NULL) {
@@ -964,7 +618,7 @@ googlechat_received_typing_notification(PurpleConnection *pc, Event *event)
 			}
 			cbflags = purple_chat_user_get_flags(cb);
 			
-			if (typing_notification->type == TYPING_TYPE__TYPING_TYPE_STARTED)
+			if (typing_notification->state == TYPING_STATE__TYPING)
 				cbflags |= PURPLE_CHAT_USER_TYPING;
 			else
 				cbflags &= ~PURPLE_CHAT_USER_TYPING;
@@ -974,20 +628,16 @@ googlechat_received_typing_notification(PurpleConnection *pc, Event *event)
 		return;
 	}
 	
-	switch(typing_notification->type) {
-		case TYPING_TYPE__TYPING_TYPE_STARTED:
+	switch(typing_notification->state) {
+		case TYPING_STATE__TYPING:
 			typing_state = PURPLE_IM_TYPING;
 			break;
 		
-		case TYPING_TYPE__TYPING_TYPE_PAUSED:
-			typing_state = PURPLE_IM_TYPED;
-			break;
-		
 		default:
-		case TYPING_TYPE__TYPING_TYPE_STOPPED:
+		case TYPING_STATE__STOPPED:
 			typing_state = PURPLE_IM_NOT_TYPING;
 			break;
 	}
 	
-	purple_serv_got_typing(pc, gaia_id, 20, typing_state);
+	purple_serv_got_typing(pc, user_id, 20, typing_state);
 }

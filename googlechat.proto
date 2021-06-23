@@ -14,7 +14,6 @@ message UserId {
 	//optional DYNProtoAppId origin_app_id = 3;
 }
 
-//DYNProtoUser
 message User {
 	optional UserId user_id = 1;
 	optional string name = 2;
@@ -29,31 +28,47 @@ message User {
 	//optional DYNProtoUserAccountState user_account_state = 11;
 	//optional DYNProtoUserProfileVisibility user_profile_visibility = 15;
 	//optional DYNProtoOrganizationInfo organization_info = 12;
-	//optional DYNProtoUserBlockRelationship block_relationship = 13;
+	optional UserBlockRelationship block_relationship = 13;
 	//repeated DYNProtoPhoneNumber phone_number = 14;
 }
 
+message UserBlockRelationship {
+	optional bool is_blocked_by_requester = 1;
+	optional bool has_blocked_requester = 2;
+}
+
+message DndSettings {
+	enum DndState_State {
+		UNKNOWN = 0;
+		AVAILABLE = 1;
+		DND = 2;
+	}
+	optional DndState_State dnd_state = 1;
+	optional int64 dnd_expiry_time_usec = 2;
+	optional int64 state_remaining_duration_usec = 3;
+}
+
 message Emoji {
-	//oneof Content {
-		//string unicode;
-	//}
+	oneof Content {
+		string unicode = 1;
+	}
 }
 
 message CustomStatus {
-	//optional string status_text;
-	//optional string status_emoji;
-	//optional int64 state_expiry_timestamp_usec;
-	//optional Emoji emoji;
+	optional string status_text = 1;
+	optional string status_emoji = 2;
+	optional int64 state_expiry_timestamp_usec = 3;
+	optional Emoji emoji = 4;
 }
 
 message UserStatus {
 	optional UserId user_id = 1;
-	//optional DYNProtoDndSettings dnd_settings = 2;
+	optional DndSettings dnd_settings = 2;
 	optional int64 update_timestamp_usec = 3;
 	optional int64 dnd_settings_update_timestamp_usec = 7;
 	optional int64 status_timestamp_usec = 4;
 	optional bool presence_shared = 5;
-	//optional DYNProtoCustomStatus custom_status = 6;
+	optional CustomStatus custom_status = 6;
 	optional int64 custom_status_update_timestamp_usec = 8;
 }
 
@@ -68,6 +83,15 @@ message GetUserStatusRequest {
 
 message GetUserStatusResponse {
 	repeated UserStatus user_statuses = 1;
+}
+
+message GetSelfUserStatusRequest {
+	optional RequestHeader request_header = 100;
+}
+
+message GetSelfUserStatusResponse {
+	optional UserStatus user_status = 1;
+	//optional DYNProtoReadRevision user_revision = 2;
 }
 
 message RequestHeader {
@@ -158,6 +182,22 @@ message GetUserPresenceResponse {
 	repeated UserPresence user_presences = 1;
 }
 
+message Attachment {
+	oneof Type {
+		//HtmlAttachment html = 1;
+		//?? add_on_data = 2;
+	}
+	optional UserId app_id = 5;
+	optional User app_user = 6;
+}
+
+message Reaction {
+	optional Emoji emoji = 1;
+	optional int32 count = 2;
+	optional bool current_user_participated = 3;
+	optional int64 create_timestamp = 4;
+}
+
 message MessageParentId {
 	oneof Parent {
 		TopicId topic_id = 4;
@@ -187,10 +227,10 @@ message Message {
 	repeated Annotation annotations = 11;
 	//repeated DYNProtoBotResponse bot_responses = 19;
 	optional string local_id = 14;
-	//repeated DYNProtoAttachment attachments = 15;
+	repeated Attachment attachments = 15;
 	//optional DYNProtoAppProfile app_profile = 16;
 	//optional DYNProtoRetentionSettings retention_settings = 18;
-	//repeated DYNProtoReaction reactions = 21;
+	repeated Reaction reactions = 21;
 	//repeated DYNProtoCommunalLabelTag communal_labels = 27;
 	//repeated DYNProtoPersonalLabelTag personal_labels = 26;
 	//optional ?? message_integration_payload = 23;
@@ -449,7 +489,6 @@ message Event {
 		MESSAGE_PERSONAL_LABEL_UPDATED = 49;
 		USER_QUOTA_EXCEEDED = 50;
 	}
-	optional EventType type = 3;
 	
 	message EventBody {
 		oneof Type {
@@ -471,7 +510,7 @@ message Event {
 			//RetentionSettingsUpdatedEvent retention_settings_updated = 19;
 			//TopicCreatedEvent topic_created = 21;
 			//MessageReactionEvent message_reaction = 22;
-			//UserStatusUpdatedEvent user_status_updated_event = 23;
+			UserStatusUpdatedEvent user_status_updated_event = 23;
 			//WorkingHoursSettingsUpdatedEvent working_hours_settings_updated_event = 24;
 			//MessageSmartRepliesEvent message_smart_replies_event = 25;
 			TypingStateChangedEvent typing_state_changed_event = 26;
@@ -496,7 +535,10 @@ message Event {
 		optional EventType event_type = 12;
 		optional int64 trace_id = 20;
 	}
+	
+	optional EventType type = 3;
 	optional EventBody body = 4;
+	
 	optional UserId user_id = 5;
 	//oneof RevisionType {
 		//WriteRevision user_revision = 6;

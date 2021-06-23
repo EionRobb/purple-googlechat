@@ -22,6 +22,8 @@
 #ifndef _LIBGOOGLECHAT_H_
 #define _LIBGOOGLECHAT_H_
 
+#include <purple.h>
+
 #ifndef PURPLE_PLUGINS
 #	define PURPLE_PLUGINS
 #endif
@@ -29,9 +31,6 @@
 #define PROTOBUF_C_UNPACK_ERROR(...) purple_debug_error("googlechat-protobuf", __VA_ARGS__)
 
 #include "purplecompat.h"
-
-#include "account.h"
-#include "connection.h"
 #include "http.h"
 
 #include "googlechat.pb-c.h"
@@ -48,7 +47,7 @@
 #	define _(a) (a)
 #endif
 
-#define GOOGLECHAT_API_OAUTH2_TOKEN_URL "https://www.googleapis.com/oauth2/v3/token"
+#define GOOGLECHAT_API_OAUTH2_TOKEN_URL "https://www.googleapis.com/oauth2/v4/token"
 
 // #define GOOGLE_CLIENT_ID "1055179169992-mvb9smig5gflo8bq6m5pao05jqmov76h.apps.googleusercontent.com"
 // #define GOOGLE_CLIENT_SECRET "Hj5Cv38ZM__uO1bTQxOtWwkT"

@@ -25,19 +25,4 @@
 
 void googlechat_register_events(gpointer plugin);
 
-void googlechat_received_other_notification(PurpleConnection *pc, StateUpdate *state_update);
-void googlechat_received_event_notification(PurpleConnection *pc, StateUpdate *state_update);
-void googlechat_received_presence_notification(PurpleConnection *pc, StateUpdate *state_update);
-void googlechat_received_typing_notification(PurpleConnection *pc, StateUpdate *state_update);
-void googlechat_received_watermark_notification(PurpleConnection *pc, StateUpdate *state_update);
-void googlechat_received_block_notification(PurpleConnection *pc, StateUpdate *state_update);
-void googlechat_received_view_modification(PurpleConnection *pc, StateUpdate *state_update);
-void googlechat_received_delete_notification(PurpleConnection *pc, StateUpdate *state_update);
-void googlechat_received_state_update(PurpleConnection *pc, StateUpdate *state_update);
-
-void googlechat_received_gmail_notification(PurpleConnection *pc, const gchar *username, GmailNotification *msg);
-
-void googlechat_process_presence_result(GoogleChatAccount *ha, PresenceResult *presence);
-void googlechat_process_conversation_event(GoogleChatAccount *ha, Conversation *conversation, Event *event, gint64 current_server_time);
-
 #endif /*_GOOGLECHAT_EVENTS_H_*/

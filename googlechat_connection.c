@@ -16,8 +16,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define PURPLE_PLUGINS
-
 
 #include "googlechat_connection.h"
 
@@ -27,15 +25,12 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include "debug.h"
-#include "request.h"
+#include <purple.h>
 
 #include "googlechat_pblite.h"
 #include "googlechat_json.h"
 #include "googlechat.pb-c.h"
 #include "googlechat_conversation.h"
-
-#include "gmail.pb-c.h"
 
 void
 googlechat_process_data_chunks(GoogleChatAccount *ha, const gchar *data, gsize len)
@@ -66,15 +61,20 @@ googlechat_process_data_chunks(GoogleChatAccount *ha, const gchar *data, gsize l
 			JsonObject *obj = json_node_get_object(array0);
 			if (json_object_has_member(obj, "data")) {
 				//Contains protobuf data, base64 encoded
-				StreamEventsResponse events_response = STREAM_EVENTS_RESPONSE__INIT;
+				ProtobufCMessage *unpacked_message;
+				StreamEventsResponse *events_response;
 				guchar *decoded_response;
 				gsize response_len;
-				gchar *data = json_object_get_string_member(obj, "data");
+				const gchar *data = json_object_get_string_member(obj, "data");
 				
-				decoded_response = g_base64_decode(raw_response, &response_len);
-				unpacked_message = protobuf_c_message_unpack(events_response->descriptor, NULL, response_len, decoded_response);
+				decoded_response = g_base64_decode(data, &response_len);
+				unpacked_message = protobuf_c_message_unpack(&stream_events_response__descriptor, NULL, response_len, decoded_response);
 				
-				purple_signal_emit(purple_connection_get_protocol(ha->pc), "googlechat-received-event", ha->pc, events_response.event);
+				events_response = (StreamEventsResponse *) unpacked_message;
+				purple_signal_emit(purple_connection_get_protocol(ha->pc), "googlechat-received-event", ha->pc, events_response->event);
+				
+				protobuf_c_message_free_unpacked(unpacked_message, NULL);
+				g_free(decoded_response);
 				
 				continue;
 			}
@@ -315,7 +315,9 @@ googlechat_fetch_channel_sid_cb(PurpleHttpConnection *http_conn, PurpleHttpRespo
 	JsonNode *node;
 	gchar *sid;
 	
+	//https://github.com/google/closure-library/blob/master/closure/goog/labs/net/webchannel/webchannelbase.js#L2193
 	// [[0,["c","<sid>","",8,12,30000]]]);
+	// c, sid, hostprefix, channelversion, serverversion, serverkeepalivems
 	initial_response = purple_http_response_get_header(response, "X-HTTP-Initial-Response");
 	
 	node = json_decode(initial_response, -1);
@@ -335,7 +337,7 @@ void
 googlechat_fetch_channel_sid(GoogleChatAccount *ha)
 {
 	PurpleHttpRequest *request;
-	gchar *url;
+	GString *url;
 	
 	g_free(ha->sid_param);
 	ha->sid_param = NULL;
@@ -398,99 +400,11 @@ googlechat_register_webchannel(GoogleChatAccount *ha)
 	purple_http_request_unref(request);
 }
 
-void
-googlechat_send_maps(GoogleChatAccount *ha, JsonArray *map_list, PurpleHttpCallback send_maps_callback)
-{
-	PurpleHttpRequest *request;
-	GString *url, *postdata;
-	guint map_list_len, i;
-	
-	url = g_string_new(GOOGLECHAT_CHANNEL_URL_PREFIX "channel/bind" "?");
-	g_string_append(url, "VER=8&");           // channel protocol version
-	g_string_append(url, "RID=81188&");       // request identifier
-	g_string_append(url, "ctype=googlechat&");  // client type
-	if (ha->gsessionid_param)
-		g_string_append_printf(url, "gsessionid=%s&", purple_url_encode(ha->gsessionid_param));
-	if (ha->sid_param)
-		g_string_append_printf(url, "SID=%s&", purple_url_encode(ha->sid_param));  // session ID
-	
-	request = purple_http_request_new(NULL);
-	purple_http_request_set_cookie_jar(request, ha->cookie_jar);
-	purple_http_request_set_url(request, url->str);
-	purple_http_request_set_method(request, "POST");
-	purple_http_request_header_set(request, "Content-Type", "application/x-www-form-urlencoded");
-	
-	googlechat_set_auth_headers(ha, request);
-	
-	postdata = g_string_new(NULL);
-	if (map_list != NULL) {
-		map_list_len = json_array_get_length(map_list);
-		g_string_append_printf(postdata, "count=%u&", map_list_len);
-		g_string_append(postdata, "ofs=0&");
-		for(i = 0; i < map_list_len; i++) {
-			JsonObject *obj = json_array_get_object_element(map_list, i);
-			GList *members = json_object_get_members(obj);
-			GList *l;
-			
-			for (l = members; l != NULL; l = l->next) {
-				const gchar *member_name = l->data;
-				JsonNode *value = json_object_get_member(obj, member_name);
-				
-				g_string_append_printf(postdata, "req%u_%s=", i, purple_url_encode(member_name));
-				g_string_append_printf(postdata, "%s&", purple_url_encode(json_node_get_string(value)));
-			}
-
-			g_list_free(members);
-		}
-	}
-	purple_http_request_set_contents(request, postdata->str, postdata->len);
-
-	purple_http_request(ha->pc, request, send_maps_callback, ha);
-	purple_http_request_unref(request);
-	
-	g_string_free(postdata, TRUE);
-	g_string_free(url, TRUE);	
-}
-
-void
-googlechat_add_channel_services(GoogleChatAccount *ha)
-{
-	JsonArray *map_list = json_array_new();
-	JsonObject *obj;
-	
-	// TODO Work out what this is for
-	obj = json_object_new();
-	json_object_set_string_member(obj, "p", "{\"3\":{\"1\":{\"1\":\"tango_service\"}}}");
-	json_array_add_object_element(map_list, obj);
-	
-	// This is for the chat messages
-	obj = json_object_new();
-	json_object_set_string_member(obj, "p", "{\"3\":{\"1\":{\"1\":\"babel\"}}}");
-	json_array_add_object_element(map_list, obj);
-	
-	// This is for the presence updates
-	obj = json_object_new();
-	json_object_set_string_member(obj, "p", "{\"3\":{\"1\":{\"1\":\"babel_presence_last_seen\"}}}");
-	json_array_add_object_element(map_list, obj);
-	
-	// TODO Work out what this is for
-	obj = json_object_new();
-	json_object_set_string_member(obj, "p", "{\"3\":{\"1\":{\"1\":\"hangout_invite\"}}}");
-	json_array_add_object_element(map_list, obj);
-	
-	obj = json_object_new();
-	json_object_set_string_member(obj, "p", "{\"3\":{\"1\":{\"1\":\"gmail\"}}}");
-	json_array_add_object_element(map_list, obj);
-	
-	googlechat_send_maps(ha, map_list, NULL);
-	
-	json_array_unref(map_list);
-}
 
 
 typedef struct {
 	GoogleChatAccount *ha;
-	GoogleChatPbliteResponseFunc callback;
+	GoogleChatApiResponseFunc callback;
 	ProtobufCMessage *response_message;
 	gpointer user_data;
 } LazyPblistRequestStore;
@@ -500,7 +414,7 @@ googlechat_pblite_request_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse
 {
 	LazyPblistRequestStore *request_info = user_data;
 	GoogleChatAccount *ha = request_info->ha;
-	GoogleChatPbliteResponseFunc callback = request_info->callback;
+	GoogleChatApiResponseFunc callback = request_info->callback;
 	gpointer real_user_data = request_info->user_data;
 	ProtobufCMessage *response_message = request_info->response_message;
 	ProtobufCMessage *unpacked_message;
@@ -588,7 +502,7 @@ googlechat_raw_request(GoogleChatAccount *ha, const gchar *path, GoogleChatConte
 	request = purple_http_request_new(NULL);
 	purple_http_request_set_url_printf(request, GOOGLECHAT_PBLITE_API_URL "%s%calt=%s", path, (strchr(path, '?') ? '&' : '?'), response_type_str);
 	purple_http_request_set_cookie_jar(request, ha->cookie_jar);
-	purple_http_request_set_keepalive_pool(request, ha->client6_keepalive_pool);
+	purple_http_request_set_keepalive_pool(request, ha->api_keepalive_pool);
 	purple_http_request_set_max_len(request, G_MAXINT32 - 1);
 	
 	purple_http_request_header_set(request, "X-Goog-Encode-Response-If-Executable", "base64");
@@ -612,7 +526,7 @@ googlechat_raw_request(GoogleChatAccount *ha, const gchar *path, GoogleChatConte
 }
 
 void
-googlechat_api_request(GoogleChatAccount *ha, const gchar *endpoint, ProtobufCMessage *request_message, GoogleChatPbliteResponseFunc callback, ProtobufCMessage *response_message, gpointer user_data)
+googlechat_api_request(GoogleChatAccount *ha, const gchar *endpoint, ProtobufCMessage *request_message, GoogleChatApiResponseFunc callback, ProtobufCMessage *response_message, gpointer user_data)
 {
 	gsize request_len;
 	gchar *request_data;
@@ -649,6 +563,7 @@ googlechat_default_response_dump(GoogleChatAccount *ha, ProtobufCMessage *respon
 	g_free(dump);
 }
 
+/*
 gboolean
 googlechat_set_active_client(PurpleConnection *pc)
 {
@@ -702,7 +617,7 @@ googlechat_set_active_client(PurpleConnection *pc)
 	
 	return TRUE;
 }
-
+*/
 
 void
 googlechat_search_results_send_im(PurpleConnection *pc, GList *row, void *user_data)

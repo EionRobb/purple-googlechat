@@ -18,8 +18,9 @@
 
 #include "googlechat_auth.h"
 
-#include "core.h"
-#include "debug.h"
+#include <glib.h>
+#include <purple.h>
+
 #include "http.h"
 #include "googlechat_json.h"
 #include "googlechat_connection.h"
@@ -102,6 +103,8 @@ googlechat_save_refresh_token_password(PurpleAccount *account, const gchar *pass
 }
 
 
+void googlechat_auth_get_dynamite_token(GoogleChatAccount *ha, const gchar *id_token);
+
 static void
 googlechat_oauth_refresh_token_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse *response, gpointer user_data)
 {
@@ -115,8 +118,8 @@ googlechat_oauth_refresh_token_cb(PurpleHttpConnection *http_conn, PurpleHttpRes
 
 	if (purple_http_response_is_successful(response) && obj)
 	{
-		ha->access_token = g_strdup(json_object_get_string_member(obj, "access_token"));
-		googlechat_auth_get_session_cookies(ha);
+		const gchar *id_token = g_strdup(json_object_get_string_member(obj, "id_token"));
+		googlechat_auth_get_dynamite_token(ha, id_token);
 	} else {
 		if (obj != NULL) {
 			if (json_object_has_member(obj, "error")) {
@@ -151,7 +154,7 @@ googlechat_oauth_refresh_token(GoogleChatAccount *ha)
 
 	postdata = g_string_new(NULL);
 	g_string_append_printf(postdata, "client_id=%s&", purple_url_encode(GOOGLE_CLIENT_ID));
-	g_string_append_printf(postdata, "client_secret=%s&", purple_url_encode(GOOGLE_CLIENT_SECRET));
+	//g_string_append_printf(postdata, "client_secret=%s&", purple_url_encode(GOOGLE_CLIENT_SECRET));
 	g_string_append_printf(postdata, "refresh_token=%s&", purple_url_encode(ha->refresh_token));
 	g_string_append(postdata, "grant_type=refresh_token&");
 	
@@ -182,13 +185,13 @@ googlechat_oauth_with_code_cb(PurpleHttpConnection *http_conn, PurpleHttpRespons
 
 	if (purple_http_response_is_successful(response) && obj)
 	{
-		ha->access_token = g_strdup(json_object_get_string_member(obj, "access_token"));
+		const gchar *id_token = g_strdup(json_object_get_string_member(obj, "id_token"));
 		ha->refresh_token = g_strdup(json_object_get_string_member(obj, "refresh_token"));
 		
 		purple_account_set_remember_password(account, TRUE);
 		googlechat_save_refresh_token_password(account, ha->refresh_token);
 		
-		googlechat_auth_get_session_cookies(ha);
+		googlechat_auth_get_dynamite_token(ha, id_token);
 	} else {
 		if (obj != NULL) {
 			if (json_object_has_member(obj, "error")) {
@@ -245,18 +248,25 @@ googlechat_oauth_with_code(GoogleChatAccount *ha, const gchar *auth_code)
 
 
 void
-googlechat_auth_get_session_cookies_got_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse *response, gpointer user_data)
+googlechat_auth_get_dynamite_token_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse *response, gpointer user_data)
 {
 	GoogleChatAccount *ha = user_data;
 	guint64 last_event_timestamp;
+	JsonObject *obj;
+	const gchar *raw_response;
+	gsize response_len;
 	
-	gchar *sapisid_cookie = purple_http_cookie_jar_get(ha->cookie_jar, "SAPISID");
-	
-	if (sapisid_cookie == NULL) {
+	if (purple_http_response_get_error(response) != NULL) {
 		purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED, 
-			_("SAPISID Cookie not received"));
+			_("Auth error"));
 		return;
 	}
+
+	raw_response = purple_http_response_get_data(response, &response_len);
+	obj = json_decode_object(raw_response, response_len);
+	
+	g_free(ha->access_token);
+	ha->access_token = g_strdup(json_object_get_string_member(obj, "token"));
 	
 	//Restore the last_event_timestamp before it gets overridden by new events
 	last_event_timestamp = purple_account_get_int(ha->account, "last_event_timestamp_high", 0);
@@ -273,45 +283,30 @@ googlechat_auth_get_session_cookies_got_cb(PurpleHttpConnection *http_conn, Purp
 	googlechat_get_self_info(ha);
 	googlechat_get_conversation_list(ha);
 	ha->poll_buddy_status_timeout = g_timeout_add_seconds(120, googlechat_poll_buddy_status, ha);
-	
-	g_free(sapisid_cookie);
-}
-
-static void
-googlechat_auth_get_session_cookies_uberauth_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse *response, gpointer user_data)
-{
-	GoogleChatAccount *ha = user_data;
-	PurpleHttpRequest *request;
-	const gchar *uberauth;
-
-	uberauth = purple_http_response_get_data(response, NULL);
-
-	if (purple_http_response_get_error(response) != NULL) {
-		purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED, 
-			_("Auth error"));
-		return;
-	}
-
-	request = purple_http_request_new(NULL);
-	purple_http_request_set_url_printf(request, "https://accounts.google.com/MergeSession" "?service=mail&continue=http://www.google.com&uberauth=%s", purple_url_encode(uberauth));
-	purple_http_request_set_cookie_jar(request, ha->cookie_jar);
-	purple_http_request_header_set_printf(request, "Authorization", "Bearer %s", ha->access_token);
-	purple_http_request_set_max_redirects(request, 0);
-	
-	purple_http_request(ha->pc, request, googlechat_auth_get_session_cookies_got_cb, ha);
-	purple_http_request_unref(request);
 }
 
 void
-googlechat_auth_get_session_cookies(GoogleChatAccount *ha)
+googlechat_auth_get_dynamite_token(GoogleChatAccount *ha, const gchar *id_token)
 {
+	GString *postdata;
 	PurpleHttpRequest *request;
 
-	request = purple_http_request_new("https://accounts.google.com/accounts/OAuthLogin"
-	                                  "?source=pidgin&issueuberauth=1");
-	purple_http_request_set_cookie_jar(request, ha->cookie_jar);
-	purple_http_request_header_set_printf(request, "Authorization", "Bearer %s", ha->access_token);
+	request = purple_http_request_new("https://oauthaccountmanager.googleapis.com/v1/issuetoken");
+	purple_http_request_header_set_printf(request, "Authorization", "Bearer %s", id_token);
 
-	purple_http_request(ha->pc, request, googlechat_auth_get_session_cookies_uberauth_cb, ha);
+	postdata = g_string_new(NULL);
+	g_string_append_printf(postdata, "app_id=%s&", purple_url_encode("com.google.Dynamite"));
+	g_string_append_printf(postdata, "client_id=%s&", purple_url_encode("576267593750-sbi1m7khesgfh1e0f2nv5vqlfa4qr72m.apps.googleusercontent.com"));
+	g_string_append(postdata, "passcode_present=YES&");
+	g_string_append(postdata, "response_type=token&");
+	g_string_append_printf(postdata, "scope=%s&", purple_url_encode("https://www.googleapis.com/auth/dynamite https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/mobiledevicemanagement https://www.googleapis.com/auth/notifications https://www.googleapis.com/auth/supportcontent https://www.googleapis.com/auth/chat.integration"));
+	
+	purple_http_request_set_method(request, "POST");
+	purple_http_request_header_set(request, "Content-Type", "application/x-www-form-urlencoded");
+	purple_http_request_set_contents(request, postdata->str, postdata->len);
+
+	purple_http_request(ha->pc, request, googlechat_auth_get_dynamite_token_cb, ha);
 	purple_http_request_unref(request);
+	
+	g_string_free(postdata, TRUE);
 }

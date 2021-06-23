@@ -34,26 +34,37 @@
 // From googlechat_pblite
 gchar *pblite_dump_json(ProtobufCMessage *message);
 
-//purple_signal_emit(purple_connection_get_protocol(ha->pc), "googlechat-received-stateupdate", ha->pc, batch_update.state_update[j]);
+
+void googlechat_received_other_notification(PurpleConnection *pc, Event *event);
+void googlechat_received_event_notification(PurpleConnection *pc, Event *event);
+void googlechat_received_presence_notification(PurpleConnection *pc, Event *event);
+void googlechat_received_typing_notification(PurpleConnection *pc, Event *event);
+void googlechat_received_watermark_notification(PurpleConnection *pc, Event *event);
+void googlechat_received_block_notification(PurpleConnection *pc, Event *event);
+void googlechat_received_view_modification(PurpleConnection *pc, Event *event);
+void googlechat_received_delete_notification(PurpleConnection *pc, Event *event);
+void googlechat_received_state_update(PurpleConnection *pc, Event *event);
+
+//purple_signal_emit(purple_connection_get_protocol(ha->pc), "googlechat-received-event", ha->pc, events_response.event);
 
 void
 googlechat_register_events(gpointer plugin)
 {
-	purple_signal_connect(plugin, "googlechat-received-stateupdate", plugin, PURPLE_CALLBACK(googlechat_received_typing_notification), NULL);
-	purple_signal_connect(plugin, "googlechat-received-stateupdate", plugin, PURPLE_CALLBACK(googlechat_received_event_notification), NULL);
-	purple_signal_connect(plugin, "googlechat-received-stateupdate", plugin, PURPLE_CALLBACK(googlechat_received_presence_notification), NULL);
-	purple_signal_connect(plugin, "googlechat-received-stateupdate", plugin, PURPLE_CALLBACK(googlechat_received_watermark_notification), NULL);
-	purple_signal_connect(plugin, "googlechat-received-stateupdate", plugin, PURPLE_CALLBACK(googlechat_received_state_update), NULL);
-	purple_signal_connect(plugin, "googlechat-received-stateupdate", plugin, PURPLE_CALLBACK(googlechat_received_view_modification), NULL);
-	purple_signal_connect(plugin, "googlechat-received-stateupdate", plugin, PURPLE_CALLBACK(googlechat_received_delete_notification), NULL);
-	purple_signal_connect(plugin, "googlechat-received-stateupdate", plugin, PURPLE_CALLBACK(googlechat_received_block_notification), NULL);
-	purple_signal_connect(plugin, "googlechat-received-stateupdate", plugin, PURPLE_CALLBACK(googlechat_received_other_notification), NULL);
+	purple_signal_connect(plugin, "googlechat-received-event", plugin, PURPLE_CALLBACK(googlechat_received_typing_notification), NULL);
+	purple_signal_connect(plugin, "googlechat-received-event", plugin, PURPLE_CALLBACK(googlechat_received_event_notification), NULL);
+	purple_signal_connect(plugin, "googlechat-received-event", plugin, PURPLE_CALLBACK(googlechat_received_presence_notification), NULL);
+	purple_signal_connect(plugin, "googlechat-received-event", plugin, PURPLE_CALLBACK(googlechat_received_watermark_notification), NULL);
+	purple_signal_connect(plugin, "googlechat-received-event", plugin, PURPLE_CALLBACK(googlechat_received_state_update), NULL);
+	purple_signal_connect(plugin, "googlechat-received-event", plugin, PURPLE_CALLBACK(googlechat_received_view_modification), NULL);
+	purple_signal_connect(plugin, "googlechat-received-event", plugin, PURPLE_CALLBACK(googlechat_received_delete_notification), NULL);
+	purple_signal_connect(plugin, "googlechat-received-event", plugin, PURPLE_CALLBACK(googlechat_received_block_notification), NULL);
+	purple_signal_connect(plugin, "googlechat-received-event", plugin, PURPLE_CALLBACK(googlechat_received_other_notification), NULL);
 	
 	purple_signal_connect(plugin, "googlechat-gmail-notification", plugin, PURPLE_CALLBACK(googlechat_received_gmail_notification), NULL);
 }
 
 void
-googlechat_received_state_update(PurpleConnection *pc, StateUpdate *state_update)
+googlechat_received_state_update(PurpleConnection *pc, Event *event)
 {
 	GoogleChatAccount *ha = purple_connection_get_protocol_data(pc);
 	
@@ -93,7 +104,7 @@ googlechat_remove_conversation(GoogleChatAccount *ha, const gchar *conv_id)
 }
 
 void
-googlechat_received_view_modification(PurpleConnection *pc, StateUpdate *state_update)
+googlechat_received_view_modification(PurpleConnection *pc, Event *event)
 {
 	GoogleChatAccount *ha;
 	ConversationViewModification *view_modification = state_update->view_modification;
@@ -112,7 +123,7 @@ googlechat_received_view_modification(PurpleConnection *pc, StateUpdate *state_u
 }
 
 void
-googlechat_received_delete_notification(PurpleConnection *pc, StateUpdate *state_update)
+googlechat_received_delete_notification(PurpleConnection *pc, Event *event)
 {
 	GoogleChatAccount *ha;
 	DeleteActionNotification *delete_notification = state_update->delete_notification;
@@ -131,7 +142,7 @@ googlechat_received_delete_notification(PurpleConnection *pc, StateUpdate *state
 }
 
 void
-googlechat_received_block_notification(PurpleConnection *pc, StateUpdate *state_update)
+googlechat_received_block_notification(PurpleConnection *pc, Event *event)
 {
 	GoogleChatAccount *ha;
 	BlockNotification *block_notification = state_update->block_notification;
@@ -203,7 +214,7 @@ googlechat_received_gmail_notification(PurpleConnection *pc, const gchar *userna
 }
 
 void
-googlechat_received_other_notification(PurpleConnection *pc, StateUpdate *state_update)
+googlechat_received_other_notification(PurpleConnection *pc, Event *event)
 {
 	gchar *json_dump;
 
@@ -318,7 +329,7 @@ googlechat_received_other_notification(PurpleConnection *pc, StateUpdate *state_
 
 
 void
-googlechat_received_watermark_notification(PurpleConnection *pc, StateUpdate *state_update)
+googlechat_received_watermark_notification(PurpleConnection *pc, Event *event)
 {
 	GoogleChatAccount *ha;
 	WatermarkNotification *watermark_notification = state_update->watermark_notification;
@@ -470,7 +481,7 @@ googlechat_process_presence_result(GoogleChatAccount *ha, PresenceResult *presen
 }
 
 void
-googlechat_received_presence_notification(PurpleConnection *pc, StateUpdate *state_update)
+googlechat_received_presence_notification(PurpleConnection *pc, Event *event)
 {
 	GoogleChatAccount *ha;
 	PresenceNotification *presence_notification = state_update->presence_notification;
@@ -546,7 +557,7 @@ googlechat_got_http_image_for_conv(PurpleHttpConnection *connection, PurpleHttpR
 }
 
 void
-googlechat_received_event_notification(PurpleConnection *pc, StateUpdate *state_update)
+googlechat_received_event_notification(PurpleConnection *pc, Event *event)
 {
 	GoogleChatAccount *ha;
 	EventNotification *event_notification = state_update->event_notification;
@@ -883,7 +894,7 @@ googlechat_process_conversation_event(GoogleChatAccount *ha, Conversation *conve
 }
 
 void
-googlechat_received_typing_notification(PurpleConnection *pc, StateUpdate *state_update)
+googlechat_received_typing_notification(PurpleConnection *pc, Event *event)
 {
 	GoogleChatAccount *ha;
 	SetTypingNotification *typing_notification = state_update->typing_notification;

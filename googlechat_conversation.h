@@ -21,8 +21,7 @@
 #define _GOOGLECHAT_CONVERSATION_H_
 
 #include "libgooglechat.h"
-#include "conversation.h"
-#include "connection.h"
+#include <purple.h>
 
 #include "googlechat.pb-c.h"
 
@@ -37,7 +36,7 @@ gchar *googlechat_get_chat_name(GHashTable *data);
 void googlechat_join_chat_from_url(GoogleChatAccount *ha, const gchar *url);
 
 void googlechat_get_all_events(GoogleChatAccount *ha, guint64 since_timestamp);
-void googlechat_add_conversation_to_blist(GoogleChatAccount *ha, Conversation *conversation, GHashTable *unique_user_ids);
+// void googlechat_add_conversation_to_blist(GoogleChatAccount *ha, Conversation *conversation, GHashTable *unique_user_ids);
 
 void googlechat_get_self_info(GoogleChatAccount *ha);
 void googlechat_get_conversation_list(GoogleChatAccount *ha);

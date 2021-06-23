@@ -24,6 +24,5 @@
 
 void googlechat_oauth_with_code(GoogleChatAccount *ha, const gchar *auth_code);
 void googlechat_oauth_refresh_token(GoogleChatAccount *ha);
-void googlechat_auth_get_session_cookies(GoogleChatAccount *ha);
 
 #endif /*_GOOGLECHAT_AUTH_H_*/

@@ -364,13 +364,12 @@ googlechat_login(PurpleAccount *account)
 	ha->cookie_jar = purple_http_cookie_jar_new();
 	ha->channel_buffer = g_byte_array_sized_new(GOOGLECHAT_BUFFER_DEFAULT_SIZE);
 	ha->channel_keepalive_pool = purple_http_keepalive_pool_new();
-	ha->client6_keepalive_pool = purple_http_keepalive_pool_new();
+	ha->api_keepalive_pool = purple_http_keepalive_pool_new();
 	ha->sent_message_ids = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 	
 	ha->one_to_ones = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
 	ha->one_to_ones_rev = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
 	ha->group_chats = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
-	ha->google_voice_conversations = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 	
 	self_gaia_id = purple_account_get_string(account, "self_gaia_id", NULL);
 	if (self_gaia_id != NULL) {
@@ -426,7 +425,7 @@ googlechat_close(PurpleConnection *pc)
 	purple_http_conn_cancel_all(pc);
 	
 	purple_http_keepalive_pool_unref(ha->channel_keepalive_pool);
-	purple_http_keepalive_pool_unref(ha->client6_keepalive_pool);
+	purple_http_keepalive_pool_unref(ha->api_keepalive_pool);
 	g_free(ha->self_gaia_id);
 	g_free(ha->self_phone);
 	g_free(ha->refresh_token);
@@ -445,8 +444,6 @@ googlechat_close(PurpleConnection *pc)
 	g_hash_table_unref(ha->one_to_ones_rev);
 	g_hash_table_remove_all(ha->group_chats);
 	g_hash_table_unref(ha->group_chats);
-	g_hash_table_remove_all(ha->google_voice_conversations);
-	g_hash_table_unref(ha->google_voice_conversations);
 	
 	g_free(ha);
 }
@@ -618,15 +615,9 @@ googlechat_protocol_init(PurpleProtocol *prpl_info)
 	prpl_info->options = OPT_PROTO_NO_PASSWORD | OPT_PROTO_CHAT_TOPIC | OPT_PROTO_MAIL_CHECK;
 	prpl_info->account_options = googlechat_add_account_options(prpl_info->account_options);
 	
-	purple_signal_register(plugin, "googlechat-received-stateupdate",
+	purple_signal_register(plugin, "googlechat-received-event",
 			purple_marshal_VOID__POINTER_POINTER, G_TYPE_NONE, 2,
 			PURPLE_TYPE_CONNECTION,
-			G_TYPE_OBJECT);
-	
-	purple_signal_register(plugin, "googlechat-gmail-notification",
-			purple_marshal_VOID__POINTER_POINTER_POINTER, G_TYPE_NONE, 3,
-			PURPLE_TYPE_CONNECTION,
-			G_TYPE_STRING,
 			G_TYPE_OBJECT);
 
 	googlechat_register_events(plugin);
@@ -689,8 +680,8 @@ googlechat_protocol_chat_iface_init(PurpleProtocolChatIface *prpl_info)
 static void 
 googlechat_protocol_media_iface_init(PurpleProtocolMediaIface *prpl_info)
 {
-	prpl_info->get_caps = googlechat_get_media_caps;
-	prpl_info->initiate_session = googlechat_initiate_media;
+	//prpl_info->get_caps = googlechat_get_media_caps;
+	//prpl_info->initiate_session = googlechat_initiate_media;
 }
 
 static void 
@@ -884,8 +875,8 @@ init_plugin(PurplePlugin *plugin)
 	prpl_info->chat_invite = googlechat_chat_invite;
 	prpl_info->set_chat_topic = googlechat_chat_set_topic;
 	
-	prpl_info->get_media_caps = googlechat_get_media_caps;
-	prpl_info->initiate_media = googlechat_initiate_media;
+	//prpl_info->get_media_caps = googlechat_get_media_caps;
+	//prpl_info->initiate_media = googlechat_initiate_media;
 	
 	prpl_info->add_deny = googlechat_block_user;
 	prpl_info->rem_deny = googlechat_unblock_user;

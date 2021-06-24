@@ -183,10 +183,10 @@ message GetUserPresenceResponse {
 }
 
 message Attachment {
-	oneof Type {
+	//oneof Type {
 		//HtmlAttachment html = 1;
 		//?? add_on_data = 2;
-	}
+	//}
 	optional UserId app_id = 5;
 	optional User app_user = 6;
 }
@@ -255,14 +255,83 @@ message Message {
 	//optional ?? tombstone_metadata = 32;
 }
 
+message DriveMetadata {
+	optional string id = 1;
+	optional string title = 2;
+	optional string thumbnail_url = 3;
+	optional int32 thumbnail_width = 7;
+	optional int32 thumbnail_height = 8;
+	optional string mimetype = 4;
+	optional string external_mimetype = 14;
+	optional string organization_display_name = 13;
+	optional bool encrypted_doc_id = 10;
+	optional string url_fragment = 16;
+	//optional ?? embed_url = 18;
+	optional bool is_owner = 19;
+	optional bool can_share = 5;
+	optional bool can_edit = 15;
+	optional bool can_view = 6;
+	//optional DriveState drive_state = ;
+	optional bool should_not_render = 9;
+	optional bool is_download_restricted = 17;
+}
+
+message FormatMetadata {
+	enum FormatType {
+		TYPE_UNSPECIFIED = 0;
+		BOLD = 1;
+		ITALIC = 2;
+		STRIKE = 3;
+		SOURCE_CODE = 4;
+		MONOSPACE = 5;
+		HIDDEN = 6;
+		MONOSPACE_BLOCK = 7;
+		UNDERLINE = 8;
+		FONT_COLOR = 9;
+		BULLETED_LIST = 10;
+		BULLETED_LIST_ITEM = 11;
+		CLIENT_HIDDEN = 12;
+	}
+	optional FormatType format_type = 1;
+	optional int32 font_color = 2;
+}
+
 message Annotation {
 	optional AnnotationType type = 1;
-	//optional int32 start_index;
-	//optional int32 length;
-	//optional DYNProtoUserMentionMetadata user_mention_metadata;
-	//optional DYNProtoFormatMetadata format_metadata;
-	//optional DYNProtoSlashCommandMetadata slash_command_metadata;
-	//optional DYNProtoDriveMetadata drive_metadata;
+	optional int32 start_index = 2;
+	optional int32 length = 3;
+	optional string local_id = 9;
+	optional string unique_id = 19;
+	
+	enum ChipRenderType {
+		UNKNOWN = 0;
+		RENDER = 1;
+		RENDER_IF_POSSIBLE = 2;
+		DO_NOT_RENDER = 3;
+	}
+	optional ChipRenderType chip_render_type = 20;
+	optional bool server_invalidated = 13;
+	
+	oneof Metadata {
+		//DYNProtoUserMentionMetadata user_mention_metadata = 5;
+		FormatMetadata format_metadata = 8;
+		//DYNProtoSlashCommandMetadata slash_command_metadata = 15;
+		DriveMetadata drive_metadata = 4;
+		
+		//DYNProtoYoutubeMetadata youtube_metadata = 6;
+		//DYNProtoUrlMetadata url_metadata = 7;
+		//DYNProtoUploadMetadata upload_metadata = 10;
+		//DYNProtoMembershipChangedMetadata membership_changed = 11;
+		//DYNProtoVideoCallMetadata video_call_metadata = 12;
+		//DYNProtoRoomUpdatedMetadata room_updated = 14;
+		//DYNProtoGsuiteIntegrationMetadata gsuite_integration_metadata = 16;
+		//DYNProtoGroupRetentionSettingsUpdatedMetaData group_retention_settings_updated = 17;
+		//DYNProtoBabelPlaceholderMetadata babel_placeholder_metadata = 18
+		//DYNProtoReadReceiptsSettingsUpdatedMetadata read_receipts_settings_metadata = 21;
+		//DYNProtoIncomingWebhookChangedMetadata incoming_webhook_changed_metadata = 22;
+		//DYNProtoIntegrationConfigUpdatedMetadata integration_config_updated = 23;
+		//DYNProtoConsentedAppUnfurlMetadata consented_app_unfurl_metadata = 24;
+	}
 }
 
 enum TypingState {
@@ -427,6 +496,7 @@ message TypingStateChangedEvent {
 	optional int64 start_timestamp_usec = 4;
 }
 
+// echo "<base64 encoded stream response>" | base64 -d - | protoc --decode StreamEventsResponse googlechat.proto
 message StreamEventsResponse {
 	optional Event event = 1;
 	optional string sample_id = 2;
@@ -599,21 +669,6 @@ enum AnnotationType {
 	CONSENTED_APP_UNFURL = 24;
 }
 
-enum FormatMetadata_FormatType {
-	TYPE_UNSPECIFIED = 0;
-	BOLD = 1;
-	ITALIC = 2;
-	STRIKE = 3;
-	SOURCE_CODE = 4;
-	MONOSPACE = 5;
-	HIDDEN = 6;
-	MONOSPACE_BLOCK = 7;
-	UNDERLINE = 8;
-	FONT_COLOR = 9;
-	BULLETED_LIST = 10;
-	BULLETED_LIST_ITEM = 11;
-	CLIENT_HIDDEN = 12;
-}
 
 message MembershipChangedMetadata {
 	enum Type {

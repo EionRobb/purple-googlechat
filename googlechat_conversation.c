@@ -25,8 +25,7 @@
 #include <string.h>
 #include <glib.h>
 
-#include "debug.h"
-#include "status.h"
+#include <purple.h>
 #include "glibcompat.h"
 #include "image-store.h"
 
@@ -37,22 +36,13 @@ RequestHeader *
 googlechat_get_request_header(GoogleChatAccount *ha)
 {
 	RequestHeader *header = g_new0(RequestHeader, 1);
-	ClientVersion *version = g_new0(ClientVersion, 1);
 	request_header__init(header);
-	client_version__init(version);
 	
-	if (ha->client_id != NULL) {
-		ClientIdentifier *client_identifier = g_new0(ClientIdentifier, 1);
-		client_identifier__init(client_identifier);
-		
-		header->client_identifier = client_identifier;
-		header->client_identifier->resource = g_strdup(ha->client_id);
-	}
+	header->has_client_type = TRUE;
+	header->client_type = REQUEST_HEADER__CLIENT_TYPE__IOS;
 	
-	version->has_client_id = TRUE;
-	version->client_id = CLIENT_ID__CLIENT_ID_WEB_GOOGLECHAT;
-	
-	header->client_version = version;
+	header->has_client_version = TRUE;
+	header->client_version = 2440378181258;
 	
 	return header;
 }
@@ -60,113 +50,39 @@ googlechat_get_request_header(GoogleChatAccount *ha)
 void
 googlechat_request_header_free(RequestHeader *header)
 {
-	if (header->client_identifier) {
-		g_free(header->client_identifier->resource);
-		g_free(header->client_identifier);
-	}
-	g_free(header->client_version);
-	g_free(header);
-}
-
-EventRequestHeader *
-googlechat_get_event_request_header(GoogleChatAccount *ha, const gchar *conv_id)
-{
-	EventRequestHeader *header = g_new0(EventRequestHeader, 1);
-	event_request_header__init(header);
-	
-	if (conv_id != NULL) {
-		ConversationId *conversation_id = g_new0(ConversationId, 1);
-		conversation_id__init(conversation_id);
-		
-		conversation_id->id = g_strdup(conv_id);
-		header->conversation_id = conversation_id;
-		
-		if (g_hash_table_contains(ha->google_voice_conversations, conv_id)) {
-			DeliveryMedium *delivery_medium = g_new0(DeliveryMedium, 1);
-			PhoneNumber *self_phone = g_new0(PhoneNumber, 1);
-			delivery_medium__init(delivery_medium);
-			phone_number__init(self_phone);
-			
-			delivery_medium->has_medium_type = TRUE;
-			delivery_medium->medium_type = DELIVERY_MEDIUM_TYPE__DELIVERY_MEDIUM_GOOGLE_VOICE;
-			self_phone->e164 = g_strdup(ha->self_phone);
-			delivery_medium->self_phone = self_phone;
-			
-			header->delivery_medium = delivery_medium;
-			header->has_event_type = TRUE;
-			header->event_type = EVENT_TYPE__EVENT_TYPE_SMS;
-		}
-	}
-	
-	header->has_client_generated_id = TRUE;
-	header->client_generated_id = g_random_int();
-	
-	//todo off the record status
-	
-	return header;
-}
-
-void
-googlechat_event_request_header_free(EventRequestHeader *header)
-{
-	if (header->conversation_id) {
-		g_free(header->conversation_id->id);
-		g_free(header->conversation_id);
-	}
-	if (header->delivery_medium) {
-		if (header->delivery_medium->self_phone) {
-			g_free(header->delivery_medium->self_phone->e164);
-			g_free(header->delivery_medium->self_phone);
-		}
-		g_free(header->delivery_medium);
-	}
-	
 	g_free(header);
 }
 
 static void 
-googlechat_got_self_info(GoogleChatAccount *ha, GetSelfInfoResponse *response, gpointer user_data)
+googlechat_got_self_user_status(GoogleChatAccount *ha, GetSelfUserStatusResponse *response, gpointer user_data)
 {
-	Entity *self_entity = response->self_entity;
-	PhoneData *phone_data = response->phone_data;
-	guint i;
-	const gchar *alias;
+	UserStatus *self_status = response->user_status;
 	
-	g_return_if_fail(self_entity);
+	g_return_if_fail(self_status);
 	
 	g_free(ha->self_gaia_id);
-	ha->self_gaia_id = g_strdup(self_entity->id->gaia_id);
+	ha->self_gaia_id = g_strdup(self_status->user_id->id);
 	purple_connection_set_display_name(ha->pc, ha->self_gaia_id);
 	purple_account_set_string(ha->account, "self_gaia_id", ha->self_gaia_id);
 	
-	alias = purple_account_get_private_alias(ha->account);
-	if (alias == NULL || *alias == '\0') {
-		purple_account_set_private_alias(ha->account, self_entity->properties->display_name);
-	}
-	
-	if (phone_data != NULL) {
-		for (i = 0; i < phone_data->n_phone; i++) {
-			Phone *phone = phone_data->phone[i];
-			if (phone->google_voice) {
-				g_free(ha->self_phone);
-				ha->self_phone = g_strdup(phone->phone_number->e164);
-				break;
-			}
-		}
-	}
+	// TODO find self display name
+	// const gchar *alias = purple_account_get_private_alias(ha->account);
+	// if (alias == NULL || *alias == '\0') {
+		// purple_account_set_private_alias(ha->account, self_status->properties->display_name);
+	// }
 	
 	googlechat_get_buddy_list(ha);
 }
 
 void
-googlechat_get_self_info(GoogleChatAccount *ha)
+googlechat_get_self_user_status(GoogleChatAccount *ha)
 {
-	GetSelfInfoRequest request;
-	get_self_info_request__init(&request);
+	GetSelfUserStatusRequest request;
+	get_self_user_status_request__init(&request);
 	
 	request.request_header = googlechat_get_request_header(ha);
 	
-	googlechat_pblite_get_self_info(ha, &request, googlechat_got_self_info, NULL);
+	googlechat_api_get_self_user_status(ha, &request, googlechat_got_self_user_status, NULL);
 	
 	googlechat_request_header_free(request.request_header);
 	
@@ -176,64 +92,100 @@ googlechat_get_self_info(GoogleChatAccount *ha)
 }
 
 static void
-googlechat_got_users_presence(GoogleChatAccount *ha, QueryPresenceResponse *response, gpointer user_data)
+googlechat_got_users_presence(GoogleChatAccount *ha, GetUserPresenceResponse *response, gpointer user_data)
 {
 	guint i;
 	
-	for (i = 0; i < response->n_presence_result; i++) {
-		googlechat_process_presence_result(ha, response->presence_result[i]);
+	for (i = 0; i < response->n_user_presences; i++) {
+		UserPresence *user_presence = response->user_presences[i];
+		UserStatus *user_status = user_presence->user_status;
+		
+		const gchar *user_id = user_presence->user_id->id;
+		const gchar *status_id = NULL;
+		gchar *message = NULL;
+		
+		gboolean available = FALSE;
+		gboolean reachable = FALSE;
+		if (user_presence->dnd_state == DND_STATE__STATE__AVAILABLE) {
+			reachable = TRUE;
+		}
+		if (user_presence->presence == PRESENCE__ACTIVE) {
+			reachable = TRUE;
+		}
+		
+		if (reachable && available) {
+			status_id = purple_primitive_get_id_from_type(PURPLE_STATUS_AVAILABLE);
+		} else if (reachable) {
+			status_id = purple_primitive_get_id_from_type(PURPLE_STATUS_AWAY);
+		} else if (available) {
+			status_id = purple_primitive_get_id_from_type(PURPLE_STATUS_EXTENDED_AWAY);
+		} else if (purple_account_get_bool(ha->account, "treat_invisible_as_offline", FALSE)) {
+			status_id = "gone";
+		} else {
+			// GoogleChat contacts are never really unreachable, just invisible
+			status_id = purple_primitive_get_id_from_type(PURPLE_STATUS_INVISIBLE);
+		}
+		
+		if (user_status != NULL && user_status->custom_status) {
+			const gchar *status_text = user_status->custom_status->status_text;
+			
+			if (status_text && *status_text) {
+				message = g_strdup(status_text);
+			}
+		}
+		
+		if (message != NULL) {
+			purple_protocol_got_user_status(ha->account, user_id, status_id, "message", message, NULL);
+			g_free(message);
+		} else {
+			purple_protocol_got_user_status(ha->account, user_id, status_id, NULL);
+		}
 	}
 }
 
 void
 googlechat_get_users_presence(GoogleChatAccount *ha, GList *user_ids)
 {
-	QueryPresenceRequest request;
-	ParticipantId **participant_id;
-	guint n_participant_id;
+	GetUserPresenceRequest request;
+	UserId **user_id;
+	guint n_user_id;
 	GList *cur;
 	guint i;
 	
-	query_presence_request__init(&request);
+	get_user_presence_request__init(&request);
 	request.request_header = googlechat_get_request_header(ha);
 	
-	n_participant_id = g_list_length(user_ids);
-	participant_id = g_new0(ParticipantId *, n_participant_id);
+	n_user_id = g_list_length(user_ids);
+	user_id = g_new0(UserId *, n_user_id);
 	
-	for (i = 0, cur = user_ids; cur && cur->data && i < n_participant_id; (cur = cur->next), i++) {
+	for (i = 0, cur = user_ids; cur && cur->data && i < n_user_id; (cur = cur->next), i++) {
 		gchar *who = (gchar *) cur->data;
 		
 		if (G_UNLIKELY(!googlechat_is_valid_id(who))) {
 			i--;
-			n_participant_id--;
+			n_user_id--;
 		} else {
-			participant_id[i] = g_new0(ParticipantId, 1);
-			participant_id__init(participant_id[i]);
-			participant_id[i]->gaia_id = who;
+			user_id[i] = g_new0(UserId, 1);
+			user_id__init(user_id[i]);
+			user_id[i]->id = who;
 		}
 	}
 	
-	request.participant_id = participant_id;
-	request.n_participant_id = n_participant_id;
+	request.user_ids = user_id;
+	request.n_user_ids = n_user_id;
 	
-	request.n_field_mask = 7;
-	request.field_mask = g_new0(FieldMask, request.n_field_mask);
-	request.field_mask[0] = FIELD_MASK__FIELD_MASK_REACHABLE;
-	request.field_mask[1] = FIELD_MASK__FIELD_MASK_AVAILABLE;
-	request.field_mask[2] = FIELD_MASK__FIELD_MASK_MOOD;
-	request.field_mask[3] = FIELD_MASK__FIELD_MASK_LOCATION;
-	request.field_mask[4] = FIELD_MASK__FIELD_MASK_IN_CALL;
-	request.field_mask[5] = FIELD_MASK__FIELD_MASK_DEVICE;
-	request.field_mask[6] = FIELD_MASK__FIELD_MASK_LAST_SEEN;
+	request.include_user_status = TRUE;
+	request.has_include_user_status = TRUE;
+	request.include_active_until = TRUE;
+	request.has_include_active_until = TRUE;
 
-	googlechat_pblite_query_presence(ha, &request, googlechat_got_users_presence, NULL);
+	googlechat_api_get_user_presence(ha, &request, googlechat_got_users_presence, NULL);
 	
 	googlechat_request_header_free(request.request_header);
-	for (i = 0; i < n_participant_id; i++) {
-		g_free(participant_id[i]);
+	for (i = 0; i < n_user_id; i++) {
+		g_free(user_id[i]);
 	}
-	g_free(participant_id);
-	g_free(request.field_mask);
+	g_free(user_id);
 }
 
 gboolean
@@ -264,34 +216,33 @@ googlechat_poll_buddy_status(gpointer userdata)
 static void googlechat_got_buddy_photo(PurpleHttpConnection *connection, PurpleHttpResponse *response, gpointer user_data);
 
 static void
-googlechat_got_users_information(GoogleChatAccount *ha, GetEntityByIdResponse *response, gpointer user_data)
+googlechat_got_users_information(GoogleChatAccount *ha, GetMembersResponse *response, gpointer user_data)
 {
 	guint i;
 	
-	for (i = 0; i < response->n_entity_result; i++) {
-		Entity *entity = response->entity_result[i]->entity[0];
+	for (i = 0; i < response->n_member_profiles; i++) {
+		Member *member = response->member_profiles[i]->member;
 		const gchar *gaia_id;
 
-		if (entity == NULL) {
+		if (member == NULL || member->user == NULL) {
 			continue;
 		}
-		gaia_id = entity->id ? entity->id->gaia_id : NULL;
+		User *user = member->user;
+		gaia_id = user->user_id ? user->user_id->id : NULL;
 		
-		if (gaia_id != NULL && entity->properties) {
+		if (gaia_id != NULL) {
 			PurpleBuddy *buddy = purple_blist_find_buddy(ha->account, gaia_id);
 			
 			// Give a best-guess for the buddy's alias
-			if (entity->properties->display_name)
-				purple_serv_got_alias(ha->pc, gaia_id, entity->properties->display_name);
-			else if (entity->properties->canonical_email)
-				purple_serv_got_alias(ha->pc, gaia_id, entity->properties->canonical_email);
-			else if (entity->entity_type == PARTICIPANT_TYPE__PARTICIPANT_TYPE_OFF_NETWORK_PHONE
-			         && entity->properties->n_phone)
-				purple_serv_got_alias(ha->pc, gaia_id, entity->properties->phone[0]);
+			if (user->name)
+				purple_serv_got_alias(ha->pc, gaia_id, user->name);
+			else if (user->email)
+				purple_serv_got_alias(ha->pc, gaia_id, user->email);
+			//TODO first+last name
 			
 			// Set the buddy photo, if it's real
-			if (entity->properties->photo_url != NULL && entity->properties->photo_url_status == PHOTO_URL_STATUS__PHOTO_URL_STATUS_USER_PHOTO) {
-				gchar *photo = g_strconcat("https:", entity->properties->photo_url, NULL);
+			if (user->avatar_url != NULL) {
+				const gchar *photo = user->avatar_url;
 				if (!purple_strequal(purple_buddy_icons_get_checksum_for_user(buddy), photo)) {
 					PurpleHttpRequest *photo_request = purple_http_request_new(photo);
 					
@@ -304,111 +255,99 @@ googlechat_got_users_information(GoogleChatAccount *ha, GetEntityByIdResponse *r
 					purple_http_request(ha->pc, photo_request, googlechat_got_buddy_photo, buddy);
 					purple_http_request_unref(photo_request);
 				}
-				g_free(photo);
 			}
 		}
 		
-		if (entity->entity_type == PARTICIPANT_TYPE__PARTICIPANT_TYPE_OFF_NETWORK_PHONE) {
-			purple_protocol_got_user_status(ha->account, gaia_id, "mobile", NULL);
-		}
+		//TODO - process user->deleted == TRUE;
 	}
 }
 
 void
 googlechat_get_users_information(GoogleChatAccount *ha, GList *user_ids)
 {
-	GetEntityByIdRequest request;
-	size_t n_batch_lookup_spec;
-	EntityLookupSpec **batch_lookup_spec;
+	GetMembersRequest request;
+	size_t n_member_ids;
+	MemberId **member_ids;
 	GList *cur;
 	guint i;
 	
-	get_entity_by_id_request__init(&request);
+	get_members_request__init(&request);
 	request.request_header = googlechat_get_request_header(ha);
 	
-	n_batch_lookup_spec = g_list_length(user_ids);
-	batch_lookup_spec = g_new0(EntityLookupSpec *, n_batch_lookup_spec);
+	n_member_ids = g_list_length(user_ids);
+	member_ids = g_new0(MemberId *, n_member_ids);
 	
-	for (i = 0, cur = user_ids; cur && cur->data && i < n_batch_lookup_spec; (cur = cur->next), i++) {
-		batch_lookup_spec[i] = g_new0(EntityLookupSpec, 1);
-		entity_lookup_spec__init(batch_lookup_spec[i]);
+	for (i = 0, cur = user_ids; cur && cur->data && i < n_member_ids; (cur = cur->next), i++) {
+		gchar *who = (gchar *) cur->data;
 		
-		batch_lookup_spec[i]->gaia_id = (gchar *) cur->data;
+		if (G_UNLIKELY(!googlechat_is_valid_id(who))) {
+			i--;
+			n_member_ids--;
+		}
+		
+		member_ids[i] = g_new0(MemberId, 1);
+		member_id__init(member_ids[i]);
+		
+		member_ids[i]->user_id = g_new0(UserId, 1);
+		user_id__init(member_ids[i]->user_id);
+		member_ids[i]->user_id->id = (gchar *) cur->data;
+		
 	}
 	
-	request.batch_lookup_spec = batch_lookup_spec;
-	request.n_batch_lookup_spec = n_batch_lookup_spec;
+	request.member_ids = member_ids;
+	request.n_member_ids = n_member_ids;
 	
-	googlechat_pblite_get_entity_by_id(ha, &request, googlechat_got_users_information, NULL);
+	googlechat_api_get_members(ha, &request, googlechat_got_users_information, NULL);
 	
 	googlechat_request_header_free(request.request_header);
-	for (i = 0; i < n_batch_lookup_spec; i++) {
-		g_free(batch_lookup_spec[i]);
+	for (i = 0; i < n_member_ids; i++) {
+		g_free(member_ids[i]);
 	}
-	g_free(batch_lookup_spec);
+	g_free(member_ids);
 }
 
 static void
-googlechat_got_user_info(GoogleChatAccount *ha, GetEntityByIdResponse *response, gpointer user_data)
+googlechat_got_user_info(GoogleChatAccount *ha, GetMembersResponse *response, gpointer user_data)
 {
-	Entity *entity;
-	EntityProperties *props;
+	Member *member;
 	PurpleNotifyUserInfo *user_info;
 	gchar *who = user_data;
-	guint i;
 	
-	if (response->n_entity_result < 1) {
+	if (response->n_member_profiles < 1) {
 		g_free(who);
 		return;
 	}
 	
-	entity = response->entity_result[0]->entity[0];
-	if (entity == NULL || entity->properties == NULL) {
+	member = response->member_profiles[0]->member;
+	if (member == NULL || member->user == NULL) {
 		g_free(who);
 		return;
 	}
-	props = entity->properties;
+	User *user = member->user;
+	//who = user->user_id ? user->user_id->id : NULL;
 	
 	user_info = purple_notify_user_info_new();
-	
-	const gchar *type_str;
-	switch (entity->entity_type) {
-		case PARTICIPANT_TYPE__PARTICIPANT_TYPE_OFF_NETWORK_PHONE: type_str = _("SMS"); break;
-		case PARTICIPANT_TYPE__PARTICIPANT_TYPE_GAIA: type_str = _("GoogleChat (Gaia)"); break;
-		default: type_str = _("Unknown"); break;
-	}
-	purple_notify_user_info_add_pair_html(user_info, _("Type"), type_str);
-	if (props->display_name != NULL)
-		purple_notify_user_info_add_pair_html(user_info, _("Display Name"), props->display_name);
-	if (props->first_name != NULL)
-		purple_notify_user_info_add_pair_html(user_info, _("First Name"), props->first_name);
 
-	if (props->photo_url) {
-		gchar *prefix = strncmp(props->photo_url, "//", 2) ? "" : "https:";
+	if (user->name != NULL)
+		purple_notify_user_info_add_pair_html(user_info, _("Display Name"), user->name);
+	if (user->first_name != NULL)
+		purple_notify_user_info_add_pair_html(user_info, _("First Name"), user->first_name);
+
+	if (user->avatar_url) {
+		gchar *prefix = strncmp(user->avatar_url, "//", 2) ? "" : "https:";
 		gchar *photo_tag = g_strdup_printf("<a href=\"%s%s\"><img width=\"128\" src=\"%s%s\"/></a>",
-		                                   prefix, props->photo_url, prefix, props->photo_url);
+		                                   prefix, user->avatar_url, prefix, user->avatar_url);
 		purple_notify_user_info_add_pair_html(user_info, _("Photo"), photo_tag);
 		g_free(photo_tag);
 	}
 
-	for (i = 0; i < props->n_email; i++) {
-		purple_notify_user_info_add_pair_html(user_info, _("Email"), props->email[i]);
+	if (user->email) {
+		purple_notify_user_info_add_pair_html(user_info, _("Email"), user->email);
 	}
-	for (i = 0; i < props->n_phone; i++) {
-		purple_notify_user_info_add_pair_html(user_info, _("Phone"), props->phone[i]);
+	if (user->gender) {
+		purple_notify_user_info_add_pair_html(user_info, _("Gender"), user->gender);
 	}
-	if (props->has_gender) {
-		const gchar *gender_str;
-		switch (props->gender) {
-			case GENDER__GENDER_MALE: gender_str = _("Male"); break;
-			case GENDER__GENDER_FEMALE: gender_str = _("Female"); break;
-			default: gender_str = _("Unknown"); break;
-		}
-		purple_notify_user_info_add_pair_html(user_info, _("Gender"), gender_str);
-	}
-	if (props->canonical_email != NULL)
-		purple_notify_user_info_add_pair_html(user_info, _("Canonical Email"), props->canonical_email);
-       
+	
 	purple_notify_userinfo(ha->pc, who, user_info, NULL, NULL);
        
 	g_free(who);
@@ -419,123 +358,40 @@ void
 googlechat_get_info(PurpleConnection *pc, const gchar *who)
 {
 	GoogleChatAccount *ha = purple_connection_get_protocol_data(pc);
-	GetEntityByIdRequest request;
-	EntityLookupSpec entity_lookup_spec;
-	EntityLookupSpec *batch_lookup_spec;
+	GetMembersRequest request;
+	MemberId member_id;
+	MemberId *member_ids;
+	UserId user_id;
 	gchar *who_dup = g_strdup(who);
 	
-	get_entity_by_id_request__init(&request);
+	get_members_request__init(&request);
 	request.request_header = googlechat_get_request_header(ha);
 	
-	entity_lookup_spec__init(&entity_lookup_spec);
-	entity_lookup_spec.gaia_id = who_dup;
+	user_id__init(&user_id);
+	user_id.id = who_dup;
 	
-	batch_lookup_spec = &entity_lookup_spec;
-	request.batch_lookup_spec = &batch_lookup_spec;
-	request.n_batch_lookup_spec = 1;
+	member_id__init(&member_id);
+	member_id.user_id = &user_id;
 	
-	googlechat_pblite_get_entity_by_id(ha, &request, googlechat_got_user_info, who_dup);
+	member_ids = &member_id;
+	request.member_ids = &member_ids;
+	request.n_member_ids = 1;
+	
+	googlechat_api_get_members(ha, &request, googlechat_got_user_info, who_dup);
 	
 	googlechat_request_header_free(request.request_header);
 }
 
 static void
-googlechat_got_conversation_events(GoogleChatAccount *ha, GetConversationResponse *response, gpointer user_data)
+googlechat_got_events(GoogleChatAccount *ha, CatchUpResponse *response, gpointer user_data)
 {
-	Conversation *conversation;
-	const gchar *conv_id;
-	PurpleConversation *conv;
-	PurpleChatConversation *chatconv;
 	guint i;
-	PurpleConversationUiOps *convuiops;
-	PurpleGroup *temp_group = NULL;
-	
-	if (response->conversation_state == NULL) {
-		if (response->response_header->status == RESPONSE_STATUS__RESPONSE_STATUS_ERROR_INVALID_CONVERSATION) {
-			purple_notify_error(ha->pc, _("Invalid conversation"), _("This is not a valid conversation"), _("Please use the Room List to search for a valid conversation"), purple_request_cpar_from_connection(ha->pc));
-		} else {
-			purple_notify_error(ha->pc, _("Error"), _("An error occurred while fetching the history of the conversation"), NULL, purple_request_cpar_from_connection(ha->pc));
-		}
-		g_warn_if_reached();
-		return;
-	}
-	
-	conversation = response->conversation_state->conversation;
-	g_return_if_fail(conversation != NULL);
-	conv_id = conversation->conversation_id->id;
-	
-	//purple_debug_info("googlechat", "got conversation events %s\n", pblite_dump_json((ProtobufCMessage *)response));
-	
-	if (conversation->type == CONVERSATION_TYPE__CONVERSATION_TYPE_GROUP) {
-		chatconv = purple_conversations_find_chat_with_account(conv_id, ha->account);
-		if (!chatconv) {
-			chatconv = purple_serv_got_joined_chat(ha->pc, g_str_hash(conv_id), conv_id);
-			purple_conversation_set_data(PURPLE_CONVERSATION(chatconv), "conv_id", g_strdup(conv_id));
-		}
-		conv = PURPLE_CONVERSATION(chatconv);
-		convuiops = purple_conversation_get_ui_ops(conv);
+	for (i = 0; i < response->n_events; i++) {
+		Event *event = response->events[i];
 		
-		for (i = 0; i < conversation->n_participant_data; i++) {
-			ConversationParticipantData *participant_data = conversation->participant_data[i];
-			PurpleChatUserFlags cbflags = PURPLE_CHAT_USER_NONE;
-			const gchar *gaia_id = participant_data->id->gaia_id;
-			PurpleChatUser *cb;
-			gboolean ui_update_sent = FALSE;
-			
-			purple_chat_conversation_add_user(chatconv, gaia_id, NULL, cbflags, FALSE);
-			cb = purple_chat_conversation_find_user(chatconv, gaia_id);
-			purple_chat_user_set_alias(cb, participant_data->fallback_name);
-			
-			if (convuiops != NULL) {
-				// Horrible hack.  Don't try this at home!
-				if (convuiops->chat_rename_user != NULL) {
-#if PURPLE_VERSION_CHECK(3, 0, 0)
-					convuiops->chat_rename_user(chatconv, gaia_id, gaia_id, participant_data->fallback_name);
-#else
-					convuiops->chat_rename_user(conv, gaia_id, gaia_id, participant_data->fallback_name);
-#endif
-					ui_update_sent = TRUE;
-				} else if (convuiops->chat_update_user != NULL) {
-#if PURPLE_VERSION_CHECK(3, 0, 0)
-					convuiops->chat_update_user(cb);
-#else
-					convuiops->chat_update_user(conv, gaia_id);
-#endif
-					ui_update_sent = TRUE;
-				}
-			}
-			
-			if (ui_update_sent == FALSE) {
-				// Bitlbee doesn't have the above two functions, lets do an even worse hack
-				PurpleBuddy *fakebuddy;
-				if (temp_group == NULL) {
-					temp_group = purple_blist_find_group("GoogleChat Temporary Chat Buddies");
-					if (!temp_group)
-					{
-						temp_group = purple_group_new("GoogleChat Temporary Chat Buddies");
-						purple_blist_add_group(temp_group, NULL);
-					}
-				}
-				
-				fakebuddy = purple_buddy_new(ha->account, gaia_id, participant_data->fallback_name);
-				purple_blist_node_set_transient(PURPLE_BLIST_NODE(fakebuddy), TRUE);
-				purple_blist_add_buddy(fakebuddy, NULL, temp_group, NULL);
-			}
-		}
-	}
-
-	for (i = 0; i < response->conversation_state->n_event; i++) {
-		Event *event = response->conversation_state->event[i];
-		
-		// Ignore join/parts when loading history
-		if (!event->membership_change) {
-			if(event->chat_message != NULL && event->chat_message->message_content->n_attachment && !purple_account_get_bool(ha->account, "fetch_image_history", TRUE)) {
-				purple_debug_info("googlechat", "skipping attachment due to fetch_image_history disabled\n");
-				continue;
-			}
-			//Send event to the googlechat_events.c slaughterhouse
-			googlechat_process_conversation_event(ha, conversation, event, response->response_header->current_server_time);
-		}
+		// TODO Ignore join/parts when loading history
+		//Send event to the googlechat_events.c slaughterhouse
+		googlechat_process_received_event(ha, event);
 	}
 }
 
@@ -543,97 +399,62 @@ void
 googlechat_get_conversation_events(GoogleChatAccount *ha, const gchar *conv_id, gint64 since_timestamp)
 {
 	//since_timestamp is in microseconds
-	GetConversationRequest request;
-	ConversationId conversation_id;
-	ConversationSpec conversation_spec;
-	EventContinuationToken event_continuation_token;
+	CatchUpGroupRequest request;
+	GroupId group_id;
+	SpaceId space_id;
+	DmId dm_id;
+	CatchUpRange range;
 	
-	get_conversation_request__init(&request);
+	catch_up_group_request__init(&request);
 	request.request_header = googlechat_get_request_header(ha);
+	request.page_size = 500;
+	request.cutoff_size = 500;
 	
-	conversation_spec__init(&conversation_spec);
-	request.conversation_spec = &conversation_spec;
+	group_id__init(&group_id);
+	request.group_id = &group_id;
 	
-	conversation_id__init(&conversation_id);
-	conversation_id.id = (gchar *) conv_id;
-	conversation_spec.conversation_id = &conversation_id;
-	
-	if (since_timestamp > 0) {
-		request.has_include_event = TRUE;
-		request.include_event = TRUE;
-		request.has_max_events_per_conversation = TRUE;
-		request.max_events_per_conversation = 50;
-		
-		event_continuation_token__init(&event_continuation_token);
-		event_continuation_token.event_timestamp = since_timestamp;
-		request.event_continuation_token = &event_continuation_token;
+	if (TRUE) {
+		dm_id__init(&dm_id);
+		dm_id.dm_id = (gchar *) conv_id;
+		group_id.dm_id = &dm_id;
+	} else {
+		space_id__init(&space_id);
+		space_id.space_id = (gchar *) conv_id;
+		group_id.space_id = &space_id;
 	}
 	
-	googlechat_pblite_get_conversation(ha, &request, googlechat_got_conversation_events, NULL);
+	catch_up_range__init(&range);
+	
+	if (since_timestamp > 0) {
+		range.has_from_revision_timestamp = TRUE;
+		range.from_revision_timestamp = since_timestamp;
+	}
+	
+	googlechat_api_catch_up_group(ha, &request, googlechat_got_events, NULL);
 	
 	googlechat_request_header_free(request.request_header);
 	
 }
 
-static void
-googlechat_got_all_events(GoogleChatAccount *ha, SyncAllNewEventsResponse *response, gpointer user_data)
-{
-	guint i, j;
-	guint64 sync_timestamp;
-	
-	//purple_debug_info("googlechat", "%s\n", pblite_dump_json((ProtobufCMessage *)response));
-	/*
-struct  _SyncAllNewEventsResponse
-{
-  ProtobufCMessage base;
-  ResponseHeader *response_header;
-  protobuf_c_boolean has_sync_timestamp;
-  uint64_t sync_timestamp;
-  size_t n_conversation_state;
-  ConversationState **conversation_state;
-};
-
-struct  _ConversationState
-{
-  ProtobufCMessage base;
-  ConversationId *conversation_id;
-  Conversation *conversation;
-  size_t n_event;
-  Event **event;
-  EventContinuationToken *event_continuation_token;
-};
-
-*/
-	sync_timestamp = response->sync_timestamp;
-	for (i = 0; i < response->n_conversation_state; i++) {
-		ConversationState *conversation_state = response->conversation_state[i];
-		Conversation *conversation = conversation_state->conversation;
-		
-		for (j = 0; j < conversation_state->n_event; j++) {
-			Event *event = conversation_state->event[j];
-			
-			googlechat_process_conversation_event(ha, conversation, event, sync_timestamp);
-		}
-	}
-}
-
 void
 googlechat_get_all_events(GoogleChatAccount *ha, guint64 since_timestamp)
 {
-	SyncAllNewEventsRequest request;
+	//since_timestamp is in microseconds
+	CatchUpUserRequest request;
+	CatchUpRange range;
 	
 	g_return_if_fail(since_timestamp > 0);
 	
-	sync_all_new_events_request__init(&request);
+	catch_up_user_request__init(&request);
 	request.request_header = googlechat_get_request_header(ha);
+	request.page_size = 500;
+	request.cutoff_size = 500;
 	
-	request.has_last_sync_timestamp = TRUE;
-	request.last_sync_timestamp = since_timestamp;
+	catch_up_range__init(&range);
+	range.has_from_revision_timestamp = TRUE;
+	range.from_revision_timestamp = since_timestamp;
 	
-	request.has_max_response_size_bytes = TRUE;
-	request.max_response_size_bytes = 1048576; // 1 mibbily bite
-	
-	googlechat_pblite_sync_all_new_events(ha, &request, googlechat_got_all_events, NULL);
+	googlechat_api_catch_up_user(ha, &request, googlechat_got_events, NULL);
 	
 	googlechat_request_header_free(request.request_header);
 }
@@ -694,6 +515,7 @@ googlechat_join_chat(PurpleConnection *pc, GHashTable *data)
 	googlechat_get_conversation_events(ha, conv_id, 0);
 }
 
+/*
 static void
 googlechat_got_join_chat_from_url(GoogleChatAccount *ha, OpenGroupConversationFromUrlResponse *response, gpointer user_data)
 {
@@ -721,6 +543,7 @@ googlechat_join_chat_from_url(GoogleChatAccount *ha, const gchar *url)
 	
 	googlechat_request_header_free(request.request_header);
 }
+*/
 
 
 gchar *
@@ -742,7 +565,7 @@ googlechat_get_chat_name(GHashTable *data)
 void
 googlechat_add_person_to_blist(GoogleChatAccount *ha, gchar *gaia_id, gchar *alias)
 {
-	PurpleGroup *googlechat_group = purple_blist_find_group("GoogleChat");
+	PurpleGroup *googlechat_group = purple_blist_find_group("Google Chat");
 	
 	if (purple_account_get_bool(ha->account, "hide_self", FALSE) && purple_strequal(gaia_id, ha->self_gaia_id)) {
 		return;
@@ -750,7 +573,7 @@ googlechat_add_person_to_blist(GoogleChatAccount *ha, gchar *gaia_id, gchar *ali
 	
 	if (!googlechat_group)
 	{
-		googlechat_group = purple_group_new("GoogleChat");
+		googlechat_group = purple_group_new("Google Chat");
 		purple_blist_add_group(googlechat_group, NULL);
 	}
 	purple_blist_add_buddy(purple_buddy_new(ha->account, gaia_id, alias), NULL, googlechat_group, NULL);
@@ -806,10 +629,10 @@ googlechat_add_conversation_to_blist(GoogleChatAccount *ha, Conversation *conver
 		g_hash_table_replace(ha->group_chats, g_strdup(conv_id), NULL);
 		
 		if (chat == NULL) {
-			googlechat_group = purple_blist_find_group("GoogleChat");
+			googlechat_group = purple_blist_find_group("Google Chat");
 			if (!googlechat_group)
 			{
-				googlechat_group = purple_group_new("GoogleChat");
+				googlechat_group = purple_group_new("Google Chat");
 				purple_blist_add_group(googlechat_group, NULL);
 			}
 			
@@ -1027,10 +850,10 @@ googlechat_got_buddy_list(PurpleHttpConnection *http_conn, PurpleHttpResponse *r
 		
 		if (buddy == NULL) {
 			if (googlechat_group == NULL) {
-				googlechat_group = purple_blist_find_group("GoogleChat");
+				googlechat_group = purple_blist_find_group("Google Chat");
 				if (!googlechat_group)
 				{
-					googlechat_group = purple_group_new("GoogleChat");
+					googlechat_group = purple_group_new("Google Chat");
 					purple_blist_add_group(googlechat_group, NULL);
 				}
 			}

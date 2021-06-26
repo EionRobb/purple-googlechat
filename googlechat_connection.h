@@ -59,16 +59,19 @@ typedef void(* GoogleChatApiResponseFunc)(GoogleChatAccount *ha, ProtobufCMessag
 void googlechat_api_request(GoogleChatAccount *ha, const gchar *endpoint, ProtobufCMessage *request, GoogleChatApiResponseFunc callback, ProtobufCMessage *response_message, gpointer user_data);
 
 
-#define GOOGLECHAT_DEFINE_API_REQUEST_FUNC(name, type, url) \
+#define GOOGLECHAT_DEFINE_API_REQUEST_RESPONSE_FUNC(name, request_type, response_name, type, url) \
 typedef void(* GoogleChatApi##type##ResponseFunc)(GoogleChatAccount *ha, type##Response *response, gpointer user_data);\
 static inline void \
-googlechat_api_##name(GoogleChatAccount *ha, type##Request *request, GoogleChatApi##type##ResponseFunc callback, gpointer user_data)\
+googlechat_api_##name(GoogleChatAccount *ha, request_type##Request *request, GoogleChatApi##type##ResponseFunc callback, gpointer user_data)\
 {\
 	type##Response *response = g_new0(type##Response, 1);\
 	\
-	name##_response__init(response);\
+	response_name##_response__init(response);\
 	googlechat_api_request(ha, "/api/" url "?rt=b", (ProtobufCMessage *)request, (GoogleChatApiResponseFunc)callback, (ProtobufCMessage *)response, user_data);\
 }
+
+#define GOOGLECHAT_DEFINE_API_REQUEST_FUNC(name, type, url) \
+	GOOGLECHAT_DEFINE_API_REQUEST_RESPONSE_FUNC(name, type, name, type, url)
 
 GOOGLECHAT_DEFINE_API_REQUEST_FUNC(create_topic, CreateTopic, "create_topic");
 GOOGLECHAT_DEFINE_API_REQUEST_FUNC(get_user_status, GetUserStatus, "get_user_status");
@@ -76,5 +79,9 @@ GOOGLECHAT_DEFINE_API_REQUEST_FUNC(get_members, GetMembers, "get_members");
 GOOGLECHAT_DEFINE_API_REQUEST_FUNC(set_typing_state, SetTypingState, "set_typing_state");
 GOOGLECHAT_DEFINE_API_REQUEST_FUNC(list_topics, ListTopics, "list_topics");
 GOOGLECHAT_DEFINE_API_REQUEST_FUNC(get_user_presence, GetUserPresence, "get_user_presence");
+GOOGLECHAT_DEFINE_API_REQUEST_FUNC(get_self_user_status, GetSelfUserStatus, "get_self_user_status");
+GOOGLECHAT_DEFINE_API_REQUEST_RESPONSE_FUNC(catch_up_group, CatchUpGroup, catch_up, CatchUp, "catch_up_group");
+GOOGLECHAT_DEFINE_API_REQUEST_RESPONSE_FUNC(catch_up_user, CatchUpUser, catch_up, CatchUp, "catch_up_user");
+GOOGLECHAT_DEFINE_API_REQUEST_FUNC(get_group, GetGroup, "get_group");
 
 #endif /*_GOOGLECHAT_CONNECTION_H_*/

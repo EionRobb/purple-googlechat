@@ -121,6 +121,7 @@ googlechat_received_state_update(PurpleConnection *pc, Event *event)
 	}
 }*/
 
+/*
 static void
 googlechat_remove_conversation(GoogleChatAccount *ha, const gchar *conv_id)
 {
@@ -142,7 +143,7 @@ googlechat_remove_conversation(GoogleChatAccount *ha, const gchar *conv_id)
 		// Unknown conversation!
 		return;
 	}
-}
+}*/
 
 
 void
@@ -292,6 +293,132 @@ googlechat_got_http_image_for_conv(PurpleHttpConnection *connection, PurpleHttpR
 	g_dataset_destroy(connection);
 }
 
+void
+googlechat_received_message_event(PurpleConnection *pc, Event *event)
+{
+	GoogleChatAccount *ha;
+	MessageEvent *message_event = event->body->message_posted;
+	const gchar *conv_id;
+	const gchar *sender_id;
+	gboolean is_dm = FALSE;
+	
+	if (message_event == NULL) {
+		return;
+	}
+	
+	ha = purple_connection_get_protocol_data(pc);
+	
+	Message *message = message_event->message;
+	guint i;
+	
+	//TODO safety checks
+	sender_id = message->creator->user_id->id;
+	is_dm = !!message->id->parent_id->topic_id->group_id->dm_id;
+	if (is_dm) {
+		conv_id = message->id->parent_id->topic_id->group_id->dm_id->dm_id;
+	} else {
+		conv_id = message->id->parent_id->topic_id->group_id->space_id->space_id;
+	}
+	
+	
+	time_t message_timestamp = (message->create_time / 1000000) - ha->server_time_offset;
+	PurpleMessageFlags msg_flags = (g_strcmp0(sender_id, ha->self_gaia_id) ? PURPLE_MESSAGE_RECV : (PURPLE_MESSAGE_SEND | PURPLE_MESSAGE_REMOTE_SEND | PURPLE_MESSAGE_DELAYED));
+	if (((message->create_time / 1000000) - time(NULL) - ha->server_time_offset) > 120) {
+		msg_flags |= PURPLE_MESSAGE_DELAYED;
+	}
+	PurpleConversation *pconv = NULL;
+	
+	//TODO process Annotations to add formatting
+	gchar *msg = g_strdup(message->text_body);
+	
+	if (!is_dm) {
+		PurpleChatConversation *chatconv = purple_conversations_find_chat_with_account(conv_id, ha->account);
+		if (chatconv == NULL) {
+			//TODO /api/get_group
+			// chatconv = purple_serv_got_joined_chat(ha->pc, g_str_hash(conv_id), conv_id);
+			// purple_conversation_set_data(PURPLE_CONVERSATION(chatconv), "conv_id", g_strdup(conv_id));
+			// if (conversation) {
+				// guint i;
+				// for (i = 0; i < conversation->n_current_participant; i++) {
+					// PurpleChatUserFlags cbflags = PURPLE_CHAT_USER_NONE;
+					// purple_chat_conversation_add_user(chatconv, conversation->current_participant[i]->gaia_id, NULL, cbflags, FALSE);
+				// }
+			// }
+		}
+		pconv = PURPLE_CONVERSATION(chatconv);
+		purple_serv_got_chat_in(pc, g_str_hash(conv_id), sender_id, msg_flags, msg, message_timestamp);
+		
+	} else {
+		PurpleIMConversation *imconv = NULL;
+		// It's most likely a one-to-one message
+		if (msg_flags & PURPLE_MESSAGE_RECV) {
+			purple_serv_got_im(pc, sender_id, msg, msg_flags, message_timestamp);
+		} else {
+			sender_id = g_hash_table_lookup(ha->one_to_ones, conv_id);
+			if (sender_id) {
+				imconv = purple_conversations_find_im_with_account(sender_id, ha->account);
+				PurpleMessage *pmessage = purple_message_new_outgoing(sender_id, msg, msg_flags);
+				if (imconv == NULL)
+				{
+					imconv = purple_im_conversation_new(ha->account, sender_id);
+				}
+				purple_message_set_time(pmessage, message_timestamp);
+				purple_conversation_write_message(PURPLE_CONVERSATION(imconv), pmessage);
+			}
+		}
+		
+		if (imconv == NULL) {
+			imconv = purple_conversations_find_im_with_account(sender_id, ha->account);
+		}
+		pconv = PURPLE_CONVERSATION(imconv);
+	}
+	
+	if (purple_conversation_has_focus(pconv)) {
+		googlechat_mark_conversation_seen(pconv, PURPLE_CONVERSATION_UPDATE_UNSEEN);
+	}
+	
+	g_free(msg);
+	//purple_xmlnode_free(html);
+	
+	for (i = 0; i < message->n_annotations; i++) {
+		Annotation *annotation = message->annotations[i];
+		
+		if (annotation->drive_metadata) {
+			DriveMetadata *drive_metadata = annotation->drive_metadata;
+			const gchar *image_url = drive_metadata->thumbnail_url;
+			const gchar *url = drive_metadata->url_fragment;
+			PurpleHttpConnection *connection;
+			
+			//TODO
+			continue;
+			
+			if (g_strcmp0(purple_core_get_ui(), "BitlBee") == 0) {
+				// Bitlbee doesn't support images, so just plop a url to the image instead
+				if (g_hash_table_contains(ha->group_chats, conv_id)) {
+					purple_serv_got_chat_in(pc, g_str_hash(conv_id), sender_id, msg_flags, url, message_timestamp);
+				} else {
+					if (msg_flags & PURPLE_MESSAGE_RECV) {
+						purple_serv_got_im(pc, sender_id, url, msg_flags, message_timestamp);
+					} else {
+						PurpleMessage *img_message = purple_message_new_outgoing(sender_id, url, msg_flags);
+						purple_message_set_time(img_message, message_timestamp);
+						purple_conversation_write_message(pconv, img_message);
+					}
+				}
+			} else {
+				connection = purple_http_get(ha->pc, googlechat_got_http_image_for_conv, ha, image_url);
+				purple_http_request_set_max_len(purple_http_conn_get_request(connection), -1);
+				g_dataset_set_data_full(connection, "url", g_strdup(url), g_free);
+				g_dataset_set_data_full(connection, "sender_id", g_strdup(sender_id), g_free);
+				g_dataset_set_data_full(connection, "conv_id", g_strdup(conv_id), g_free);
+				g_dataset_set_data(connection, "msg_flags", GINT_TO_POINTER(msg_flags));
+				g_dataset_set_data(connection, "message_timestamp", GINT_TO_POINTER(message_timestamp));
+			}
+		}
+	}
+}
+
+/*
 void
 googlechat_received_event_notification(PurpleConnection *pc, Event *event)
 {
@@ -627,7 +754,7 @@ googlechat_process_conversation_event(GoogleChatAccount *ha, Conversation *conve
 			}
 		}
 	}
-}
+}*/
 
 void
 googlechat_received_typing_notification(PurpleConnection *pc, Event *event)
@@ -649,9 +776,19 @@ googlechat_received_typing_notification(PurpleConnection *pc, Event *event)
 	if (ha->self_gaia_id && g_strcmp0(user_id, ha->self_gaia_id) == 0)
 		return;
 	
-	conv_id = typing_notification->context->topic_id->id;
+	if (!typing_notification->context->group_id) {
+		//TODO handle topic_id -> group_id conversion
+		return;
+	}
 	
-	if (g_hash_table_contains(ha->group_chats, conv_id)) {
+	gboolean is_dm = !!typing_notification->context->group_id->dm_id;
+	if (is_dm) {
+		conv_id = typing_notification->context->group_id->dm_id->dm_id;
+	} else {
+		conv_id = typing_notification->context->group_id->space_id->space_id;
+	}
+	
+	if (!is_dm) {
 		// This is a group conversation
 		PurpleChatConversation *chatconv = purple_conversations_find_chat_with_account(conv_id, ha->account);
 		if (chatconv != NULL) {

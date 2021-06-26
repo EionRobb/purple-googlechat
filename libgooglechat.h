@@ -84,6 +84,7 @@ typedef struct {
 	gint64 last_event_timestamp;
 	PurpleConversation *last_conversation_focused;
 	guint poll_buddy_status_timeout;
+	gint server_time_offset;
 	
 	GByteArray *channel_buffer;
 	guint channel_watchdog;

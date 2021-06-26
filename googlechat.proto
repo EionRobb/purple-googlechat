@@ -607,14 +607,14 @@ message Event {
 	}
 	
 	optional EventType type = 3;
-	optional EventBody body = 4;
+	optional EventBody body = 4; // This is the first event body
 	
 	optional UserId user_id = 5;
 	//oneof RevisionType {
 		//WriteRevision user_revision = 6;
 		//WriteRevision group_revision = 7;
 	//}
-	repeated EventBody bodies = 8;
+	repeated EventBody bodies = 8;  // This is the second and subsequent event bodies in this event
 }
 
 

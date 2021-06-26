@@ -31,6 +31,8 @@
 #include "googlechat_json.h"
 #include "googlechat.pb-c.h"
 #include "googlechat_conversation.h"
+#include "googlechat_events.h"
+
 
 void
 googlechat_process_data_chunks(GoogleChatAccount *ha, const gchar *data, gsize len)
@@ -71,7 +73,8 @@ googlechat_process_data_chunks(GoogleChatAccount *ha, const gchar *data, gsize l
 				unpacked_message = protobuf_c_message_unpack(&stream_events_response__descriptor, NULL, response_len, decoded_response);
 				
 				events_response = (StreamEventsResponse *) unpacked_message;
-				purple_signal_emit(purple_connection_get_protocol(ha->pc), "googlechat-received-event", ha->pc, events_response->event);
+				
+				googlechat_process_received_event(ha, events_response->event);
 				
 				protobuf_c_message_free_unpacked(unpacked_message, NULL);
 				g_free(decoded_response);

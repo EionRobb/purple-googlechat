@@ -61,6 +61,49 @@ googlechat_register_events(gpointer plugin)
 	purple_signal_connect(plugin, "googlechat-received-event", plugin, PURPLE_CALLBACK(googlechat_received_other_notification), NULL);
 }
 
+void
+googlechat_process_received_event(GoogleChatAccount *ha, Event *event)
+{
+	// Can't just use this ;(
+	//purple_signal_emit(purple_connection_get_protocol(ha->pc), "googlechat-received-event", ha->pc, event);
+	
+	size_t n_bodies = 0;
+	Event__EventBody **bodies = NULL;
+	
+	//An event can have multiple events within it.  Mangle the structs to split multiples out into singles
+	if (event->n_bodies) {
+		n_bodies = event->n_bodies;
+		bodies = event->bodies;
+		
+		event->n_bodies = 0;
+		event->bodies = NULL;
+	}
+	
+	// Send an initial 'bare' event, if there is one
+	if (event->body) {
+		purple_signal_emit(purple_connection_get_protocol(ha->pc), "googlechat-received-event", ha->pc, event);
+	}
+	
+	if (n_bodies > 0) {
+		Event__EventBody *orig_body = event->body;
+		guint i;
+		
+		// loop through all the sub-bodies and make them a primary
+		for (i = 0; i < n_bodies; i++) {
+			Event__EventBody *body = bodies[i];
+			
+			event->body = body;
+			
+			purple_signal_emit(purple_connection_get_protocol(ha->pc), "googlechat-received-event", ha->pc, event);
+		}
+		
+		// put everything back the way it was to let memory be free'd
+		event->body = orig_body;
+		event->n_bodies = n_bodies;
+		event->bodies = bodies;
+	}
+}
+
 /*void
 googlechat_received_state_update(PurpleConnection *pc, Event *event)
 {
@@ -119,7 +162,11 @@ googlechat_received_other_notification(PurpleConnection *pc, Event *event)
 	g_free(json_dump);
 }
 
+void 
+googlechat_process_presence_result(GoogleChatAccount *ha, UserPresence *presence)
+{
 	
+}
 
 void
 googlechat_received_presence_notification(PurpleConnection *pc, Event *event)

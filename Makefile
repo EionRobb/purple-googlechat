@@ -75,7 +75,15 @@ WIN32_PIDGIN3_CFLAGS = -I$(PIDGIN3_TREE_TOP)/libpurple -I$(PIDGIN3_TREE_TOP) -I$
 WIN32_PIDGIN2_LDFLAGS = -L$(PIDGIN_TREE_TOP)/libpurple $(WIN32_LDFLAGS)
 WIN32_PIDGIN3_LDFLAGS = -L$(PIDGIN3_TREE_TOP)/libpurple -L$(WIN32_DEV_TOP)/gplugin-dev/gplugin $(WIN32_LDFLAGS) -lgplugin
 
-C_FILES := googlechat.pb-c.c googlechat_json.c googlechat_pblite.c googlechat_connection.c googlechat_auth.c googlechat_events.c googlechat_conversation.c
+C_FILES := \
+	googlechat.pb-c.c \
+	googlechat_json.c \
+	googlechat_pblite.c \
+	googlechat_connection.c \
+	googlechat_auth.c \
+	googlechat_events.c \
+	googlechat_conversation.c
+	
 PURPLE_COMPAT_FILES := purple2compat/http.c purple2compat/purple-socket.c
 PURPLE_C_FILES := libgooglechat.c $(C_FILES)
 
@@ -87,6 +95,7 @@ all: $(PLUGIN_TARGET)
 
 googlechat.pb-c.c: googlechat.proto
 	$(PROTOC_C) --c_out=. googlechat.proto
+	$(PROTOC_C) -o googlechat.proto.desc googlechat.proto
 
 libgooglechat.so: $(PURPLE_C_FILES) $(PURPLE_COMPAT_FILES)
 	$(CC) -fPIC $(CFLAGS) -shared -o $@ $^ $(LDFLAGS) $(PROTOBUF_OPTS) `$(PKG_CONFIG) purple glib-2.0 json-glib-1.0 zlib --libs --cflags` -ldl $(INCLUDES) -Ipurple2compat -g -ggdb

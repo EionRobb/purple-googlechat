@@ -140,8 +140,8 @@ message MemberProfile {
 
 message GetMembersRequest {
 	optional RequestHeader request_header = 100;
-	repeated MembershipId membership_ids = 1;
-	repeated MemberId member_ids = 2;
+	repeated MemberId member_ids = 1;
+	repeated MembershipId membership_ids = 2;
 }
 
 message GetMembersResponse {
@@ -760,4 +760,84 @@ enum MembershipState {
 	MEMBER_JOINED = 2;
 	MEMBER_NOT_A_MEMBER = 3;
 	MEMBER_FAILED = 4;
+}
+
+message ComGoogleProtobufTimestamp {
+	optional int64 seconds = 1;
+	optional int32 nanos = 2;
+}
+
+message GetServerTimeRequest {
+	optional RequestHeader request_header = 100;
+}
+
+message GetServerTimeResponse {
+	optional ComGoogleProtobufTimestamp timestamp = 1;
+}
+
+
+message CatchUpRange {
+	optional int64 from_revision_timestamp = 1;
+	optional int64 to_revision_timestamp = 2;
+}
+
+message CatchUpGroupRequest {
+	optional RequestHeader request_header = 100;
+	optional GroupId group_id = 1;
+	optional CatchUpRange range = 2;
+	optional int32 page_size = 3;
+	optional int32 cutoff_size = 4;
+}
+
+message CatchUpUserRequest {
+	optional RequestHeader request_header = 100;
+	optional CatchUpRange range = 1;
+	optional int32 page_size = 2;
+	optional int32 cutoff_size = 3;
+}
+
+// Used by both CatchUpGroupRequest and CatchUpUserRequest
+message CatchUpResponse {
+	repeated Event events = 1;
+	enum ResponseStatus {
+		UNKNOWN = 0;
+		COMPLETED = 1;
+		PAGINATED = 2;
+		ABORTED_CUTOFF_EXCEEDED = 3;
+		ABORTED_CACHE_INVALIDATION = 4;
+		ABORTED_FROM_REVISION_TOO_OLD = 5;
+	}
+	optional ResponseStatus status = 2;
+	//optional GroupData group_data = 3;
+}
+
+message GetGroupRequest {
+	optional RequestHeader request_header = 100;
+	optional GroupId group_id = 1;
+	enum FetchOptions {
+		MEMBERS = 0;
+		INVITEES = 1;
+		MEMBER_IDS_ONLY = 2;
+		PROFILE_IN_READ_RECEIPTS = 3;
+		INCLUDE_SNIPPET = 4;
+		INCLUDE_DYNAMIC_GROUP_NAME = 5;
+		INCLUDE_ACCOUNT_USER_CAPABILITIES = 6;
+	}
+	repeated FetchOptions fetch_options = 4;
+	//optional ReferenceRevision user_not_older_than = 2;
+	//optional ReferenceRevision group_not_older_than = 3;
+	optional bool include_invite_dms = 5;
+}
+
+message GetGroupResponse {
+	optional Group group = 1;
+	//repeated Membership memberships = 4;
+	//optional ReadRevision user_revision = 2;
+	//optional ReadRevision group_revision = 3;
+	//optional MembershipState membership_state = 6;
+	repeated MemberId joined_member_ids = 7;
+	repeated MemberId invited_member_ids = 8;
+	//optional ReadReceiptSet read_receipt_set = 9;
+	optional Message snippet = 10;
+	// repeated ?? capabilities = 11;
 }

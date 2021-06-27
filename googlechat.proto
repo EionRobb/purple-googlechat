@@ -453,6 +453,93 @@ message CreateTopicResponse {
 	//optional DYNProtoReadRevision current_group_revision = 3;
 }
 
+message InviteeInfo {
+	optional UserId user_id = 1;
+	optional string email = 2;
+}
+
+message InviteeMemberInfo {
+	oneof Id {
+		InviteeInfo invitee_info = 1;
+		// RosterId roster_id = 2;
+	}
+}
+
+message SpaceCreationInfo {
+	optional string name = 1;
+	// optional GroupGuestAccessSettings group_guest_access_settings = 3;
+	optional GroupVisibility visibility = 4;
+	
+	message FlatGroup {
+	
+	}
+	optional FlatGroup flat_group = 5;
+	
+	message ThreadedGroup {
+	
+	}
+	optional ThreadedGroup threaded_group = 6;
+	
+	optional bool has_server_generated_name = 7;
+	repeated InviteeMemberInfo invitee_member_infos = 8;
+	// optional RoomInviteNotificationSettings notification_settings = 9;
+	// optional AvatarInfo avatar_info = 10;
+	
+	message SpaceType {
+	
+	}
+	optional SpaceType space_type = 11;
+
+	// optional ?? space_details = 12;
+	// optional ?? attribute_checker_group_type = 13;
+	optional string shared_drive_name = 14;
+}
+
+message CreateGroupRequest {
+	optional RequestHeader request_header = 100;
+	oneof CreationInfo {
+		SpaceCreationInfo space = 1;
+	}
+	optional string local_id = 3;
+	optional bool should_find_existing_space = 4;
+}
+
+message CreateMembershipResult {
+	// optional Membership membership = 1;
+	// optional FailureReason reason = 2;
+	// repeated SupplementalReason supplemental_reasons = 3;
+}
+
+message CreateGroupResponse {
+	optional Group group = 1;
+	// optional WriteRevision group_revision = 2;
+	// optional WriteRevision user_revision = 3;
+	repeated CreateMembershipResult results = 4;
+	// optional Failure creator_membership_failure = 5;
+}
+
+message CreateDmRequest {
+	optional RequestHeader request_header = 100;
+	enum FetchOptions {
+		UNKNOWN = 0;
+		INCLUDE_BOT_MEMBERSHIPS_IN_RESPONSE = 1;
+	}
+	repeated FetchOptions fetch_options = 8;
+	repeated UserId members = 1;
+	repeated InviteeInfo invitees = 7;
+	// optional MessageCreationInfo message_creation_info = 2;
+	// optional RetentionSettings retention_settings = 3;
+	optional string local_id = 4;
+	optional string topic_and_message_id = 5;
+}
+
+message CreateDmResponse {
+	optional Group dm = 1;
+	optional Topic topic = 2;
+	// optional WriteRevision group_revision = 3;
+	// repeated Membership memberships = 4;
+}
+
 message ListTopicsResponse {
 	repeated Topic topics = 1;
 	//optional DYNProtoReadRevision user_revision = 2
@@ -474,7 +561,7 @@ message ListTopicsRequest {
 	enum FetchOptions {
 		USER = 1;
 		TOTAL_MESSAGE_COUNTS = 2;
-		READ_RECEIPTS	= 3;
+		READ_RECEIPTS = 3;
 	}
 	repeated FetchOptions fetch_options = 5;
 	//optional DYNProtoReferenceRevision user_not_older_than = 9;
@@ -840,4 +927,186 @@ message GetGroupResponse {
 	//optional ReadReceiptSet read_receipt_set = 9;
 	optional Message snippet = 10;
 	// repeated ?? capabilities = 11;
+}
+
+message WorldSection {
+	enum WorldSectionType {
+		WORLD_SECTION_TYPE_UNSPECIFIED = 0;
+		STARRED_DIRECT_MESSAGE_PEOPLE = 1;
+		STARRED_ROOMS = 2;
+		STARRED_DIRECT_MESSAGE_BOTS = 3;
+		NON_STARRED_DIRECT_MESSAGE_PEOPLE = 4;
+		NON_STARRED_ROOMS = 5;
+		NON_STARRED_DIRECT_MESSAGE_BOTS = 6;
+		ALL_DIRECT_MESSAGE_PEOPLE = 7;
+		ALL_ROOMS = 8;
+		ALL_DIRECT_MESSAGE_BOTS = 9;
+		INVITED_DM_PEOPLE = 10;
+		SPAM_INVITED_DM_PEOPLE = 11;
+		STARRED_DIRECT_MESSAGE_EVERYONE = 12;
+		NON_STARRED_DIRECT_MESSAGE_EVERYONE = 13;
+		ALL_DIRECT_MESSAGE_EVERYONE = 14;
+		STARRED_DMS_AND_STARRED_UNNAMED_ROOMS = 15;
+		NON_STARRED_DMS_AND_NON_STARRED_UNNAMED_ROOMS = 16;
+	}
+	optional WorldSectionType world_section_type = 1;
+}
+
+message WorldFilter {
+	enum StarredState {
+		STARRED_STATE_UNSPECIFIED = 0;
+		STARRED = 1;
+		NON_STARRED = 2;
+	}
+	optional StarredState starred_state = 1;
+	
+	enum VisibilityState {
+		VISIBILITY_STATE_UNSPECIFIED = 0;
+		VISIBLE = 1;
+		HIDDEN = 2;
+	}
+	optional VisibilityState visibility_state = 2;
+	
+	enum ReadState {
+		READ_STATE_UNSPECIFIED = 0;
+		READ = 1;
+		UNREAD = 2;
+		UNREAD_SUBSCRIBED_TOPIC = 3;
+	}
+	optional ReadState read_state = 7;
+	
+	enum BlockState {
+		BLOCK_STATE_UNSPECIFIED = 0;
+		BLOCKED = 1;
+		UNBLOCKED = 2;
+	}
+	optional BlockState block_state = 8;
+	
+	enum NamedState {
+		NAMED_STATE_UNSPECIFIED = 0;
+		NAMED = 1;
+		UNNAMED = 2;
+	}
+	optional NamedState named_state = 9;
+	
+	// optional MembershipState membership_state = 3;
+	// optional InviteCategory invite_category = 4;
+	
+	enum MemberType {
+		MEMBER_TYPE_UNSPECIFIED = 0;
+		HUMAN = 1;
+		BOT = 2;
+	}
+	optional MemberType member_type = 5;
+	
+	enum GroupType {
+		GROUP_TYPE_UNSPECIFIED = 0;
+		DM = 1;
+		ROOM = 2;
+	}
+	optional GroupType group_type = 6;
+}
+
+message NameUsers {
+	repeated UserId name_user_ids = 1;
+	optional bool has_more_name_users = 2;
+	optional string group_name = 3;
+}
+
+message WorldItemLite {
+	optional GroupId group_id = 1;
+	// optional ReadRevision group_revision = 2;
+	optional int64 sort_timestamp = 3;
+	// optional GroupReadState read_state = 4;
+	optional string room_name = 5;
+	message MembershipLite {
+		optional UserId user_id = 1;
+		optional MembershipState membership_state = 2;
+	}
+	message DmMembers {
+		repeated UserId members = 1;
+		repeated MembershipLite memberships = 2;
+		optional bool has_all_memberships = 3;
+	}
+	optional DmMembers dm_members = 6;
+	// optional NameUsers name_users = 20;
+	optional int64 retention_horizon_time_micros = 8;
+	optional int64 retention_duration_seconds = 9;
+	message GroupLite {
+		optional UserId creator_id = 1;
+		optional int64 create_time = 2;
+		optional bool is_flat = 3;
+		// optional RetentionSettings retention_settings = 4;
+		optional bool interop_enabled = 5;
+		//optional DasherDomainPolicies dasher_domain_policies = 6;
+		optional string roster_email = 7;
+		// optional ?? space_details = 8;
+	}
+	optional GroupLite group_lite = 7;
+	//optional GroupGuestAccessSettings group_guest_access_settings = 10;
+	//optional OrganizationInfo organization_info = 11;
+	//repeated GsuiteIntegration gsuite_integration = 12;
+	optional Message message = 13;
+	optional bool is_message_blocked = 25;
+	message FlatGroup {
+	
+	}
+	optional FlatGroup flat_group = 14;
+	message ThreadedGroup {
+	
+	}
+	optional ThreadedGroup threaded_group = 15;
+	optional string avatar_url = 16;
+	//repeated ?? space_integration_payloads = 17;
+	//optional GroupIntegrationSettings group_integration_settings = 22;
+	// optional AvatarInfo avatar_info = 18;
+	// optional ?? attribute_checker_group_type = 19;
+	// optional GroupSupportLevel group_support_level = 23;
+	// optional GroupUnsupportedReason group_unsupported_reason = 24;
+	// optional ?? group_policies = 26;
+}
+
+message WorldSectionRequest {
+	optional int32 page_size = 1;
+	optional WorldSection world_section = 2;
+	optional WorldFilter world_filter = 4;
+	optional int32 num_world_items_with_snippet = 5;
+	optional int64 anchor_sort_timestamp_micros = 3;
+	oneof Pagination {
+		string pagination_token = 6;
+		// SortingOrder sorting_order = 7;
+	}
+}
+
+message WorldSectionResponse {
+	optional WorldSection world_section = 1;
+	optional WorldFilter world_filter = 4;
+	repeated WorldItemLite world_items = 2;
+	optional int64 next_page_anchor_sort_timestamp_micros = 3;
+	optional bool has_more_items = 5;
+	optional string pagination_token = 6;
+}
+
+message PaginatedWorldRequest {
+	optional RequestHeader request_header = 1;
+	repeated WorldSectionRequest world_section_requests = 2;
+	optional string world_consistency_token = 3;
+	enum FetchOptions {
+		UNKNOWN = 0;
+		EXCLUDE_GROUP_LITE = 1;
+		FETCH_BOTS_IN_HUMAN_DM = 2;
+		FETCH_SPACE_INTEGRATION_PAYLOADS = 3;
+		FETCH_GROUPS_D3_POLICIES = 4;
+	}
+	repeated FetchOptions fetch_options = 4;
+	optional bool fetch_from_user_spaces = 5;
+	optional bool receive_world_update_notifications = 6;
+	optional bool fetch_snippets_for_unnamed_rooms = 7;
+}
+
+message PaginatedWorldResponse {
+	repeated WorldSectionResponse world_section_responses = 1;
+	optional string world_consistency_token = 2;
+	// optional ReadRevision user_revision = 3;
+	repeated WorldItemLite world_items = 4;
 }

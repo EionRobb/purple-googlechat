@@ -113,6 +113,12 @@ message RequestHeader {
 	//optional DYNProtoClientFeatureCapabilities client_feature_capabilities = 5;
 }
 
+enum InviteCategory {
+	UNKNOWN_INVITE = 0;
+	REGULAR_INVITE = 1;
+	SPAM_INVITE = 2;
+}
+
 message Member {
 	oneof Profile {
 		User user = 1;
@@ -131,6 +137,14 @@ message MembershipId {
 	optional MemberId member_id = 1;
 	optional SpaceId space_id = 2;
 	optional GroupId group_id = 3;
+}
+
+message Membership {
+	optional MembershipId id = 1;
+	optional int64 create_time = 2;
+	optional MembershipState membership_state = 3;
+	optional InviteCategory invite_category = 4;
+	optional MembershipRole membership_role = 5;
 }
 
 message MemberProfile {
@@ -250,7 +264,7 @@ message Message {
 	}
 	optional MessageType message_type = 28;
 	//optional DYNProtoAppId origin_app_id = 29;
-	//optional DYNProtoMembership creator_membership = 30;
+	optional Membership creator_membership = 30;
 	//optional DYNProtoMessageAttributes attributes = 31;
 	//optional ?? tombstone_metadata = 32;
 }
@@ -380,7 +394,7 @@ message Group {
 	optional int64 last_modified_time = 6;
 	optional int64 sort_time = 7;
 	optional int64 revision_time = 13;
-	//optional DYNProtoGroupReadState group_read_state = 12;
+	optional GroupReadState group_read_state = 12;
 	optional int64 retention_horizon_time = 14;
 	//optional DYNProtoDasherDomainPolicies dasher_domain_policies = 15;
 	//optional ?? group_policies = 40;
@@ -402,14 +416,20 @@ message Group {
 	//optional DYNProtoGroupVisibility visibility = 23;
 	//repeated DYNProtoGsuiteIntegration gsuite_integration = 24;
 	optional string roster_email = 25;
-	//optional DYNProtoGroup_FlatGroup flat_group = 26;
-	//optional DYNProtoGroup_ThreadedGroup threaded_group = 27;
+	
+	message FlatGroup {}
+	message ThreadedGroup {}
+	oneof ThreadedModel {
+		FlatGroup flat_group = 26;
+		ThreadedGroup threaded_group = 27;
+	}
+	
 	optional string avatar_url = 28;
 	//optional DYNProtoGroupIntegrationSettings group_integration_settings = 36;
 	//repeated ?? space_integration_payloads = 29;
 	//optional DYNProtoAvatarInfo avatar_info = 30;
 	//optional ?? attribute_checker_group_type = 33;
-	//optional DYNProtoNameUsers name_users = 34;
+	optional NameUsers name_users = 34;
 	//optional ?? space_details = 37;
 	//optional DYNProtoGroupSupportLevel group_support_level = 38;
 	//optional DYNProtoGroupUnsupportedReason group_unsupported_reason = 39;
@@ -417,6 +437,10 @@ message Group {
 	//optional ?? ufr_upgrade_info = 42;
 	optional bool typing_indicators_enabled = 43;
 	//DYNProtoGroup_ThreadedModelCase - oneof
+}
+
+message GroupReadState {
+	repeated UserId joined_users = 23;
 }
 
 message TopicId {
@@ -505,7 +529,7 @@ message CreateGroupRequest {
 }
 
 message CreateMembershipResult {
-	// optional Membership membership = 1;
+	optional Membership membership = 1;
 	// optional FailureReason reason = 2;
 	// repeated SupplementalReason supplemental_reasons = 3;
 }
@@ -537,7 +561,7 @@ message CreateDmResponse {
 	optional Group dm = 1;
 	optional Topic topic = 2;
 	// optional WriteRevision group_revision = 3;
-	// repeated Membership memberships = 4;
+	repeated Membership memberships = 4;
 }
 
 message ListTopicsResponse {
@@ -568,6 +592,14 @@ message ListTopicsRequest {
 	//optional DYNProtoReferenceRevision group_not_older_than = 10;
 	//optional DYNProtoListTopicsRequest_SortOption sort_option = 11;
 }
+
+// message ListMembersRequest {
+	// optional RequestHeader request_header = 100;
+// }
+
+// message ListMembersResponse {
+
+// }
 
 message MessageEvent {
 	optional Message message = 1;
@@ -918,10 +950,10 @@ message GetGroupRequest {
 
 message GetGroupResponse {
 	optional Group group = 1;
-	//repeated Membership memberships = 4;
+	repeated Membership memberships = 4;
 	//optional ReadRevision user_revision = 2;
 	//optional ReadRevision group_revision = 3;
-	//optional MembershipState membership_state = 6;
+	optional MembershipState membership_state = 6;
 	repeated MemberId joined_member_ids = 7;
 	repeated MemberId invited_member_ids = 8;
 	//optional ReadReceiptSet read_receipt_set = 9;
@@ -989,8 +1021,8 @@ message WorldFilter {
 	}
 	optional NamedState named_state = 9;
 	
-	// optional MembershipState membership_state = 3;
-	// optional InviteCategory invite_category = 4;
+	optional MembershipState membership_state = 3;
+	optional InviteCategory invite_category = 4;
 	
 	enum MemberType {
 		MEMBER_TYPE_UNSPECIFIED = 0;
@@ -1017,7 +1049,7 @@ message WorldItemLite {
 	optional GroupId group_id = 1;
 	// optional ReadRevision group_revision = 2;
 	optional int64 sort_timestamp = 3;
-	// optional GroupReadState read_state = 4;
+	optional GroupReadState read_state = 4;
 	optional string room_name = 5;
 	message MembershipLite {
 		optional UserId user_id = 1;
@@ -1029,7 +1061,7 @@ message WorldItemLite {
 		optional bool has_all_memberships = 3;
 	}
 	optional DmMembers dm_members = 6;
-	// optional NameUsers name_users = 20;
+	optional NameUsers name_users = 20;
 	optional int64 retention_horizon_time_micros = 8;
 	optional int64 retention_duration_seconds = 9;
 	message GroupLite {

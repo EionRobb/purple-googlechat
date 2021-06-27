@@ -83,5 +83,8 @@ GOOGLECHAT_DEFINE_API_REQUEST_FUNC(get_self_user_status, GetSelfUserStatus, "get
 GOOGLECHAT_DEFINE_API_REQUEST_RESPONSE_FUNC(catch_up_group, CatchUpGroup, catch_up, CatchUp, "catch_up_group");
 GOOGLECHAT_DEFINE_API_REQUEST_RESPONSE_FUNC(catch_up_user, CatchUpUser, catch_up, CatchUp, "catch_up_user");
 GOOGLECHAT_DEFINE_API_REQUEST_FUNC(get_group, GetGroup, "get_group");
+GOOGLECHAT_DEFINE_API_REQUEST_FUNC(create_group, CreateGroup, "create_group");
+GOOGLECHAT_DEFINE_API_REQUEST_FUNC(create_dm, CreateDm, "create_dm");
+GOOGLECHAT_DEFINE_API_REQUEST_FUNC(paginated_world, PaginatedWorld, "paginated_world");
 
 #endif /*_GOOGLECHAT_CONNECTION_H_*/

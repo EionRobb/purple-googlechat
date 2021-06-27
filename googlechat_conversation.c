@@ -413,7 +413,7 @@ googlechat_get_conversation_events(GoogleChatAccount *ha, const gchar *conv_id, 
 	group_id__init(&group_id);
 	request.group_id = &group_id;
 	
-	if (TRUE) {
+	if (g_hash_table_contains(ha->one_to_ones, conv_id)) {
 		dm_id__init(&dm_id);
 		dm_id.dm_id = (gchar *) conv_id;
 		group_id.dm_id = &dm_id;
@@ -579,33 +579,24 @@ googlechat_add_person_to_blist(GoogleChatAccount *ha, gchar *gaia_id, gchar *ali
 	purple_blist_add_buddy(purple_buddy_new(ha->account, gaia_id, alias), NULL, googlechat_group, NULL);
 }
 
-
 void
-googlechat_add_conversation_to_blist(GoogleChatAccount *ha, Conversation *conversation, GHashTable *unique_user_ids)
+googlechat_add_conversation_to_blist(GoogleChatAccount *ha, Group *group, GHashTable *unique_user_ids)
 {
 	PurpleGroup *googlechat_group = NULL;
-	guint i;
-	gchar *conv_id = conversation->conversation_id->id;
+	// guint i;
+	gboolean is_dm = !!group->group_id->dm_id;
+	gchar *conv_id = is_dm ? group->group_id->dm_id->dm_id : group->group_id->space_id->space_id;
 	
-	if ((conversation->self_conversation_state->delivery_medium_option && conversation->self_conversation_state->delivery_medium_option[0]->delivery_medium->medium_type == DELIVERY_MEDIUM_TYPE__DELIVERY_MEDIUM_GOOGLE_VOICE) 
-			|| conversation->network_type[0] == NETWORK_TYPE__NETWORK_TYPE_PHONE) {
-		g_hash_table_replace(ha->google_voice_conversations, g_strdup(conv_id), NULL);
-		
-		if (conversation->self_conversation_state->delivery_medium_option && ha->self_phone == NULL) {
-			ha->self_phone = g_strdup(conversation->self_conversation_state->delivery_medium_option[0]->delivery_medium->self_phone->e164);
-		}
-	}
 	
-	if (conversation->type == CONVERSATION_TYPE__CONVERSATION_TYPE_ONE_TO_ONE) {
-		gchar *other_person = conversation->participant_data[0]->id->gaia_id;
-		guint participant_num = 0;
-		gchar *other_person_alias;
+	if (is_dm) {
+		gchar *other_person = group->group_read_state->joined_users[0]->id;
+		// guint participant_num = 0;
+		gchar *other_person_alias = NULL;
 		
-		if (!g_strcmp0(other_person, conversation->self_conversation_state->self_read_state->participant_id->gaia_id)) {
-			other_person = conversation->participant_data[1]->id->gaia_id;
-			participant_num = 1;
+		if (purple_strequal(other_person, ha->self_gaia_id)) {
+			other_person = group->group_read_state->joined_users[1]->id;
+			// participant_num = 1;
 		}
-		other_person_alias = conversation->participant_data[participant_num]->fallback_name;
 		
 		g_hash_table_replace(ha->one_to_ones, g_strdup(conv_id), g_strdup(other_person));
 		g_hash_table_replace(ha->one_to_ones_rev, g_strdup(other_person), g_strdup(conv_id));
@@ -613,7 +604,7 @@ googlechat_add_conversation_to_blist(GoogleChatAccount *ha, Conversation *conver
 		if (!purple_blist_find_buddy(ha->account, other_person)) {
 			googlechat_add_person_to_blist(ha, other_person, other_person_alias);
 		} else {
-			purple_serv_got_alias(ha->pc, other_person, other_person_alias);
+			// purple_serv_got_alias(ha->pc, other_person, other_person_alias);
 		}
 		
 		if (unique_user_ids == NULL) {
@@ -621,9 +612,10 @@ googlechat_add_conversation_to_blist(GoogleChatAccount *ha, Conversation *conver
 			googlechat_get_users_presence(ha, user_list);
 			g_list_free(user_list);
 		}
+		
 	} else {
 		PurpleChat *chat = purple_blist_find_chat(ha->account, conv_id);
-		gchar *name = conversation->name;
+		gchar *name = group->name;
 		gboolean has_name = name ? TRUE : FALSE;
 		
 		g_hash_table_replace(ha->group_chats, g_strdup(conv_id), NULL);
@@ -636,22 +628,13 @@ googlechat_add_conversation_to_blist(GoogleChatAccount *ha, Conversation *conver
 				purple_blist_add_group(googlechat_group, NULL);
 			}
 			
-			if (!has_name) {
-				gchar **name_set = g_new0(gchar *, conversation->n_participant_data + 1);
-				for (i = 0; i < conversation->n_participant_data; i++) {
-					gchar *p_name = conversation->participant_data[i]->fallback_name;
-					if (p_name != NULL) {
-						name_set[i] = p_name;
-					} else {
-						name_set[i] = _("Unknown");
-					}
-				}
-				name = g_strjoinv(", ", name_set);
-				g_free(name_set);
-			}
+			//TODO 
+			// if (!has_name) {
+			// 	name = g_strdup("Unknown");
+			// }
 			purple_blist_add_chat(purple_chat_new(ha->account, name, googlechat_chat_info_defaults(ha->pc, conv_id)), googlechat_group, NULL);
-			if (!has_name)
-				g_free(name);
+			// if (!has_name)
+				// g_free(name);
 		} else {
 			if(has_name && strstr(purple_chat_get_name(chat), _("Unknown")) != NULL) {
 				purple_chat_set_alias(chat, name);
@@ -660,37 +643,92 @@ googlechat_add_conversation_to_blist(GoogleChatAccount *ha, Conversation *conver
 	}
 	
 	
-	for (i = 0; i < conversation->n_participant_data; i++) {
-		ConversationParticipantData *participant_data = conversation->participant_data[i];
+	// for (i = 0; i < conversation->n_participant_data; i++) {
+		// ConversationParticipantData *participant_data = conversation->participant_data[i];
 		
-		if (participant_data->participant_type != PARTICIPANT_TYPE__PARTICIPANT_TYPE_UNKNOWN) {
-			if (!purple_blist_find_buddy(ha->account, participant_data->id->gaia_id)) {
-				googlechat_add_person_to_blist(ha, participant_data->id->gaia_id, participant_data->fallback_name);
-			}
-			if (participant_data->fallback_name != NULL) {
-				purple_serv_got_alias(ha->pc, participant_data->id->gaia_id, participant_data->fallback_name);
-			}
-			if (unique_user_ids != NULL) {
-				g_hash_table_replace(unique_user_ids, participant_data->id->gaia_id, participant_data->id);
-			}
-		}
-	}
+		// if (participant_data->participant_type != PARTICIPANT_TYPE__PARTICIPANT_TYPE_UNKNOWN) {
+			// if (!purple_blist_find_buddy(ha->account, participant_data->id->gaia_id)) {
+				// googlechat_add_person_to_blist(ha, participant_data->id->gaia_id, participant_data->fallback_name);
+			// }
+			// if (participant_data->fallback_name != NULL) {
+				// purple_serv_got_alias(ha->pc, participant_data->id->gaia_id, participant_data->fallback_name);
+			// }
+			// if (unique_user_ids != NULL) {
+				// g_hash_table_replace(unique_user_ids, participant_data->id->gaia_id, participant_data->id);
+			// }
+		// }
+	// }
 }
 
 static void
-googlechat_got_conversation_list(GoogleChatAccount *ha, SyncRecentConversationsResponse *response, gpointer user_data)
+googlechat_got_conversation_list(GoogleChatAccount *ha, PaginatedWorldResponse *response, gpointer user_data)
 {
 	guint i;
 	GHashTable *unique_user_ids = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, NULL);
 	GList *unique_user_ids_list;
 	PurpleBlistNode *node;
+	PurpleGroup *googlechat_group = NULL;
 	
-	for (i = 0; i < response->n_conversation_state; i++) {
-		ConversationState *conversation_state = response->conversation_state[i];
-		Conversation *conversation = conversation_state->conversation;
+	for (i = 0; i < response->n_world_items; i++) {
+		WorldItemLite *world_item_lite = response->world_items[i];
+		GroupId *group_id = world_item_lite->group_id;
+		gboolean is_dm = !!group_id->dm_id;
+		gchar *conv_id = is_dm ? group_id->dm_id->dm_id : group_id->space_id->space_id;
 		
-		//purple_debug_info("googlechat", "got conversation state %s\n", pblite_dump_json((ProtobufCMessage *)conversation_state));
-		googlechat_add_conversation_to_blist(ha, conversation, unique_user_ids);
+		//purple_debug_info("googlechat", "got worlditemlite %s\n", pblite_dump_json((ProtobufCMessage *)world_item_lite));
+		//googlechat_add_conversation_to_blist(ha, group_id, NULL);
+		
+		if (is_dm) {
+			gchar *other_person = world_item_lite->dm_members->members[0]->id;
+			// guint participant_num = 0;
+			gchar *other_person_alias = NULL;
+			
+			if (purple_strequal(other_person, ha->self_gaia_id)) {
+				other_person = world_item_lite->dm_members->members[1]->id;
+				// participant_num = 1;
+			}
+			
+			g_hash_table_replace(ha->one_to_ones, g_strdup(conv_id), g_strdup(other_person));
+			g_hash_table_replace(ha->one_to_ones_rev, g_strdup(other_person), g_strdup(conv_id));
+			
+			
+			if (!purple_blist_find_buddy(ha->account, other_person)) {
+				googlechat_add_person_to_blist(ha, other_person, other_person_alias);
+			} else {
+				// purple_serv_got_alias(ha->pc, other_person, other_person_alias);
+			}
+			
+			g_hash_table_replace(unique_user_ids, other_person, NULL);
+			
+		} else {
+			PurpleChat *chat = purple_blist_find_chat(ha->account, conv_id);
+			gchar *name = world_item_lite->room_name;
+			gboolean has_name = name ? TRUE : FALSE;
+			
+			g_hash_table_replace(ha->group_chats, g_strdup(conv_id), NULL);
+			
+			if (chat == NULL) {
+				googlechat_group = purple_blist_find_group("Google Chat");
+				if (!googlechat_group)
+				{
+					googlechat_group = purple_group_new("Google Chat");
+					purple_blist_add_group(googlechat_group, NULL);
+				}
+				
+				//TODO 
+				// if (!has_name) {
+				// loop over name_users->name_user_ids[]
+				// 	name = g_strdup("Unknown");
+				// }
+				purple_blist_add_chat(purple_chat_new(ha->account, name, googlechat_chat_info_defaults(ha->pc, conv_id)), googlechat_group, NULL);
+				// if (!has_name)
+					// g_free(name);
+			} else {
+				if(has_name && strstr(purple_chat_get_name(chat), _("Unknown")) != NULL) {
+					purple_chat_set_alias(chat, name);
+				}
+			}
+		}
 	}
 	
 	//Add missing people from the buddy list
@@ -719,21 +757,16 @@ googlechat_got_conversation_list(GoogleChatAccount *ha, SyncRecentConversationsR
 void
 googlechat_get_conversation_list(GoogleChatAccount *ha)
 {
-	SyncRecentConversationsRequest request;
-	SyncFilter sync_filter[1];
-	sync_recent_conversations_request__init(&request);
+	PaginatedWorldRequest request;
+	paginated_world_request__init(&request);
 	
 	request.request_header = googlechat_get_request_header(ha);
-	request.has_max_conversations = TRUE;
-	request.max_conversations = 100;
-	request.has_max_events_per_conversation = TRUE;
-	request.max_events_per_conversation = 1;
+	request.has_fetch_from_user_spaces = TRUE;
+	request.fetch_from_user_spaces = TRUE;
+	request.has_fetch_snippets_for_unnamed_rooms = TRUE;
+	request.fetch_snippets_for_unnamed_rooms = TRUE;
 	
-	sync_filter[0] = SYNC_FILTER__SYNC_FILTER_INBOX;
-	request.sync_filter = sync_filter;
-	request.n_sync_filter = 1;  // Back streets back, alright!
-	
-	googlechat_pblite_sync_recent_conversations(ha, &request, googlechat_got_conversation_list, NULL);
+	googlechat_api_paginated_world(ha, &request, googlechat_got_conversation_list, NULL);
 	
 	googlechat_request_header_free(request.request_header);
 }
@@ -886,269 +919,30 @@ googlechat_got_buddy_list(PurpleHttpConnection *http_conn, PurpleHttpResponse *r
 void
 googlechat_get_buddy_list(GoogleChatAccount *ha)
 {
-	gchar *request_data;
-	/*
-	POST https://clients6.google.com/rpc/plusi?key={KEY}&alt=json 
-Authorization: SAPISIDHASH {AUTH HEADER}
-Content-Type: application/json
-Accept: application/json
-Cookie: {COOKIES}
-Pragma: no-cache
-Cache-Control: no-cache
-
-{"method":"plusi.ozinternal.listmergedpeople","id":"ListMergedPeople","apiVersion":"v2","jsonrpc":"2.0","params":{"pageSelection":{"maxResults":1000},"params":{"personId":"{MY_USER_ID}","collection":6,"hasField":[8,11],"requestMask":{"includeField":[1,2,3,8,9,11,32]},"commonParams":{"includeAffinity":[3]},"extensionSet":{"extensionNames":[4]}}}} 
-*/
-	request_data = g_strdup_printf("{\"method\":\"plusi.ozinternal.listmergedpeople\",\"id\":\"ListMergedPeople\",\"apiVersion\":\"v2\",\"jsonrpc\":\"2.0\",\"params\":{\"pageSelection\":{\"maxResults\":1000},\"params\":{\"personId\":\"%s\",\"collection\":6,\"hasField\":[8,11],\"requestMask\":{\"includeField\":[1,2,3,8,9,11,32]},\"commonParams\":{\"includeAffinity\":[3]},\"extensionSet\":{\"extensionNames\":[4]}}}}", ha->self_gaia_id);
+	// gchar *request_data;
 	
-	googlechat_client6_request(ha, "/rpc/plusi?key=" GOOGLE_GPLUS_KEY, GOOGLECHAT_CONTENT_TYPE_JSON, request_data, -1, GOOGLECHAT_CONTENT_TYPE_JSON, googlechat_got_buddy_list, ha);
+	//TODO POST https://peoplestack-pa.googleapis.com/$rpc/peoplestack.PeopleStackAutocompleteService/Autocomplete
+	// [14, [], [4]]
 	
-	g_free(request_data);
-
-	//TODO blocked users
-/* {"method":"plusi.ozinternal.loadblockedpeople","id":"getBlockedUsers","apiVersion":"v2","jsonrpc":"2.0","params":{"includeChatBlocked":true}} */
+	// or maybe
+	//https://people-pa.googleapis.com/v2/people?person_id=me&request_mask.include_container=ACCOUNT&request_mask.include_container=PROFILE&request_mask.include_container=DOMAIN_PROFILE&request_mask.include_field.paths=person.cover_photo&request_mask.include_field.paths=person.email&request_mask.include_field.paths=person.photo&request_mask.include_field.paths=person.metadata&request_mask.include_field.paths=person.name&request_mask.include_field.paths=person.read_only_profile_info&request_mask.include_field.paths=person.read_only_profile_info.customer_info
+	
 }
 
 void
 googlechat_block_user(PurpleConnection *pc, const char *who)
 {
-	GoogleChatAccount *ha = purple_connection_get_protocol_data(pc);
-	gchar *request_data;
+	// GoogleChatAccount *ha = purple_connection_get_protocol_data(pc);
 	
-	request_data = g_strdup_printf("{\"method\":\"plusi.ozinternal.blockuser\",\"id\":\"blockUser\",\"apiVersion\":\"v2\",\"jsonrpc\":\"2.0\",\"params\":{\"membersToBlock\": {\"members\":[{\"memberId\":{\"obfuscatedGaiaId\":\"%s\"}}],\"block\":true}}}", who);
-	
-	googlechat_client6_request(ha, "/rpc/plusi?key=" GOOGLE_GPLUS_KEY, GOOGLECHAT_CONTENT_TYPE_JSON, request_data, -1, GOOGLECHAT_CONTENT_TYPE_JSON, NULL, ha);
-	
-	g_free(request_data);
+	//TODO
 }
 
 void
 googlechat_unblock_user(PurpleConnection *pc, const char *who)
 {
-	GoogleChatAccount *ha = purple_connection_get_protocol_data(pc);
-	gchar *request_data;
+	// GoogleChatAccount *ha = purple_connection_get_protocol_data(pc);
 	
-	request_data = g_strdup_printf("{\"method\":\"plusi.ozinternal.blockuser\",\"id\":\"unblockUser\",\"apiVersion\":\"v2\",\"jsonrpc\":\"2.0\",\"params\":{\"membersToBlock\": {\"members\":[{\"memberId\":{\"obfuscatedGaiaId\":\"%s\"}}],\"block\":false},\"legacyChatUnblock\":true}}", who);
-	
-	googlechat_client6_request(ha, "/rpc/plusi?key=" GOOGLE_GPLUS_KEY, GOOGLECHAT_CONTENT_TYPE_JSON, request_data, -1, GOOGLECHAT_CONTENT_TYPE_JSON, NULL, ha);
-	
-	g_free(request_data);
-}
-
-static Segment **
-googlechat_convert_html_to_segments(GoogleChatAccount *ha, const gchar *html_message, guint *segments_count)
-{
-	guint n_segments;
-	Segment **segments;
-	const gchar *c = html_message;
-	GString *text_content;
-	Segment *segment;
-	guint i;
-	GList *segment_list = NULL;
-	gboolean is_bold = FALSE, is_italic = FALSE, is_strikethrough = FALSE, is_underline = FALSE;
-	gboolean is_link = FALSE;
-	gchar *last_link = NULL;
-	
-	if (c == NULL || *c == '\0') {
-		g_warn_if_reached();
-		
-		if (segments_count != NULL) {
-			*segments_count = 0;
-		}
-		return NULL;
-	}
-	
-	text_content = g_string_new("");
-	segment = g_new0(Segment, 1);
-	segment__init(segment);
-	
-	while (c && *c) {
-		if(*c == '<') {
-			gboolean opening = TRUE;
-			GString *tag = g_string_new("");
-			c++;
-			if(*c == '/') { // closing tag
-				opening = FALSE;
-				c++;
-			}
-			while (*c != ' ' && *c != '>') {
-				g_string_append_c(tag, *c);
-				c++;
-			}
-			if (text_content->len) {
-				segment->text = g_string_free(text_content, FALSE);
-				text_content = g_string_new("");
-				
-				segment->formatting = g_new0(Formatting, 1);
-				formatting__init(segment->formatting);
-				segment->formatting->has_bold = TRUE;
-				segment->formatting->bold = is_bold;
-				segment->formatting->has_italics = TRUE;
-				segment->formatting->italics = is_italic;
-				segment->formatting->has_strikethrough = TRUE;
-				segment->formatting->strikethrough = is_strikethrough;
-				segment->formatting->has_underline = TRUE;
-				segment->formatting->underline = is_underline;
-				
-				if (is_link) {
-					segment->type = SEGMENT_TYPE__SEGMENT_TYPE_LINK;
-					if (last_link) {
-						segment->link_data = g_new0(LinkData, 1);
-						link_data__init(segment->link_data);
-						segment->link_data->link_target = g_strdup(last_link);
-					}
-				}
-				
-				segment_list = g_list_append(segment_list, segment);
-				segment = g_new0(Segment, 1);
-				segment__init(segment);
-			}
-			if (!g_ascii_strcasecmp(tag->str, "BR") ||
-					!g_ascii_strcasecmp(tag->str, "BR/")) {
-				//Line break, push directly onto the stack
-				segment->type = SEGMENT_TYPE__SEGMENT_TYPE_LINE_BREAK;
-				segment_list = g_list_append(segment_list, segment);
-				segment = g_new0(Segment, 1);
-				segment__init(segment);
-			} else if (!g_ascii_strcasecmp(tag->str, "B") ||
-					!g_ascii_strcasecmp(tag->str, "BOLD") ||
-					!g_ascii_strcasecmp(tag->str, "STRONG")) {
-				is_bold = opening;
-			} else if (!g_ascii_strcasecmp(tag->str, "I") ||
-					!g_ascii_strcasecmp(tag->str, "ITALIC") ||
-					!g_ascii_strcasecmp(tag->str, "EM")) {
-				is_italic = opening;
-			} else if (!g_ascii_strcasecmp(tag->str, "S") ||
-					!g_ascii_strcasecmp(tag->str, "STRIKE")) {
-				is_strikethrough = opening;
-			} else if (!g_ascii_strcasecmp(tag->str, "U") ||
-					!g_ascii_strcasecmp(tag->str, "UNDERLINE")) {
-				is_underline = opening;
-			} else if (!g_ascii_strcasecmp(tag->str, "A")) {
-				is_link = opening;
-				if (opening) {
-					while (*c != '>') {
-						//Grab HREF for the A
-						if (g_ascii_strcasecmp(tag->str, " HREF=") == 0) {
-							gchar *href_end;
-							c += 6;
-							if (*c == '"' || *c == '\'') {
-								href_end = strchr(c + 1, *c);
-								c++;
-							} else {
-								//Wow this should not happen, but what the hell
-								href_end = MIN(strchr(c, ' '), strchr(c, '>'));
-								if (!href_end)
-									href_end = strchr(c, '>');
-							}
-							g_free(last_link);
-							
-							if (href_end > c) {
-								gchar *attrib = g_strndup(c, href_end - c);
-								last_link = purple_unescape_text(attrib);
-								g_free(attrib);
-								
-								c = href_end;
-								break;
-							}
-							
-							// Shouldn't be here :s
-							g_warn_if_reached();
-							last_link = NULL;
-						}
-						c++;
-					}
-				} else {
-					g_free(last_link);
-					last_link = NULL;
-				}
-			}
-			while (*c != '>') {
-				c++;
-			}
-			
-			c++;
-			g_string_free(tag, TRUE);
-		} else if(*c == '&') {
-			const gchar *plain;
-			gint len;
-			
-			if ((plain = purple_markup_unescape_entity(c, &len)) == NULL) {
-				g_string_append_c(text_content, *c);
-				len = 1;
-			} else {
-				g_string_append(text_content, plain);
-			}
-			c += len;
-		} else {
-			g_string_append_c(text_content, *c);
-			c++;
-		}
-	}
-	
-	if (text_content->len) {
-		segment->text = g_string_free(text_content, FALSE);
-		
-		segment->formatting = g_new0(Formatting, 1);
-		formatting__init(segment->formatting);
-		segment->formatting->has_bold = TRUE;
-		segment->formatting->bold = is_bold;
-		segment->formatting->has_italics = TRUE;
-		segment->formatting->italics = is_italic;
-		segment->formatting->has_strikethrough = TRUE;
-		segment->formatting->strikethrough = is_strikethrough;
-		segment->formatting->has_underline = TRUE;
-		segment->formatting->underline = is_underline;
-				
-		if (is_link) {
-			segment->type = SEGMENT_TYPE__SEGMENT_TYPE_LINK;
-			if (last_link) {
-				segment->link_data = g_new0(LinkData, 1);
-				link_data__init(segment->link_data);
-				segment->link_data->link_target = g_strdup(last_link);
-			}
-		}
-		
-		segment_list = g_list_append(segment_list, segment);
-	}
-	
-	n_segments = g_list_length(segment_list);
-	segments = g_new0(Segment *, n_segments + 1);
-	
-	for (i = 0; segment_list && segment_list->data; i++) {
-		segments[i] = segment_list->data;
-		
-		segment_list = g_list_delete_link(segment_list, segment_list);
-	}
-	
-	if (segments_count != NULL) {
-		*segments_count = n_segments;
-	}
-	
-	g_free(last_link);
-	return segments;
-}
-
-static void
-googlechat_free_segments(Segment **segments)
-{
-	guint i;
-	
-	if (segments == NULL) {
-		// Our work here is done
-		return;
-	}
-	
-	for (i = 0; segments[i]; i++) {
-		g_free(segments[i]->text);
-		g_free(segments[i]->formatting);
-		if (segments[i]->link_data != NULL) {
-			g_free(segments[i]->link_data->link_target);
-		}
-		g_free(segments[i]->link_data);
-		g_free(segments[i]);
-	}
-	
-	g_free(segments);
+	//TODO
 }
 
 //Received the photoid of the sent image to be able to attach to an outgoing message
@@ -1162,9 +956,13 @@ googlechat_conversation_send_image_part2_cb(PurpleHttpConnection *connection, Pu
 	size_t response_len;
 	JsonNode *node;
 	PurpleConnection *pc = purple_http_conn_get_purple_connection(connection);
-	SendChatMessageRequest request;
-	ExistingMedia existing_media;
-	Photo photo;
+	CreateTopicRequest request;
+	Annotation photo_annotation;
+	Annotation *annotations;
+	DriveMetadata drive_metadata;
+	GroupId group_id;
+	SpaceId space_id;
+	DmId dm_id;
 	
 	if (purple_http_response_get_error(response) != NULL) {
 		purple_notify_error(pc, _("Image Send Error"), _("There was an error sending the image"), purple_http_response_get_error(response), purple_request_cpar_from_connection(pc));
@@ -1180,25 +978,37 @@ googlechat_conversation_send_image_part2_cb(PurpleHttpConnection *connection, Pu
 	photoid = googlechat_json_path_query_string(node, "$..photoid", NULL);
 	conv_id = g_dataset_get_data(connection, "conv_id");
 	
-	send_chat_message_request__init(&request);
-	existing_media__init(&existing_media);
-	photo__init(&photo);
+	create_topic_request__init(&request);
+	annotation__init(&photo_annotation);
+	drive_metadata__init(&drive_metadata);
+	group_id__init(&group_id);
 	
 	request.request_header = googlechat_get_request_header(ha);
-	request.event_request_header = googlechat_get_event_request_header(ha, conv_id);
 	
-	photo.photo_id = photoid;
-	existing_media.photo = &photo;
-	request.existing_media = &existing_media;
+	request.group_id = &group_id;
+	if (g_hash_table_lookup(ha->one_to_ones, conv_id)) {
+		dm_id__init(&dm_id);
+		dm_id.dm_id = conv_id;
+		group_id.dm_id = &dm_id;
+	} else {
+		space_id__init(&space_id);
+		space_id.space_id = conv_id;
+		group_id.space_id = &space_id;
+	}
 	
-	googlechat_pblite_send_chat_message(ha, &request, NULL, NULL);
+	drive_metadata.id = photoid;
+	photo_annotation.drive_metadata = &drive_metadata;
+	annotations = &photo_annotation;
+	request.annotations = &annotations;
+	request.n_annotations = 1;
 	
-	g_hash_table_insert(ha->sent_message_ids, g_strdup_printf("%" G_GUINT64_FORMAT, request.event_request_header->client_generated_id), NULL);
+	googlechat_api_create_topic(ha, &request, NULL, NULL);
+	
+	// g_hash_table_insert(ha->sent_message_ids, g_strdup_printf("%" G_GUINT64_FORMAT, request.event_request_header->client_generated_id), NULL);
 	
 	g_free(photoid);
 	g_dataset_destroy(connection);
 	googlechat_request_header_free(request.request_header);
-	googlechat_event_request_header_free(request.event_request_header);
 	json_node_free(node);
 }
 
@@ -1603,6 +1413,8 @@ googlechat_created_conversation(GoogleChatAccount *ha, CreateConversationRespons
 void
 googlechat_create_conversation(GoogleChatAccount *ha, gboolean is_one_to_one, const char *who, const gchar *optional_message)
 {
+	//CreateGroupRequest
+	
 	CreateConversationRequest request;
 	gchar *message_dup = NULL;
 	

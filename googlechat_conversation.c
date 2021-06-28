@@ -1125,54 +1125,67 @@ googlechat_conversation_check_message_for_images(GoogleChatAccount *ha, const gc
 	}
 }
 
+static char * 
+rand_str(size_t length) {
+    char charset[] = "0123456789"
+                     "abcdefghijklmnopqrstuvwxyz"
+                     "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+	char *dest = g_new0(char, length + 1);
+    while (length-- > 0) {
+        size_t index = (double) rand() / RAND_MAX * (sizeof charset - 1);
+        *dest++ = charset[index];
+    }
+    *dest = '\0';
+	return dest;
+}
+
 static gint
 googlechat_conversation_send_message(GoogleChatAccount *ha, const gchar *conv_id, const gchar *message)
 {
-	SendChatMessageRequest request;
-	MessageContent message_content;
-	EventAnnotation event_annotation;
-	Segment **segments;
-	guint n_segments;
+	CreateTopicRequest request;
+	GroupId group_id;
+	SpaceId space_id;
+	DmId dm_id;
+	
 	gchar *message_dup = g_strdup(message);
+	gchar *message_id = rand_str(11);
 	
 	//Check for any images to send first
 	googlechat_conversation_check_message_for_images(ha, conv_id, message_dup);
 	
-	send_chat_message_request__init(&request);
-	message_content__init(&message_content);
-	
-	if (purple_message_meify(message_dup, -1)) {
-		//TODO put purple_account_get_private_alias(sa->account) on the front
-		
-		event_annotation__init(&event_annotation);
-		event_annotation.has_type = TRUE;
-		event_annotation.type = GOOGLECHAT_MAGIC_HALF_EIGHT_SLASH_ME_TYPE;
-		
-		request.n_annotation = 1;
-		request.annotation = g_new0(EventAnnotation *, 1);
-		request.annotation[0] = &event_annotation;
-	}
-	
-	segments = googlechat_convert_html_to_segments(ha, message_dup, &n_segments);
-	message_content.segment = segments;
-	message_content.n_segment = n_segments;
+	create_topic_request__init(&request);
 	
 	request.request_header = googlechat_get_request_header(ha);
-	request.event_request_header = googlechat_get_event_request_header(ha, conv_id);
-	request.message_content = &message_content;
+	
+	group_id__init(&group_id);
+	request.group_id = &group_id;
+	
+	if (g_hash_table_contains(ha->one_to_ones, conv_id)) {
+		dm_id__init(&dm_id);
+		dm_id.dm_id = (gchar *) conv_id;
+		group_id.dm_id = &dm_id;
+	} else {
+		space_id__init(&space_id);
+		space_id.space_id = (gchar *) conv_id;
+		group_id.space_id = &space_id;
+	}
+	
+	request.text_body = message_dup;
+	request.topic_and_message_id = message_id;
+	request.has_history_v2 = TRUE;
+	request.history_v2 = TRUE;
 	
 	//purple_debug_info("googlechat", "%s\n", pblite_dump_json((ProtobufCMessage *)&request)); //leaky
 	
 	//TODO listen to response
-	googlechat_pblite_send_chat_message(ha, &request, NULL, NULL);
+	googlechat_api_create_topic(ha, &request, NULL, NULL);
 	
-	g_hash_table_insert(ha->sent_message_ids, g_strdup_printf("%" G_GUINT64_FORMAT, request.event_request_header->client_generated_id), NULL);
+	g_hash_table_insert(ha->sent_message_ids, message_id, NULL);
 	
-	googlechat_free_segments(segments);
 	googlechat_request_header_free(request.request_header);
-	googlechat_event_request_header_free(request.event_request_header);
 
 	g_free(message_dup);
+	g_free(message_id);
 	
 	return 1;
 }
@@ -1203,6 +1216,8 @@ const gchar *who, const gchar *message, PurpleMessageFlags flags)
 		
 		//We don't have any known conversations for this person
 		googlechat_create_conversation(ha, TRUE, who, message);
+		
+		//TODO wait for the create dm response and use that
 	}
 	
 	return googlechat_conversation_send_message(ha, conv_id, message);
@@ -1259,8 +1274,11 @@ googlechat_conv_send_typing(PurpleConversation *conv, PurpleIMTypingState state,
 {
 	PurpleConnection *pc;
 	const gchar *conv_id;
-	SetTypingRequest request;
-	ConversationId conversation_id;
+	SetTypingStateRequest request;
+	GroupId group_id;
+	SpaceId space_id;
+	DmId dm_id;
+	TypingContext typing_context;
 	
 	pc = purple_conversation_get_connection(conv);
 	
@@ -1284,32 +1302,41 @@ googlechat_conv_send_typing(PurpleConversation *conv, PurpleIMTypingState state,
 	}
 	g_return_val_if_fail(conv_id, -1); //TODO create new conversation for this new person
 	
-	set_typing_request__init(&request);
+	set_typing_state_request__init(&request);
 	request.request_header = googlechat_get_request_header(ha);
 	
-	conversation_id__init(&conversation_id);
-	conversation_id.id = (gchar *) conv_id;
-	request.conversation_id = &conversation_id;
+	typing_context__init(&typing_context);
+	request.context = &typing_context;
 	
-	request.has_type = TRUE;
+	group_id__init(&group_id);
+	typing_context.group_id = &group_id;
+	
+	if (g_hash_table_contains(ha->one_to_ones, conv_id)) {
+		dm_id__init(&dm_id);
+		dm_id.dm_id = (gchar *) conv_id;
+		group_id.dm_id = &dm_id;
+	} else {
+		space_id__init(&space_id);
+		space_id.space_id = (gchar *) conv_id;
+		group_id.space_id = &space_id;
+	}
+	
+	request.has_state = TRUE;
 	switch(state) {
 		case PURPLE_IM_TYPING:
-			request.type = TYPING_TYPE__TYPING_TYPE_STARTED;
+			request.state = TYPING_STATE__TYPING;
 			break;
 		
-		case PURPLE_IM_TYPED:
-			request.type = TYPING_TYPE__TYPING_TYPE_PAUSED;
-			break;
-		
+		//case PURPLE_IM_TYPED:
 		case PURPLE_IM_NOT_TYPING:
 		default:
-			request.type = TYPING_TYPE__TYPING_TYPE_STOPPED;
+			request.state = TYPING_STATE__STOPPED;
 			break;
 	}
 	
 	//TODO listen to response
 	//TODO dont send STOPPED if we just sent a message
-	googlechat_pblite_set_typing(ha, &request, NULL, NULL);
+	googlechat_api_set_typing_state(ha, &request, NULL, NULL);
 	
 	googlechat_request_header_free(request.request_header);
 	
@@ -1320,31 +1347,51 @@ void
 googlechat_chat_leave_by_conv_id(PurpleConnection *pc, const gchar *conv_id, const gchar *who)
 {
 	GoogleChatAccount *ha;
-	RemoveUserRequest request;
-	ParticipantId participant_id;
+	RemoveMembershipsRequest request;
+	MemberId member_id;
+	MemberId *member_ids;
+	UserId user_id;
+	GroupId group_id;
+	SpaceId space_id;
+	// DmId dm_id;
 	
 	g_return_if_fail(conv_id);
 	ha = purple_connection_get_protocol_data(pc);
 	g_return_if_fail(g_hash_table_contains(ha->group_chats, conv_id));
 	
-	remove_user_request__init(&request);
+	remove_memberships_request__init(&request);
 	
 	if (who != NULL) {
-		participant_id__init(&participant_id);
+		member_id__init(&member_id);
+		user_id__init(&user_id);
 		
-		participant_id.gaia_id = (gchar *) who;
-		participant_id.chat_id = (gchar *) who; //XX do we need this?
-		request.participant_id = &participant_id;
+		user_id.id = (gchar *) who;
+		member_ids = &member_id;
+		request.member_ids = &member_ids;
+		request.n_member_ids = 1;
 	}
 	
+	group_id__init(&group_id);
+	request.group_id = &group_id;
+	
+	// if (g_hash_table_contains(ha->one_to_ones, conv_id)) {
+		// dm_id__init(&dm_id);
+		// dm_id.dm_id = (gchar *) conv_id;
+		// group_id.dm_id = &dm_id;
+	// } else {
+		space_id__init(&space_id);
+		space_id.space_id = (gchar *) conv_id;
+		group_id.space_id = &space_id;
+	// }
+	
 	request.request_header = googlechat_get_request_header(ha);
-	request.event_request_header = googlechat_get_event_request_header(ha, conv_id);
+	request.has_membership_state = TRUE;
+	request.membership_state = MEMBERSHIP_STATE__MEMBER_INVITED;
 	
 	//XX do we need to see if this was successful, or does it just come through as a new event?
-	googlechat_pblite_remove_user(ha, &request, NULL, NULL);
+	googlechat_api_remove_memberships(ha, &request, NULL, NULL);
 	
 	googlechat_request_header_free(request.request_header);
-	googlechat_event_request_header_free(request.event_request_header);
 	
 	if (who == NULL) {
 		g_hash_table_remove(ha->group_chats, conv_id);
@@ -1413,40 +1460,69 @@ googlechat_created_conversation(GoogleChatAccount *ha, CreateConversationRespons
 void
 googlechat_create_conversation(GoogleChatAccount *ha, gboolean is_one_to_one, const char *who, const gchar *optional_message)
 {
-	//CreateGroupRequest
-	
-	CreateConversationRequest request;
+	UserId user_id;
+	InviteeInfo invitee_info;
 	gchar *message_dup = NULL;
 	
-	create_conversation_request__init(&request);
-	request.request_header = googlechat_get_request_header(ha);
-	
-	request.has_type = TRUE;
-	if (is_one_to_one) {
-		request.type = CONVERSATION_TYPE__CONVERSATION_TYPE_ONE_TO_ONE;
-	} else {
-		request.type = CONVERSATION_TYPE__CONVERSATION_TYPE_GROUP;
-	}
-	
-	request.n_invitee_id = 1;
-	request.invitee_id = g_new0(InviteeID *, 1);
-	request.invitee_id[0] = g_new0(InviteeID, 1);
-	invitee_id__init(request.invitee_id[0]);
-	request.invitee_id[0]->gaia_id = g_strdup(who);
-	
-	request.has_client_generated_id = TRUE;
-	request.client_generated_id = g_random_int();
+	user_id__init(&user_id);
+	user_id.id = (gchar *) who;
+		
+	invitee_info__init(&invitee_info);
+	invitee_info.user_id = &user_id;
+	//TODO
+	//invitee_info.email = (gchar *) "foo@bar.com";
 	
 	if (optional_message != NULL) {
 		message_dup = g_strdup(optional_message);
 	}
 	
-	googlechat_pblite_create_conversation(ha, &request, googlechat_created_conversation, message_dup);
-	
-	g_free(request.invitee_id[0]->gaia_id);
-	g_free(request.invitee_id[0]);
-	g_free(request.invitee_id);
-	googlechat_request_header_free(request.request_header);
+	if (is_one_to_one) {
+		CreateDmRequest request;
+		UserId *members;
+		InviteeInfo *invitees;
+		
+		create_dm_request__init(&request);
+		request.request_header = googlechat_get_request_header(ha);
+		
+		members = &user_id;
+		request.members = members;
+		request.n_members = 1;
+		
+		invitees = &invitee_info;
+		request.invitees = &invitees;
+		request.n_invitees = 1;
+		
+		googlechat_api_create_dm(ha, &request, googlechat_created_dm, message_dup);
+		
+		googlechat_request_header_free(request.request_header);
+		
+		
+	} else {
+		//group chat
+		CreateGroupRequest request;
+		SpaceCreationInfo space;
+		InviteeMemberInfo imi;
+		InviteeMemberInfo *invitee_member_infos;
+		
+		create_group_request__init(&request);
+		request.has_should_find_existing_space = TRUE;
+		request.should_find_existing_space = FALSE;
+		
+		space_creation_info__init(&space);
+		//TODO
+		//space.name = (gchar *) "space name";
+		
+		invitee_member_info__init(&imi);
+		imi.invitee_info = &invitee_info;
+		invitee_member_infos = &imi;
+		space.invitee_member_infos = &invitee_member_infos;
+		space.n_invitee_member_infos = 1;
+		
+		googlechat_api_create_group(ha, &request, googlechat_created_group, message_dup);
+		
+		googlechat_request_header_free(request.request_header);
+		
+	}
 }
 
 void

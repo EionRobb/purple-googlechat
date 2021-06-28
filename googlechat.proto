@@ -1142,3 +1142,25 @@ message PaginatedWorldResponse {
 	// optional ReadRevision user_revision = 3;
 	repeated WorldItemLite world_items = 4;
 }
+
+message RemoveMembershipsRequest {
+	optional RequestHeader request_header = 100;
+	repeated MemberId member_ids = 1;
+	optional GroupId group_id = 2;
+	optional MembershipState membership_state = 3;
+}
+
+message RemoveMembershipResult {
+	optional RequestHeader request_header = 100;
+	optional MemberId member_id = 1;
+	// optional FailureReason reason = 2;
+	// repeated RosterId attached_roster_ids = 3;
+	repeated string attached_roster_names = 4;
+}
+
+message RemoveMembershipsResponse {
+	repeated RemoveMembershipResult results = 1;
+	// repeated RosterId roster_ids_without_view_acls = 2;
+	// optional RetentionSettings retention_settings = 3;
+	// optional WriteRevision retention_settings_group_revision = 4;
+}

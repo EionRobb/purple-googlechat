@@ -39,7 +39,7 @@ void googlechat_process_channel(int fd);
 
 void googlechat_longpoll_request(GoogleChatAccount *ha);
 void googlechat_fetch_channel_sid(GoogleChatAccount *ha);
-void googlechat_send_maps(GoogleChatAccount *ha, JsonArray *map_list, PurpleHttpCallback send_maps_callback);
+void googlechat_register_webchannel(GoogleChatAccount *ha);
 void googlechat_add_channel_services(GoogleChatAccount *ha);
 
 void googlechat_default_response_dump(GoogleChatAccount *ha, ProtobufCMessage *response, gpointer user_data);
@@ -67,7 +67,7 @@ googlechat_api_##name(GoogleChatAccount *ha, request_type##Request *request, Goo
 	type##Response *response = g_new0(type##Response, 1);\
 	\
 	response_name##_response__init(response);\
-	googlechat_api_request(ha, "/api/" url "?rt=b", (ProtobufCMessage *)request, (GoogleChatApiResponseFunc)callback, (ProtobufCMessage *)response, user_data);\
+	googlechat_api_request(ha, "/api/" url "?rt=a", (ProtobufCMessage *)request, (GoogleChatApiResponseFunc)callback, (ProtobufCMessage *)response, user_data);\
 }
 
 #define GOOGLECHAT_DEFINE_API_REQUEST_FUNC(name, type, url) \

@@ -405,6 +405,8 @@ googlechat_get_conversation_events(GoogleChatAccount *ha, const gchar *conv_id, 
 	DmId dm_id;
 	CatchUpRange range;
 	
+	g_return_if_fail(conv_id);
+	
 	catch_up_group_request__init(&request);
 	request.request_header = googlechat_get_request_header(ha);
 	request.page_size = 500;
@@ -1161,16 +1163,19 @@ googlechat_conversation_check_message_for_images(GoogleChatAccount *ha, const gc
 
 static char * 
 rand_str(size_t length) {
-    char charset[] = "0123456789"
+    static const char charset[] = "0123456789"
                      "abcdefghijklmnopqrstuvwxyz"
                      "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-	char *dest = g_new0(char, length + 1);
+	char *out = g_new0(char, length + 1);
+	
+	char *dest = out;
     while (length-- > 0) {
         size_t index = (double) rand() / RAND_MAX * (sizeof charset - 1);
         *dest++ = charset[index];
     }
     *dest = '\0';
-	return dest;
+	
+	return out;
 }
 
 static gint
@@ -1180,6 +1185,8 @@ googlechat_conversation_send_message(GoogleChatAccount *ha, const gchar *conv_id
 	GroupId group_id;
 	SpaceId space_id;
 	DmId dm_id;
+	
+	g_return_val_if_fail(conv_id, -1);
 	
 	gchar *message_dup = g_strdup(message);
 	gchar *message_id = rand_str(11);
@@ -1250,6 +1257,7 @@ const gchar *who, const gchar *message, PurpleMessageFlags flags)
 		
 		//We don't have any known conversations for this person
 		googlechat_create_conversation(ha, TRUE, who, message);
+		return -1;
 		
 		//TODO wait for the create dm response and use that
 	}

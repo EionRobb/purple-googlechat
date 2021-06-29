@@ -85,6 +85,7 @@ typedef struct {
 	PurpleConversation *last_conversation_focused;
 	guint poll_buddy_status_timeout;
 	gint server_time_offset;
+	gint64 last_aid;
 	
 	GByteArray *channel_buffer;
 	guint channel_watchdog;

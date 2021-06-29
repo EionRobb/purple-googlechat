@@ -837,15 +837,9 @@ init_plugin(PurplePlugin *plugin)
 	prpl_info->options = OPT_PROTO_NO_PASSWORD | OPT_PROTO_IM_IMAGE | OPT_PROTO_CHAT_TOPIC | OPT_PROTO_MAIL_CHECK;
 	prpl_info->protocol_options = googlechat_add_account_options(prpl_info->protocol_options);
 	
-	purple_signal_register(plugin, "googlechat-received-stateupdate",
+	purple_signal_register(plugin, "googlechat-received-event",
 			purple_marshal_VOID__POINTER_POINTER, NULL, 2,
 			PURPLE_TYPE_CONNECTION,
-			purple_value_new(PURPLE_TYPE_OBJECT));
-			
-	purple_signal_register(plugin, "googlechat-gmail-notification",
-			purple_marshal_VOID__POINTER_POINTER_POINTER, NULL, 3,
-			PURPLE_TYPE_CONNECTION,
-			purple_value_new(PURPLE_TYPE_STRING),
 			purple_value_new(PURPLE_TYPE_OBJECT));
 
 	googlechat_register_events(plugin);

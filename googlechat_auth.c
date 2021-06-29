@@ -118,7 +118,7 @@ googlechat_oauth_refresh_token_cb(PurpleHttpConnection *http_conn, PurpleHttpRes
 
 	if (purple_http_response_is_successful(response) && obj)
 	{
-		const gchar *id_token = g_strdup(json_object_get_string_member(obj, "id_token"));
+		const gchar *id_token = g_strdup(json_object_get_string_member(obj, "access_token"));
 		googlechat_auth_get_dynamite_token(ha, id_token);
 	} else {
 		if (obj != NULL) {
@@ -276,7 +276,8 @@ googlechat_auth_get_dynamite_token_cb(PurpleHttpConnection *http_conn, PurpleHtt
 	}
 	
 	// SOUND THE TRUMPETS
-	googlechat_fetch_channel_sid(ha);
+	//googlechat_fetch_channel_sid(ha);
+	googlechat_register_webchannel(ha);
 	purple_connection_set_state(ha->pc, PURPLE_CONNECTION_CONNECTED);
 	
 	//TODO trigger event instead

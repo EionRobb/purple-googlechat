@@ -615,6 +615,104 @@ message TypingStateChangedEvent {
 	optional int64 start_timestamp_usec = 4;
 }
 
+
+// used in the /webchannel/events
+message StreamEventsRequest {
+	optional Platform platform = 4;
+	optional ClientInfo client_info = 5;
+	optional int64 client_session_id = 6;
+	optional string sample_id = 1;
+	repeated string sample_ids = 7;
+	optional PingEvent ping_event = 2;
+	optional ClockSyncRequest clock_sync_request = 3;
+	optional GroupSubscriptionEvent group_subscription_event = 8;
+	optional int64 test_user_gaia_id = 100;
+}
+
+enum EventOrigin {
+	ORIGIN_UNSPECIFIED = 0;
+	ANDROID = 100;
+	ANDROID_DEV = 101;
+	ANDROID_PRODTEST = 102;
+	ANDROID_STAGING = 103;
+	ANDROID_PROD = 104;
+	IOS = 110;
+	IOS_DEV = 111;
+	IOS_PRODTEST = 112;
+	IOS_STAGING = 113;
+	IOS_PROD = 114;
+	WEB_ORIGIN = 120;
+	WEB_DEV = 121;
+	WEB_PRODTEST = 122;
+	WEB_PROD = 123;
+	WEB_STAGING = 124;
+	DESKTOP_ORIGIN = 125;
+	DESKTOP_DEV = 126;
+	DESKTOP_PRODTEST = 127;
+	DESKTOP_STAGING = 128;
+	DESKTOP_PROD = 129;
+	COMPANION_ORIGIN = 130;
+	COMPANION_DEV = 131;
+	COMPANION_PRODTEST = 132;
+	COMPANION_STAGING = 133;
+	COMPANION_PROD = 134;
+	WEB_GMAIL_ORIGIN = 135;
+	WEB_GMAIL_DEV = 136;
+	WEB_GMAIL_PRODTEST = 137;
+	WEB_GMAIL_STAGING = 138;
+	WEB_GMAIL_PROD = 139;
+	WEB_PWA_ORIGIN = 140;
+	WEB_PWA_DEV = 141;
+	WEB_PWA_PRODTEST = 142;
+	WEB_PWA_STAGING = 143;
+	WEB_PWA_PROD = 144;
+}
+
+message ClientInfo {
+	optional Platform platform = 1;
+	optional EventOrigin origin = 2;
+	optional string source_machine = 3;
+}
+
+message PingEvent {
+//TODO
+	// enum State {
+	
+	// }
+	// optional State state = ;
+	
+	// enum ApplicationFocusState {
+	
+	// }
+	// optional ApplicationFocusState application_focus_state = ;
+	
+	// optional int64 last_interactive_time_ms = ;
+	
+	// enum ClientInteractiveState {
+	
+	// }
+	// optional ClientInteractiveState client_interactive_state = ;
+	
+	// optional bool client_notifications_enabled = ;
+	// optional ClientNotificationsState notifications_state = ;
+	// optional bool pwa_dedupe_enabled = ;
+	
+	// enum DeviceActiveState {
+	
+	// }
+	// optional DeviceActiveState device_active_state = ;
+	
+	// optional ??ComGoogleProtobufDuration web_inactivity_timeout = ;
+}
+
+message ClockSyncRequest {
+	optional int64 origin_time_msec = 1;
+}
+
+message GroupSubscriptionEvent {
+	repeated GroupId group_ids = 1;
+}
+
 // echo "<base64 encoded stream response>" | base64 -d - | protoc --decode StreamEventsResponse googlechat.proto
 message StreamEventsResponse {
 	optional Event event = 1;

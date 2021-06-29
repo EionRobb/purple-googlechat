@@ -110,7 +110,7 @@ googlechat_got_users_presence(GoogleChatAccount *ha, GetUserPresenceResponse *re
 			reachable = TRUE;
 		}
 		if (user_presence->presence == PRESENCE__ACTIVE) {
-			reachable = TRUE;
+			available = TRUE;
 		}
 		
 		if (reachable && available) {
@@ -1632,7 +1632,9 @@ googlechat_archive_conversation(GoogleChatAccount *ha, const gchar *conv_id)
 	if (g_hash_table_contains(ha->one_to_ones, conv_id)) {
 		gchar *buddy_id = g_hash_table_lookup(ha->one_to_ones, conv_id);
 		
-		g_hash_table_remove(ha->one_to_ones_rev, buddy_id);
+		if (buddy_id != NULL) {
+			g_hash_table_remove(ha->one_to_ones_rev, buddy_id);
+		}
 		g_hash_table_remove(ha->one_to_ones, conv_id);
 	} else {
 		g_hash_table_remove(ha->group_chats, conv_id);
@@ -1859,7 +1861,7 @@ googlechat_roomlist_got_list(GoogleChatAccount *ha, PaginatedWorldResponse *resp
 			// users = g_strjoinv(", ", users_set);
 			// g_free(users_set);
 			purple_roomlist_room_add_field(roomlist, room, users);
-			g_free(users);
+			//g_free(users);
 			
 			purple_roomlist_room_add_field(roomlist, room, name);
 			

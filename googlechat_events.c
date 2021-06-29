@@ -184,7 +184,7 @@ googlechat_received_presence_notification(PurpleConnection *pc, Event *event)
 		status_id = purple_status_get_id(purple_presence_get_active_status(purple_buddy_get_presence(buddy)));
 	}
 	
-	if (user_status != NULL && user_status->dnd_settings && user_status->dnd_settings->has_dnd_state) {
+	if (user_status->dnd_settings && user_status->dnd_settings->has_dnd_state) {
 		DndSettings__DndStateState dnd_state = user_status->dnd_settings->dnd_state;
 		
 		available = TRUE;

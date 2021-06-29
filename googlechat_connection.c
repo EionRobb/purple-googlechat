@@ -218,7 +218,7 @@ googlechat_send_maps(GoogleChatAccount *ha)
 	g_string_append(url, "VER=8&");           // channel protocol version
 	g_string_append(url, "RID=1234&");         // request identifier
 	g_string_append_printf(url, "SID=%s&", purple_url_encode(ha->sid_param));  // session ID
-	g_string_append_printf(url, "AID=%" G_GUINT64_FORMAT "&", ha->last_aid);  // acknowledge message ID
+	g_string_append_printf(url, "AID=%" G_GINT64_FORMAT "&", ha->last_aid);  // acknowledge message ID
 	g_string_append(url, "CI=0&");            // 0 if streaming/chunked requests should be used
 	g_string_append(url, "t=1&");             // trial
 	
@@ -362,7 +362,7 @@ googlechat_longpoll_request(GoogleChatAccount *ha)
 	g_string_append(url, "VER=8&");           // channel protocol version
 	g_string_append(url, "RID=rpc&");         // request identifier
 	g_string_append_printf(url, "SID=%s&", purple_url_encode(ha->sid_param));  // session ID
-	g_string_append_printf(url, "AID=%" G_GUINT64_FORMAT "&", ha->last_aid);  // acknowledge message ID
+	g_string_append_printf(url, "AID=%" G_GINT64_FORMAT "&", ha->last_aid);  // acknowledge message ID
 	g_string_append(url, "CI=0&");            // 0 if streaming/chunked requests should be used
 	g_string_append(url, "t=1&");             // trial
 	g_string_append(url, "TYPE=xmlhttp&");    // type of request
@@ -428,7 +428,7 @@ googlechat_register_webchannel_callback(PurpleHttpConnection *http_conn, PurpleH
 	
 	if (g_str_has_prefix(compass_cookie, "dynamite=")) {
 		const gchar *csessionid = &compass_cookie[9];
-		if (csessionid && *csessionid) {
+		if (*csessionid) {
 			g_free(ha->csessionid_param);
 			ha->csessionid_param = g_strdup(csessionid);
 		}
@@ -486,15 +486,15 @@ googlechat_pblite_request_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse
 	}
 	
 	if (callback != NULL) {
-		raw_response = purple_http_response_get_data(response, NULL);
+		raw_response = purple_http_response_get_data(response, &response_len);
 		
 		content_type = purple_http_response_get_header(response, "X-Goog-Safety-Content-Type");
 		if (!content_type || !*content_type) {
 			content_type = purple_http_response_get_header(response, "Content-Type");
 		}
 		if (g_strcmp0(content_type, "application/x-protobuf") == 0 || g_strcmp0(content_type, "application/vnd.google.octet-stream-compressible") == 0) {
-			//only with the base64 header
-			if (FALSE) {
+			const gchar *safety_encoding = purple_http_response_get_header(response, "X-Goog-Safety-Encoding");
+			if (safety_encoding && g_strcmp0(safety_encoding, "base64") == 0) {
 				decoded_response = g_base64_decode(raw_response, &response_len);
 			} else {
 				decoded_response = (guchar *) raw_response;
@@ -583,7 +583,7 @@ googlechat_raw_request(GoogleChatAccount *ha, const gchar *path, GoogleChatConte
 			purple_http_request_header_set(request, "Content-Type", "application/x-protobuf");
 		} else if (request_type == GOOGLECHAT_CONTENT_TYPE_PBLITE) {
 			purple_http_request_header_set(request, "Content-Type", "application/json+protobuf");
-		} else if (request_type == GOOGLECHAT_CONTENT_TYPE_JSON) {
+		} else { //if (request_type == GOOGLECHAT_CONTENT_TYPE_JSON) {
 			purple_http_request_header_set(request, "Content-Type", "application/json");
 		}
 	}

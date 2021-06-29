@@ -64,7 +64,7 @@ googlechat_set_idle(PurpleConnection *pc, int time)
 	ha = purple_connection_get_protocol_data(pc);
 	
 	if (time < GOOGLECHAT_ACTIVE_CLIENT_TIMEOUT) {
-		googlechat_set_active_client(pc);
+		// googlechat_set_active_client(pc);
 	}
 	ha->idle_time = time;
 }
@@ -268,22 +268,22 @@ googlechat_node_menu(PurpleBlistNode *node)
 	return m;
 }
 
-static void
-googlechat_join_chat_by_url_action(PurpleProtocolAction *action)
-{
-	PurpleConnection *pc = purple_protocol_action_get_connection(action);
-	GoogleChatAccount *ha = purple_connection_get_protocol_data(pc);
+// static void
+// googlechat_join_chat_by_url_action(PurpleProtocolAction *action)
+// {
+	// PurpleConnection *pc = purple_protocol_action_get_connection(action);
+	// GoogleChatAccount *ha = purple_connection_get_protocol_data(pc);
 	
-	purple_request_input(pc, _("Join chat..."),
-					   _("Join a GoogleChat group chat from the invite URL..."),
-					   NULL,
-					   NULL, FALSE, FALSE, "https://googlechat.google.com/group/...",
-					   _("_Join"), G_CALLBACK(googlechat_join_chat_from_url),
-					   _("_Cancel"), NULL,
-					   purple_request_cpar_from_connection(pc),
-					   ha);
+	// purple_request_input(pc, _("Join chat..."),
+					   // _("Join a GoogleChat group chat from the invite URL..."),
+					   // NULL,
+					   // NULL, FALSE, FALSE, "https://googlechat.google.com/group/...",
+					   // _("_Join"), G_CALLBACK(googlechat_join_chat_from_url),
+					   // _("_Cancel"), NULL,
+					   // purple_request_cpar_from_connection(pc),
+					   // ha);
 
-}
+// }
 
 static GList *
 googlechat_actions(
@@ -300,8 +300,8 @@ PurpleConnection *pc
 	act = purple_protocol_action_new(_("Search for friends..."), googlechat_search_users);
 	m = g_list_append(m, act);
 
-	act = purple_protocol_action_new(_("Join a group chat by URL..."), googlechat_join_chat_by_url_action);
-	m = g_list_append(m, act);
+	// act = purple_protocol_action_new(_("Join a group chat by URL..."), googlechat_join_chat_by_url_action);
+	// m = g_list_append(m, act);
 
 	return m;
 }
@@ -407,7 +407,7 @@ googlechat_login(PurpleAccount *account)
 	}
 #endif
 	
-	ha->active_client_timeout = g_timeout_add_seconds(GOOGLECHAT_ACTIVE_CLIENT_TIMEOUT, ((GSourceFunc) googlechat_set_active_client), pc);
+	// ha->active_client_timeout = g_timeout_add_seconds(GOOGLECHAT_ACTIVE_CLIENT_TIMEOUT, ((GSourceFunc) googlechat_set_active_client), pc);
 }
 
 static void

@@ -280,7 +280,7 @@ googlechat_auth_get_dynamite_token_cb(PurpleHttpConnection *http_conn, PurpleHtt
 	purple_connection_set_state(ha->pc, PURPLE_CONNECTION_CONNECTED);
 	
 	//TODO trigger event instead
-	googlechat_get_self_info(ha);
+	googlechat_get_self_user_status(ha);
 	googlechat_get_conversation_list(ha);
 	ha->poll_buddy_status_timeout = g_timeout_add_seconds(120, googlechat_poll_buddy_status, ha);
 }

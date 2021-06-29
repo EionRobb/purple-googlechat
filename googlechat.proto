@@ -1164,3 +1164,118 @@ message RemoveMembershipsResponse {
 	// optional RetentionSettings retention_settings = 3;
 	// optional WriteRevision retention_settings_group_revision = 4;
 }
+
+
+message HideGroupRequest {
+	optional RequestHeader request_header = 100;
+	optional GroupId id = 1;
+	optional bool hide = 2;
+}
+
+message HideGroupResponse {
+	optional GroupReadState read_state = 1;
+	//optional WriteRevision user_revision = 3;
+}
+
+message InviteNotificationSettings {
+	enum NotificationOption {
+		UNSPECIFIED = 0;
+		EMAIL_NOTIFICATION = 1;
+	}
+	repeated NotificationOption option = 1;
+}
+
+message CreateMembershipRequest {
+	optional RequestHeader request_header = 100;
+	repeated MemberId member_ids = 2;
+	repeated InviteeMemberInfo invitee_member_infos = 8;
+	optional MembershipState membership_state = 3;
+	optional GroupId group_id = 4;
+	optional InviteNotificationSettings notification_settings = 5;
+}
+
+message CreateMembershipResponse {
+	repeated CreateMembershipResult results = 2;
+	// repeated WriteRevision group_revision = 4;
+	// optional RetentionSettings retention_settings = 5;
+	// optional WriteRevision retention_settings_group_revision = 6;
+}
+
+message MarkGroupReadstateRequest {
+	optional RequestHeader request_header = 100;
+	optional GroupId id = 1;
+	optional int64 last_read_time = 2;
+}
+
+message MarkGroupReadstateResponse {
+	optional GroupReadState read_state = 1;
+	// optional WriteRevision user_revision = 2;
+}
+
+message SetPresenceSharedRequest {
+	optional RequestHeader request_header = 100;
+	optional bool presence_shared = 1;
+}
+
+message SetPresenceSharedResponse {
+	optional UserStatus user_status = 1;
+	// optional WriteRevision user_revision = 2;
+}
+
+message SetDndDurationRequest {
+	optional RequestHeader request_header = 100;
+	enum State {
+		UNKNOWN = 0;
+		AVAILABLE = 1;
+		DND = 2;
+	}
+	optional State current_dnd_state = 2;
+	
+	oneof DndExpiry {
+		int64 new_dnd_duration_usec = 1;
+		int64 dnd_expiry_timestamp_usec = 3;
+	}
+}
+
+message SetDndDurationResponse {
+	optional UserStatus user_status = 1;
+	// optional WriteRevision user_revision = 2;
+}
+
+message UpdateGroupRequest {
+	optional RequestHeader request_header = 100;
+	optional SpaceId space_id = 1;
+	enum UpdateMask {
+		UPDATE_MASK_UNSPECIFIED = 0;
+		NAME = 1;
+		VISIBILITY = 2;
+		AVATAR_INFO = 3;
+		SPACE_DETAILS = 4;
+		SHARED_DRIVE = 5;
+	}
+	repeated UpdateMask update_masks = 4;
+	optional string name = 2;
+	optional GroupVisibility visibility = 5;
+	// optional AvatarInfo avatar_info = 6;
+	// optional ?? space_details = 7;
+}
+
+message UpdateGroupResponse {
+	optional Group group = 1;
+	// optional WriteRevision group_revision = 2;
+}
+
+message BlockEntityRequest {
+	optional RequestHeader request_header = 100;
+	oneof Entity {
+		UserId user_id = 1;
+		GroupId group_id = 2;
+	}
+	optional bool blocked = 3;
+	optional bool reported = 4;
+}
+
+message BlockEntityResponse {
+	optional GroupReadState read_state = 1;
+	// optional WriteRevision user_revision = 2;
+}

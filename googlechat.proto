@@ -436,7 +436,6 @@ message Group {
 	//optional DYNProtoHubGroupProperties hub_group_properties = 41;
 	//optional ?? ufr_upgrade_info = 42;
 	optional bool typing_indicators_enabled = 43;
-	//DYNProtoGroup_ThreadedModelCase - oneof
 }
 
 message GroupReadState {

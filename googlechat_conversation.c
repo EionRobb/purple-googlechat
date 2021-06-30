@@ -227,6 +227,11 @@ googlechat_got_users_information(GoogleChatAccount *ha, GetMembersResponse *resp
 		if (member == NULL || member->user == NULL) {
 			continue;
 		}
+#if PROTOBUF_C_VERSION_NUMBER >= 1001000
+		if (member->profile_case != MEMBER__PROFILE_USER) {
+			continue;
+		}
+#endif
 		User *user = member->user;
 		gaia_id = user->user_id ? user->user_id->id : NULL;
 		
@@ -288,6 +293,9 @@ googlechat_get_users_information(GoogleChatAccount *ha, GList *user_ids)
 		member_ids[i] = g_new0(MemberId, 1);
 		member_id__init(member_ids[i]);
 		
+#if PROTOBUF_C_VERSION_NUMBER >= 1001000
+		member_ids[i]->id_case = MEMBER_ID__ID_USER_ID;
+#endif
 		member_ids[i]->user_id = g_new0(UserId, 1);
 		user_id__init(member_ids[i]->user_id);
 		member_ids[i]->user_id->id = (gchar *) cur->data;
@@ -301,6 +309,7 @@ googlechat_get_users_information(GoogleChatAccount *ha, GList *user_ids)
 	
 	googlechat_request_header_free(request.request_header);
 	for (i = 0; i < n_member_ids; i++) {
+		g_free(member_ids[i]->user_id);
 		g_free(member_ids[i]);
 	}
 	g_free(member_ids);
@@ -323,6 +332,12 @@ googlechat_got_user_info(GoogleChatAccount *ha, GetMembersResponse *response, gp
 		g_free(who);
 		return;
 	}
+#if PROTOBUF_C_VERSION_NUMBER >= 1001000
+	if (member->profile_case != MEMBER__PROFILE_USER) {
+		g_free(who);
+		return;
+	}
+#endif
 	User *user = member->user;
 	//who = user->user_id ? user->user_id->id : NULL;
 	
@@ -371,6 +386,9 @@ googlechat_get_info(PurpleConnection *pc, const gchar *who)
 	user_id.id = who_dup;
 	
 	member_id__init(&member_id);
+#if PROTOBUF_C_VERSION_NUMBER >= 1001000
+	member_id.id_case = MEMBER_ID__ID_USER_ID;
+#endif
 	member_id.user_id = &user_id;
 	
 	member_ids = &member_id;
@@ -418,10 +436,16 @@ googlechat_get_conversation_events(GoogleChatAccount *ha, const gchar *conv_id, 
 	if (g_hash_table_contains(ha->one_to_ones, conv_id)) {
 		dm_id__init(&dm_id);
 		dm_id.dm_id = (gchar *) conv_id;
+#if PROTOBUF_C_VERSION_NUMBER >= 1001000
+		group_id.id_case = GROUP_ID__ID_DM_ID;
+#endif
 		group_id.dm_id = &dm_id;
 	} else {
 		space_id__init(&space_id);
 		space_id.space_id = (gchar *) conv_id;
+#if PROTOBUF_C_VERSION_NUMBER >= 1001000
+		group_id.id_case = GROUP_ID__ID_SPACE_ID;
+#endif
 		group_id.space_id = &space_id;
 	}
 	
@@ -674,7 +698,11 @@ googlechat_got_conversation_list(GoogleChatAccount *ha, PaginatedWorldResponse *
 	for (i = 0; i < response->n_world_items; i++) {
 		WorldItemLite *world_item_lite = response->world_items[i];
 		GroupId *group_id = world_item_lite->group_id;
+#if PROTOBUF_C_VERSION_NUMBER >= 1001000
+		gboolean is_dm = (group_id->id_case == GROUP_ID__ID_DM_ID);
+#else
 		gboolean is_dm = !!group_id->dm_id;
+#endif
 		gchar *conv_id = is_dm ? group_id->dm_id->dm_id : group_id->space_id->space_id;
 		
 		//purple_debug_info("googlechat", "got worlditemlite %s\n", pblite_dump_json((ProtobufCMessage *)world_item_lite));
@@ -948,6 +976,9 @@ googlechat_block_user(PurpleConnection *pc, const char *who)
 	
 	user_id__init(&user_id);
 	user_id.id = (gchar *) who;
+#if PROTOBUF_C_VERSION_NUMBER >= 1001000
+	request.entity_case = BLOCK_ENTITY_REQUEST__ENTITY_USER_ID;
+#endif
 	request.user_id = &user_id;
 	
 	request.has_blocked = TRUE;
@@ -971,6 +1002,9 @@ googlechat_unblock_user(PurpleConnection *pc, const char *who)
 	
 	user_id__init(&user_id);
 	user_id.id = (gchar *) who;
+#if PROTOBUF_C_VERSION_NUMBER >= 1001000
+	request.entity_case = BLOCK_ENTITY_REQUEST__ENTITY_USER_ID;
+#endif
 	request.user_id = &user_id;
 	
 	request.has_blocked = TRUE;
@@ -1025,14 +1059,23 @@ googlechat_conversation_send_image_part2_cb(PurpleHttpConnection *connection, Pu
 	if (g_hash_table_lookup(ha->one_to_ones, conv_id)) {
 		dm_id__init(&dm_id);
 		dm_id.dm_id = conv_id;
+#if PROTOBUF_C_VERSION_NUMBER >= 1001000
+		group_id.id_case = GROUP_ID__ID_DM_ID;
+#endif
 		group_id.dm_id = &dm_id;
 	} else {
 		space_id__init(&space_id);
 		space_id.space_id = conv_id;
+#if PROTOBUF_C_VERSION_NUMBER >= 1001000
+		group_id.id_case = GROUP_ID__ID_SPACE_ID;
+#endif
 		group_id.space_id = &space_id;
 	}
 	
 	drive_metadata.id = photoid;
+#if PROTOBUF_C_VERSION_NUMBER >= 1001000
+	photo_annotation.metadata_case = ANNOTATION__METADATA_DRIVE_METADATA;
+#endif
 	photo_annotation.drive_metadata = &drive_metadata;
 	annotations = &photo_annotation;
 	request.annotations = &annotations;
@@ -1204,10 +1247,16 @@ googlechat_conversation_send_message(GoogleChatAccount *ha, const gchar *conv_id
 	if (g_hash_table_contains(ha->one_to_ones, conv_id)) {
 		dm_id__init(&dm_id);
 		dm_id.dm_id = (gchar *) conv_id;
+#if PROTOBUF_C_VERSION_NUMBER >= 1001000
+		group_id.id_case = GROUP_ID__ID_DM_ID;
+#endif
 		group_id.dm_id = &dm_id;
 	} else {
 		space_id__init(&space_id);
 		space_id.space_id = (gchar *) conv_id;
+#if PROTOBUF_C_VERSION_NUMBER >= 1001000
+		group_id.id_case = GROUP_ID__ID_SPACE_ID;
+#endif
 		group_id.space_id = &space_id;
 	}
 	
@@ -1351,15 +1400,24 @@ googlechat_conv_send_typing(PurpleConversation *conv, PurpleIMTypingState state,
 	request.context = &typing_context;
 	
 	group_id__init(&group_id);
+#if PROTOBUF_C_VERSION_NUMBER >= 1001000
+	typing_context.context_case = TYPING_CONTEXT__CONTEXT_GROUP_ID;
+#endif
 	typing_context.group_id = &group_id;
 	
 	if (g_hash_table_contains(ha->one_to_ones, conv_id)) {
 		dm_id__init(&dm_id);
 		dm_id.dm_id = (gchar *) conv_id;
+#if PROTOBUF_C_VERSION_NUMBER >= 1001000
+		group_id.id_case = GROUP_ID__ID_DM_ID;
+#endif
 		group_id.dm_id = &dm_id;
 	} else {
 		space_id__init(&space_id);
 		space_id.space_id = (gchar *) conv_id;
+#if PROTOBUF_C_VERSION_NUMBER >= 1001000
+		group_id.id_case = GROUP_ID__ID_SPACE_ID;
+#endif
 		group_id.space_id = &space_id;
 	}
 	
@@ -1406,6 +1464,10 @@ googlechat_chat_leave_by_conv_id(PurpleConnection *pc, const gchar *conv_id, con
 	if (who != NULL) {
 		member_id__init(&member_id);
 		user_id__init(&user_id);
+#if PROTOBUF_C_VERSION_NUMBER >= 1001000
+		member_id.id_case = MEMBER_ID__ID_USER_ID;
+#endif
+		member_id.user_id = &user_id;
 		
 		user_id.id = (gchar *) who;
 		member_ids = &member_id;
@@ -1419,10 +1481,16 @@ googlechat_chat_leave_by_conv_id(PurpleConnection *pc, const gchar *conv_id, con
 	// if (g_hash_table_contains(ha->one_to_ones, conv_id)) {
 		// dm_id__init(&dm_id);
 		// dm_id.dm_id = (gchar *) conv_id;
+#if PROTOBUF_C_VERSION_NUMBER >= 1001000
+		// group_id.id_case = GROUP_ID__ID_DM_ID;
+#endif
 		// group_id.dm_id = &dm_id;
 	// } else {
 		space_id__init(&space_id);
 		space_id.space_id = (gchar *) conv_id;
+#if PROTOBUF_C_VERSION_NUMBER >= 1001000
+		group_id.id_case = GROUP_ID__ID_SPACE_ID;
+#endif
 		group_id.space_id = &space_id;
 	// }
 	
@@ -1578,10 +1646,17 @@ googlechat_create_conversation(GoogleChatAccount *ha, gboolean is_one_to_one, co
 		request.should_find_existing_space = FALSE;
 		
 		space_creation_info__init(&space);
+#if PROTOBUF_C_VERSION_NUMBER >= 1001000
+		request.creation_info_case = CREATE_GROUP_REQUEST__CREATION_INFO_SPACE;
+#endif
+		request.space = &space;
 		//TODO
 		//space.name = (gchar *) "space name";
 		
 		invitee_member_info__init(&imi);
+#if PROTOBUF_C_VERSION_NUMBER >= 1001000
+		imi.id_case = INVITEE_MEMBER_INFO__ID_INVITEE_INFO;
+#endif
 		imi.invitee_info = &invitee_info;
 		invitee_member_infos = &imi;
 		space.invitee_member_infos = &invitee_member_infos;
@@ -1614,10 +1689,16 @@ googlechat_archive_conversation(GoogleChatAccount *ha, const gchar *conv_id)
 	if (g_hash_table_contains(ha->one_to_ones, conv_id)) {
 		dm_id__init(&dm_id);
 		dm_id.dm_id = (gchar *) conv_id;
+#if PROTOBUF_C_VERSION_NUMBER >= 1001000
+		group_id.id_case = GROUP_ID__ID_DM_ID;
+#endif
 		group_id.dm_id = &dm_id;
 	} else {
 		space_id__init(&space_id);
 		space_id.space_id = (gchar *) conv_id;
+#if PROTOBUF_C_VERSION_NUMBER >= 1001000
+		group_id.id_case = GROUP_ID__ID_SPACE_ID;
+#endif
 		group_id.space_id = &space_id;
 	}
 	
@@ -1690,10 +1771,16 @@ googlechat_chat_invite(PurpleConnection *pc, int id, const char *message, const 
 	if (g_hash_table_contains(ha->one_to_ones, conv_id)) {
 		dm_id__init(&dm_id);
 		dm_id.dm_id = (gchar *) conv_id;
+#if PROTOBUF_C_VERSION_NUMBER >= 1001000
+		group_id.id_case = GROUP_ID__ID_DM_ID;
+#endif
 		group_id.dm_id = &dm_id;
 	} else {
 		space_id__init(&space_id);
 		space_id.space_id = (gchar *) conv_id;
+#if PROTOBUF_C_VERSION_NUMBER >= 1001000
+		group_id.id_case = GROUP_ID__ID_SPACE_ID;
+#endif
 		group_id.space_id = &space_id;
 	}
 	
@@ -1706,6 +1793,9 @@ googlechat_chat_invite(PurpleConnection *pc, int id, const char *message, const 
 	invitee_info.user_id = &user_id;
 	
 	invitee_member_info__init(&imi);
+#if PROTOBUF_C_VERSION_NUMBER >= 1001000
+	imi.id_case = INVITEE_MEMBER_INFO__ID_INVITEE_INFO;
+#endif
 	imi.invitee_info = &invitee_info;
 	invitee_member_infos = &imi;
 	
@@ -1769,10 +1859,16 @@ googlechat_mark_conversation_seen(PurpleConversation *conv, PurpleConversationUp
 	if (g_hash_table_contains(ha->one_to_ones, conv_id)) {
 		dm_id__init(&dm_id);
 		dm_id.dm_id = (gchar *) conv_id;
+#if PROTOBUF_C_VERSION_NUMBER >= 1001000
+		group_id.id_case = GROUP_ID__ID_DM_ID;
+#endif
 		group_id.dm_id = &dm_id;
 	} else {
 		space_id__init(&space_id);
 		space_id.space_id = (gchar *) conv_id;
+#if PROTOBUF_C_VERSION_NUMBER >= 1001000
+		group_id.id_case = GROUP_ID__ID_SPACE_ID;
+#endif
 		group_id.space_id = &space_id;
 	}
 	
@@ -1868,7 +1964,11 @@ googlechat_roomlist_got_list(GoogleChatAccount *ha, PaginatedWorldResponse *resp
 	for (i = 0; i < response->n_world_items; i++) {
 		WorldItemLite *world_item_lite = response->world_items[i];
 		GroupId *group_id = world_item_lite->group_id;
+#if PROTOBUF_C_VERSION_NUMBER >= 1001000
+		gboolean is_dm = (group_id->id_case == GROUP_ID__ID_DM_ID);
+#else
 		gboolean is_dm = !!group_id->dm_id;
+#endif
 		gchar *conv_id = is_dm ? group_id->dm_id->dm_id : group_id->space_id->space_id;
 		
 		if (!is_dm) {

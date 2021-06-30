@@ -164,11 +164,12 @@ void
 googlechat_received_presence_notification(PurpleConnection *pc, Event *event)
 {
 	GoogleChatAccount *ha;
-	UserStatusUpdatedEvent *user_status_updated_event = event->body->user_status_updated_event;
+	UserStatusUpdatedEvent *user_status_updated_event;
 	
-	if (user_status_updated_event == NULL) {
+	if (event->type != EVENT__EVENT_TYPE__USER_STATUS_UPDATED_EVENT) {
 		return;
 	}
+	user_status_updated_event = event->body->user_status_updated_event;
 	
 	ha = purple_connection_get_protocol_data(pc);
 	
@@ -288,14 +289,14 @@ void
 googlechat_received_message_event(PurpleConnection *pc, Event *event)
 {
 	GoogleChatAccount *ha;
-	MessageEvent *message_event = event->body->message_posted;
+	MessageEvent *message_event;
 	const gchar *conv_id;
 	const gchar *sender_id;
-	gboolean is_dm = FALSE;
 	
-	if (message_event == NULL) {
+	if (event->type != EVENT__EVENT_TYPE__MESSAGE_POSTED) {
 		return;
 	}
+	message_event = event->body->message_posted;
 	
 	ha = purple_connection_get_protocol_data(pc);
 	
@@ -304,11 +305,16 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 	
 	//TODO safety checks
 	sender_id = message->creator->user_id->id;
-	is_dm = !!message->id->parent_id->topic_id->group_id->dm_id;
+	GroupId *group_id = message->id->parent_id->topic_id->group_id;
+#if PROTOBUF_C_VERSION_NUMBER >= 1001000
+	gboolean is_dm = (group_id->id_case == GROUP_ID__ID_DM_ID);
+#else
+	gboolean is_dm = !!group_id->dm_id;
+#endif
 	if (is_dm) {
-		conv_id = message->id->parent_id->topic_id->group_id->dm_id->dm_id;
+		conv_id = group_id->dm_id->dm_id;
 	} else {
-		conv_id = message->id->parent_id->topic_id->group_id->space_id->space_id;
+		conv_id = group_id->space_id->space_id;
 	}
 	
 	
@@ -374,7 +380,11 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 	for (i = 0; i < message->n_annotations; i++) {
 		Annotation *annotation = message->annotations[i];
 		
-		if (annotation->drive_metadata) {
+		if (annotation->drive_metadata
+#if PROTOBUF_C_VERSION_NUMBER >= 1001000
+			&& annotation->metadata_case == ANNOTATION__METADATA_DRIVE_METADATA
+#endif
+		) {
 			DriveMetadata *drive_metadata = annotation->drive_metadata;
 			const gchar *image_url = drive_metadata->thumbnail_url;
 			const gchar *url = drive_metadata->url_fragment;
@@ -751,15 +761,15 @@ void
 googlechat_received_typing_notification(PurpleConnection *pc, Event *event)
 {
 	GoogleChatAccount *ha;
-	TypingStateChangedEvent *typing_notification = event->body->typing_state_changed_event;
+	TypingStateChangedEvent *typing_notification;
 	const gchar *user_id;
 	const gchar *conv_id;
 	PurpleIMTypingState typing_state;
 	
-	//event->type == EVENT__EVENT_TYPE__TYPING_STATE_CHANGED
-	if (typing_notification == NULL) {
+	if (event->type != EVENT__EVENT_TYPE__TYPING_STATE_CHANGED) {
 		return;
 	}
+	typing_notification = event->body->typing_state_changed_event;
 	
 	ha = purple_connection_get_protocol_data(pc);
 	
@@ -772,11 +782,16 @@ googlechat_received_typing_notification(PurpleConnection *pc, Event *event)
 		return;
 	}
 	
-	gboolean is_dm = !!typing_notification->context->group_id->dm_id;
+	GroupId *group_id = typing_notification->context->group_id;
+#if PROTOBUF_C_VERSION_NUMBER >= 1001000
+	gboolean is_dm = (group_id->id_case == GROUP_ID__ID_DM_ID);
+#else
+	gboolean is_dm = !!group_id->dm_id;
+#endif
 	if (is_dm) {
-		conv_id = typing_notification->context->group_id->dm_id->dm_id;
+		conv_id = group_id->dm_id->dm_id;
 	} else {
-		conv_id = typing_notification->context->group_id->space_id->space_id;
+		conv_id = group_id->space_id->space_id;
 	}
 	
 	if (!is_dm) {

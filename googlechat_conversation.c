@@ -1812,12 +1812,20 @@ googlechat_set_status(PurpleAccount *account, PurpleStatus *status)
 	if (purple_status_type_get_primitive(purple_status_get_status_type(status)) == PURPLE_STATUS_UNAVAILABLE) {
 		dnd_request.has_current_dnd_state = TRUE;
 		dnd_request.current_dnd_state = SET_DND_DURATION_REQUEST__STATE__DND;
+#if PROTOBUF_C_VERSION_NUMBER < 1001000
 		dnd_request.has_dnd_expiry_timestamp_usec = TRUE;
+#else
+		dnd_request.dnd_expiry_case = SET_DND_DURATION_REQUEST__DND_EXPIRY_DND_EXPIRY_TIMESTAMP_USEC;
+#endif
 		dnd_request.dnd_expiry_timestamp_usec = 172800000000;
 	} else {
 		dnd_request.has_current_dnd_state = TRUE;
 		dnd_request.current_dnd_state = SET_DND_DURATION_REQUEST__STATE__AVAILABLE;
+#if PROTOBUF_C_VERSION_NUMBER < 1001000
 		dnd_request.has_new_dnd_duration_usec = TRUE;
+#else
+		dnd_request.dnd_expiry_case = SET_DND_DURATION_REQUEST__DND_EXPIRY_NEW_DND_DURATION_USEC;
+#endif
 		dnd_request.new_dnd_duration_usec = 0;
 	}
 
@@ -1831,10 +1839,13 @@ googlechat_set_status(PurpleAccount *account, PurpleStatus *status)
 	if (message && *message) {
 		SetCustomStatusRequest custom_status_request;
 		CustomStatus custom_status;
-		if (message && *message) {
 		
 		set_custom_status_request__init(&custom_status_request);
+#if PROTOBUF_C_VERSION_NUMBER < 1001000
 		custom_status_request.has_custom_status_remaining_duration_usec = TRUE;
+#else
+		custom_status_request.custom_status_timing_case = SET_CUSTOM_STATUS_REQUEST__CUSTOM_STATUS_TIMING_CUSTOM_STATUS_REMAINING_DURATION_USEC;
+#endif
 		custom_status_request.custom_status_remaining_duration_usec = 172800000000;
 		
 		custom_status__init(&custom_status);

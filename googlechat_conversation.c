@@ -1813,7 +1813,7 @@ googlechat_set_status(PurpleAccount *account, PurpleStatus *status)
 		dnd_request.has_current_dnd_state = TRUE;
 		dnd_request.current_dnd_state = SET_DND_DURATION_REQUEST__STATE__DND;
 		dnd_request.has_dnd_expiry_timestamp_usec = TRUE;
-		dnd_request.dnd_expiry_timestamp_usec = 172800000;
+		dnd_request.dnd_expiry_timestamp_usec = 172800000000;
 	} else {
 		dnd_request.has_current_dnd_state = TRUE;
 		dnd_request.current_dnd_state = SET_DND_DURATION_REQUEST__STATE__AVAILABLE;
@@ -1826,6 +1826,25 @@ googlechat_set_status(PurpleAccount *account, PurpleStatus *status)
 	
 	googlechat_request_header_free(presence_request.request_header);
 	googlechat_request_header_free(dnd_request.request_header);
+	
+	const gchar *message = purple_status_get_attr_string(status, "message");
+	if (message && *message) {
+		SetCustomStatusRequest custom_status_request;
+		CustomStatus custom_status;
+		if (message && *message) {
+		
+		set_custom_status_request__init(&custom_status_request);
+		custom_status_request.has_custom_status_remaining_duration_usec = TRUE;
+		custom_status_request.custom_status_remaining_duration_usec = 172800000000;
+		
+		custom_status__init(&custom_status);
+		custom_status_request.custom_status = &custom_status;
+		custom_status.status_text = (gchar *) message;
+		
+		googlechat_api_set_custom_status(ha, &custom_status_request, NULL, NULL);
+		
+		googlechat_request_header_free(custom_status_request.request_header);
+	}
 }
 
 

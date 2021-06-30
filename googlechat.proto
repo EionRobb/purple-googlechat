@@ -1377,3 +1377,17 @@ message BlockEntityResponse {
 	optional GroupReadState read_state = 1;
 	// optional WriteRevision user_revision = 2;
 }
+
+message SetCustomStatusRequest {
+	optional RequestHeader request_header = 100;
+	optional CustomStatus custom_status = 1;
+	oneof CustomStatusTiming {
+		int64 custom_status_expiry_timestamp_usec = 2;
+		int64 custom_status_remaining_duration_usec = 3;
+	}
+}
+
+message SetCustomStatusResponse {
+	optional UserStatus user_status = 1;
+	// optional WriteRevision user_revision = 2;
+}

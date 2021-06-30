@@ -92,6 +92,7 @@ GOOGLECHAT_DEFINE_API_REQUEST_FUNC(hide_group, HideGroup, "hide_group");
 GOOGLECHAT_DEFINE_API_REQUEST_FUNC(mark_group_readstate, MarkGroupReadstate, "mark_group_readstate");
 GOOGLECHAT_DEFINE_API_REQUEST_FUNC(set_presence_shared, SetPresenceShared, "set_presence_shared");
 GOOGLECHAT_DEFINE_API_REQUEST_FUNC(set_dnd_duration, SetDndDuration, "set_dnd_duration");
+GOOGLECHAT_DEFINE_API_REQUEST_FUNC(set_custom_status, SetCustomStatus, "set_custom_status");
 GOOGLECHAT_DEFINE_API_REQUEST_FUNC(update_group, UpdateGroup, "update_group");
 GOOGLECHAT_DEFINE_API_REQUEST_FUNC(block_entity, BlockEntity, "block_entity");
 

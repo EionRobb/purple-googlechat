@@ -216,54 +216,63 @@ googlechat_poll_buddy_status(gpointer userdata)
 static void googlechat_got_buddy_photo(PurpleHttpConnection *connection, PurpleHttpResponse *response, gpointer user_data);
 
 static void
+googlechat_got_users_information_member(GoogleChatAccount *ha, Member *member)
+{
+	if (member == NULL || member->user == NULL) {
+		return;
+	}
+#if PROTOBUF_C_VERSION_NUMBER >= 1001000
+	if (member->profile_case != MEMBER__PROFILE_USER) {
+		return;
+	}
+#endif
+	User *user = member->user;
+	const gchar *gaia_id = user->user_id ? user->user_id->id : NULL;
+	
+	if (gaia_id != NULL) {
+		PurpleBuddy *buddy = purple_blist_find_buddy(ha->account, gaia_id);
+		
+		// Give a best-guess for the buddy's alias
+		if (user->name)
+			purple_serv_got_alias(ha->pc, gaia_id, user->name);
+		else if (user->email)
+			purple_serv_got_alias(ha->pc, gaia_id, user->email);
+		//TODO first+last name
+		
+		// Set the buddy photo, if it's real
+		if (user->avatar_url != NULL) {
+			const gchar *photo = user->avatar_url;
+			if (!purple_strequal(purple_buddy_icons_get_checksum_for_user(buddy), photo)) {
+				PurpleHttpRequest *photo_request = purple_http_request_new(photo);
+				
+				if (ha->icons_keepalive_pool == NULL) {
+					ha->icons_keepalive_pool = purple_http_keepalive_pool_new();
+					purple_http_keepalive_pool_set_limit_per_host(ha->icons_keepalive_pool, 4);
+				}
+				purple_http_request_set_keepalive_pool(photo_request, ha->icons_keepalive_pool);
+				
+				purple_http_request(ha->pc, photo_request, googlechat_got_buddy_photo, buddy);
+				purple_http_request_unref(photo_request);
+			}
+		}
+	}
+	
+	//TODO - process user->deleted == TRUE;
+}
+
+static void
 googlechat_got_users_information(GoogleChatAccount *ha, GetMembersResponse *response, gpointer user_data)
 {
 	guint i;
 	
 	for (i = 0; i < response->n_member_profiles; i++) {
 		Member *member = response->member_profiles[i]->member;
-		const gchar *gaia_id;
-
-		if (member == NULL || member->user == NULL) {
-			continue;
-		}
-#if PROTOBUF_C_VERSION_NUMBER >= 1001000
-		if (member->profile_case != MEMBER__PROFILE_USER) {
-			continue;
-		}
-#endif
-		User *user = member->user;
-		gaia_id = user->user_id ? user->user_id->id : NULL;
-		
-		if (gaia_id != NULL) {
-			PurpleBuddy *buddy = purple_blist_find_buddy(ha->account, gaia_id);
-			
-			// Give a best-guess for the buddy's alias
-			if (user->name)
-				purple_serv_got_alias(ha->pc, gaia_id, user->name);
-			else if (user->email)
-				purple_serv_got_alias(ha->pc, gaia_id, user->email);
-			//TODO first+last name
-			
-			// Set the buddy photo, if it's real
-			if (user->avatar_url != NULL) {
-				const gchar *photo = user->avatar_url;
-				if (!purple_strequal(purple_buddy_icons_get_checksum_for_user(buddy), photo)) {
-					PurpleHttpRequest *photo_request = purple_http_request_new(photo);
-					
-					if (ha->icons_keepalive_pool == NULL) {
-						ha->icons_keepalive_pool = purple_http_keepalive_pool_new();
-						purple_http_keepalive_pool_set_limit_per_host(ha->icons_keepalive_pool, 4);
-					}
-					purple_http_request_set_keepalive_pool(photo_request, ha->icons_keepalive_pool);
-					
-					purple_http_request(ha->pc, photo_request, googlechat_got_buddy_photo, buddy);
-					purple_http_request_unref(photo_request);
-				}
-			}
-		}
-		
-		//TODO - process user->deleted == TRUE;
+		googlechat_got_users_information_member(ha, member);
+	}
+	
+	for (i = 0; i < response->n_members; i++) {
+		Member *member = response->members[i];
+		googlechat_got_users_information_member(ha, member);
 	}
 }
 
@@ -318,16 +327,15 @@ googlechat_get_users_information(GoogleChatAccount *ha, GList *user_ids)
 static void
 googlechat_got_user_info(GoogleChatAccount *ha, GetMembersResponse *response, gpointer user_data)
 {
-	Member *member;
+	Member *member = NULL;
 	PurpleNotifyUserInfo *user_info;
 	gchar *who = user_data;
 	
-	if (response->n_member_profiles < 1) {
-		g_free(who);
-		return;
+	if (response->n_members > 0) {
+		member = response->members[0];
+	} else if (response->n_member_profiles > 0) {
+		member = response->member_profiles[0]->member;
 	}
-	
-	member = response->member_profiles[0]->member;
 	if (member == NULL || member->user == NULL) {
 		g_free(who);
 		return;
@@ -347,6 +355,8 @@ googlechat_got_user_info(GoogleChatAccount *ha, GetMembersResponse *response, gp
 		purple_notify_user_info_add_pair_html(user_info, _("Display Name"), user->name);
 	if (user->first_name != NULL)
 		purple_notify_user_info_add_pair_html(user_info, _("First Name"), user->first_name);
+	if (user->last_name != NULL)
+		purple_notify_user_info_add_pair_html(user_info, _("Last Name"), user->last_name);
 
 	if (user->avatar_url) {
 		gchar *prefix = strncmp(user->avatar_url, "//", 2) ? "" : "https:";

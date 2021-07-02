@@ -1196,6 +1196,38 @@ googlechat_conversation_send_message(GoogleChatAccount *ha, const gchar *conv_id
 	
 	g_return_val_if_fail(conv_id, -1);
 	
+	// TODO HTML -> Annotation
+	/*
+	 text_body: "<b>bold</b>"
+    annotations {
+      type: FORMAT_DATA
+      start_index: 0
+      length: 3
+      format_metadata {
+        format_type: HIDDEN
+      }
+      chip_render_type: DO_NOT_RENDER
+    }
+    annotations {
+      type: FORMAT_DATA
+      start_index: 3
+      length: 4
+      format_metadata {
+        format_type: BOLD
+      }
+      chip_render_type: DO_NOT_RENDER
+    }
+    annotations {
+      type: FORMAT_DATA
+      start_index: 7
+      length: 4
+      format_metadata {
+        format_type: HIDDEN
+      }
+      chip_render_type: DO_NOT_RENDER
+    }
+	*/
+	
 	gchar *message_dup = g_strdup(message);
 	gchar *message_id = g_strdup_printf("purple%" G_GUINT32_FORMAT, (guint32) g_random_int());
 	
@@ -1232,7 +1264,7 @@ googlechat_conversation_send_message(GoogleChatAccount *ha, const gchar *conv_id
 	message_info__init(&message_info);
 	request.message_info = &message_info;
 	message_info.has_accept_format_annotations = TRUE;
-	message_info.accept_format_annotations = FALSE;
+	message_info.accept_format_annotations = TRUE; //false = treat message as markdown
 	
 	purple_debug_info("googlechat", "%s\n", pblite_dump_json((ProtobufCMessage *)&request)); //leaky
 	

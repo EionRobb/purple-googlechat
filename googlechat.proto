@@ -49,9 +49,9 @@ message DndSettings {
 }
 
 message Emoji {
-	oneof Content {
-		string unicode = 1;
-	}
+	//oneof Content {
+	optional	string unicode = 1;
+	//}
 }
 
 message CustomStatus {
@@ -136,17 +136,17 @@ enum InviteCategory {
 }
 
 message Member {
-	oneof Profile {
-		User user = 1;
+	//oneof Profile {
+	optional	User user = 1;
 		//Roster roster = 2;
-	}
+	//}
 }
 
 message MemberId {
-	oneof Id {
-		UserId user_id = 1;
+	//oneof Id {
+	optional	UserId user_id = 1;
 		//RosterId roster_id = 2;
-	}
+	//}
 }
 
 message MembershipId {
@@ -229,9 +229,9 @@ message Reaction {
 }
 
 message MessageParentId {
-	oneof Parent {
-		TopicId topic_id = 4;
-	}
+	//oneof Parent {
+	optional	TopicId topic_id = 4;
+	//}
 }
 
 message MessageId {
@@ -342,11 +342,11 @@ message Annotation {
 	optional ChipRenderType chip_render_type = 20;
 	optional bool server_invalidated = 13;
 	
-	oneof Metadata {
+	//oneof Metadata {
 		//DYNProtoUserMentionMetadata user_mention_metadata = 5;
-		FormatMetadata format_metadata = 8;
+	optional	FormatMetadata format_metadata = 8;
 		//DYNProtoSlashCommandMetadata slash_command_metadata = 15;
-		DriveMetadata drive_metadata = 4;
+	optional	DriveMetadata drive_metadata = 4;
 		
 		//DYNProtoYoutubeMetadata youtube_metadata = 6;
 		//DYNProtoUrlMetadata url_metadata = 7;
@@ -361,7 +361,7 @@ message Annotation {
 		//DYNProtoIncomingWebhookChangedMetadata incoming_webhook_changed_metadata = 22;
 		//DYNProtoIntegrationConfigUpdatedMetadata integration_config_updated = 23;
 		//DYNProtoConsentedAppUnfurlMetadata consented_app_unfurl_metadata = 24;
-	}
+	//}
 }
 
 enum TypingState {
@@ -371,10 +371,10 @@ enum TypingState {
 }
 
 message TypingContext {
-	oneof Context {
-		GroupId group_id = 1;
-		TopicId topic_id = 2;
-	}
+	//oneof Context {
+	optional	GroupId group_id = 1;
+	optional	TopicId topic_id = 2;
+	//}
 }
 
 message SetTypingStateRequest {
@@ -396,10 +396,10 @@ message SpaceId {
 }
 
 message GroupId {
-	oneof Id {
-		SpaceId space_id = 1;
-		DmId dm_id = 3;
-	}
+	//oneof Id {
+	optional	SpaceId space_id = 1;
+	optional	DmId dm_id = 3;
+	//}
 }
 
 message Group {
@@ -435,10 +435,10 @@ message Group {
 	
 	message FlatGroup {}
 	message ThreadedGroup {}
-	oneof ThreadedModel {
-		FlatGroup flat_group = 26;
-		ThreadedGroup threaded_group = 27;
-	}
+	//oneof ThreadedModel {
+	optional	FlatGroup flat_group = 26;
+	optional	ThreadedGroup threaded_group = 27;
+	//}
 	
 	optional string avatar_url = 28;
 	//optional DYNProtoGroupIntegrationSettings group_integration_settings = 36;
@@ -512,10 +512,10 @@ message InviteeInfo {
 }
 
 message InviteeMemberInfo {
-	oneof Id {
-		InviteeInfo invitee_info = 1;
+	//oneof Id {
+	optional	InviteeInfo invitee_info = 1;
 		// RosterId roster_id = 2;
-	}
+	//}
 }
 
 message SpaceCreationInfo {
@@ -550,9 +550,9 @@ message SpaceCreationInfo {
 
 message CreateGroupRequest {
 	optional RequestHeader request_header = 100;
-	oneof CreationInfo {
-		SpaceCreationInfo space = 1;
-	}
+	//oneof CreationInfo {
+	optional	SpaceCreationInfo space = 1;
+	//}
 	optional string local_id = 3;
 	optional bool should_find_existing_space = 4;
 }
@@ -807,11 +807,11 @@ message Event {
 	}
 	
 	message EventBody {
-		oneof Type {
+		//oneof Type {
 			//GroupViewedEvent group_viewed = 3;
 			//TopicViewedEvent topic_viewed = 4;
 			//GroupUpdatedEvent group_updated = 5;
-			MessageEvent message_posted = 6;
+		optional	MessageEvent message_posted = 6;
 			//TopicMuteChangedEvent topic_mute_changed = 7;
 			//UserSettingsChangedEvent user_settings_changed = 8;
 			//GroupStarredEvent group_starred = 9;
@@ -826,10 +826,10 @@ message Event {
 			//RetentionSettingsUpdatedEvent retention_settings_updated = 19;
 			//TopicCreatedEvent topic_created = 21;
 			//MessageReactionEvent message_reaction = 22;
-			UserStatusUpdatedEvent user_status_updated_event = 23;
+		optional	UserStatusUpdatedEvent user_status_updated_event = 23;
 			//WorkingHoursSettingsUpdatedEvent working_hours_settings_updated_event = 24;
 			//MessageSmartRepliesEvent message_smart_replies_event = 25;
-			TypingStateChangedEvent typing_state_changed_event = 26;
+		optional	TypingStateChangedEvent typing_state_changed_event = 26;
 			//GroupDeletedEvent group_deleted_event = 27;
 			//BlockStateChangedEvent block_state_changed_event = 28;
 			//ClearHistoryEvent clear_history_event = 29;
@@ -846,7 +846,7 @@ message Event {
 			//SharedDriveCreateScheduledEvent shared_drive_create_scheduled_event = 41;
 			//SharedDriveUpdatedEvent shared_drive_updated_event = 42;
 			//MessagePersonalLabelUpdatedEvent message_personal_label_updated = 43;
-		}
+		//}
 
 		optional EventType event_type = 12;
 		optional int64 trace_id = 20;
@@ -1231,10 +1231,10 @@ message WorldSectionRequest {
 	optional WorldFilter world_filter = 4;
 	optional int32 num_world_items_with_snippet = 5;
 	optional int64 anchor_sort_timestamp_micros = 3;
-	oneof Pagination {
-		string pagination_token = 6;
+	//oneof Pagination {
+	optional	string pagination_token = 6;
 		// SortingOrder sorting_order = 7;
-	}
+	//}
 }
 
 message WorldSectionResponse {
@@ -1358,10 +1358,10 @@ message SetDndDurationRequest {
 	}
 	optional State current_dnd_state = 2;
 	
-	oneof DndExpiry {
-		int64 new_dnd_duration_usec = 1;
-		int64 dnd_expiry_timestamp_usec = 3;
-	}
+	//oneof DndExpiry {
+	optional	int64 new_dnd_duration_usec = 1;
+	optional	int64 dnd_expiry_timestamp_usec = 3;
+	//}
 }
 
 message SetDndDurationResponse {
@@ -1394,10 +1394,10 @@ message UpdateGroupResponse {
 
 message BlockEntityRequest {
 	optional RequestHeader request_header = 100;
-	oneof Entity {
-		UserId user_id = 1;
-		GroupId group_id = 2;
-	}
+	//oneof Entity {
+	optional	UserId user_id = 1;
+	optional	GroupId group_id = 2;
+	//}
 	optional bool blocked = 3;
 	optional bool reported = 4;
 }
@@ -1410,10 +1410,10 @@ message BlockEntityResponse {
 message SetCustomStatusRequest {
 	optional RequestHeader request_header = 100;
 	optional CustomStatus custom_status = 1;
-	oneof CustomStatusTiming {
-		int64 custom_status_expiry_timestamp_usec = 2;
-		int64 custom_status_remaining_duration_usec = 3;
-	}
+	//oneof CustomStatusTiming {
+	optional	int64 custom_status_expiry_timestamp_usec = 2;
+	optional	int64 custom_status_remaining_duration_usec = 3;
+	//}
 }
 
 message SetCustomStatusResponse {

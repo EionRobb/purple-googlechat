@@ -36,6 +36,8 @@ RequestHeader *
 googlechat_get_request_header(GoogleChatAccount *ha)
 {
 	RequestHeader *header = g_new0(RequestHeader, 1);
+	ClientFeatureCapabilities *cfc = g_new0(ClientFeatureCapabilities, 1);
+	
 	request_header__init(header);
 	
 	header->has_client_type = TRUE;
@@ -47,12 +49,19 @@ googlechat_get_request_header(GoogleChatAccount *ha)
 	header->has_trace_id = TRUE;
 	header->trace_id = g_random_int();
 	
+	client_feature_capabilities__init(cfc);
+	header->client_feature_capabilities = cfc;
+	
+	cfc->has_spam_room_invites_level = TRUE;
+	cfc->spam_room_invites_level = CLIENT_FEATURE_CAPABILITIES__CAPABILITY_LEVEL__FULLY_SUPPORTED;
+	
 	return header;
 }
 
 void
 googlechat_request_header_free(RequestHeader *header)
 {
+	g_free(header->client_feature_capabilities);
 	g_free(header);
 }
 

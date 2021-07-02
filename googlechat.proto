@@ -94,6 +94,22 @@ message GetSelfUserStatusResponse {
 	//optional DYNProtoReadRevision user_revision = 2;
 }
 
+message ClientFeatureCapabilities {
+	enum CapabilityLevel {
+		UNSUPPORTED = 0;
+		DATA_SUPPORTED = 1;
+		FULLY_SUPPORTED = 2;
+	}
+	
+	optional bool enable_all_features = 1;
+	optional CapabilityLevel spaces_level_for_testing = 2;
+	optional CapabilityLevel dms_level_for_testing = 3;
+	optional CapabilityLevel post_rooms_level = 4;
+	optional CapabilityLevel spam_room_invites_level = 5;
+	optional CapabilityLevel tombstone_level = 6;
+	optional CapabilityLevel rich_text_viewing_level = 7;
+}
+
 message RequestHeader {
 	optional int64 trace_id = 1;
 	
@@ -110,7 +126,7 @@ message RequestHeader {
 	optional ClientType client_type = 2;
 	optional int64 client_version = 3;
 	optional string locale = 4;
-	//optional DYNProtoClientFeatureCapabilities client_feature_capabilities = 5;
+	optional ClientFeatureCapabilities client_feature_capabilities = 5;
 }
 
 enum InviteCategory {

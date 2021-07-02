@@ -306,11 +306,7 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 	//TODO safety checks
 	sender_id = message->creator->user_id->id;
 	GroupId *group_id = message->id->parent_id->topic_id->group_id;
-#if PROTOBUF_C_VERSION_NUMBER >= 1001000
-	gboolean is_dm = (group_id->id_case == GROUP_ID__ID_DM_ID);
-#else
 	gboolean is_dm = !!group_id->dm_id;
-#endif
 	if (is_dm) {
 		conv_id = group_id->dm_id->dm_id;
 	} else {
@@ -380,11 +376,7 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 	for (i = 0; i < message->n_annotations; i++) {
 		Annotation *annotation = message->annotations[i];
 		
-		if (annotation->drive_metadata
-#if PROTOBUF_C_VERSION_NUMBER >= 1001000
-			&& annotation->metadata_case == ANNOTATION__METADATA_DRIVE_METADATA
-#endif
-		) {
+		if (annotation->drive_metadata) {
 			DriveMetadata *drive_metadata = annotation->drive_metadata;
 			const gchar *image_url = drive_metadata->thumbnail_url;
 			const gchar *url = drive_metadata->url_fragment;
@@ -783,11 +775,7 @@ googlechat_received_typing_notification(PurpleConnection *pc, Event *event)
 	}
 	
 	GroupId *group_id = typing_notification->context->group_id;
-#if PROTOBUF_C_VERSION_NUMBER >= 1001000
-	gboolean is_dm = (group_id->id_case == GROUP_ID__ID_DM_ID);
-#else
 	gboolean is_dm = !!group_id->dm_id;
-#endif
 	if (is_dm) {
 		conv_id = group_id->dm_id->dm_id;
 	} else {

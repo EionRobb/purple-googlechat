@@ -442,6 +442,16 @@ message GroupReadState {
 	repeated UserId joined_users = 23;
 }
 
+message RetentionSettings {
+	enum RetentionState {
+		UNKNOWN_RETENTION_STATE = 0;
+		PERMANENT = 1;
+		EPHEMERAL_ONE_DAY = 2;
+	}
+	optional RetentionState state = 1;
+	optional int64 expiry_timestamp = 2;
+}
+
 message TopicId {
 	optional GroupId group_id = 3;
 	optional string topic_id = 2;
@@ -454,8 +464,12 @@ message Topic {
 	repeated Message replies = 7;
 	//optional DYNProtoTopicReadState topic_read_state = 11;
 	optional bool is_system_message = 12;
-	//optional DYNProtoRetentionSettings retention_settings = 13;
+	optional RetentionSettings retention_settings = 13;
 	optional bool contains_more_unread_replies = 14;
+}
+
+message MessageInfo {
+	optional bool accept_format_annotations = 1;
 }
 
 message CreateTopicRequest {
@@ -463,11 +477,11 @@ message CreateTopicRequest {
 	optional GroupId group_id = 5;
 	optional string text_body = 2;
 	repeated Annotation annotations = 3;
-	//optional DYNProtoRetentionSettings retention_settings = 6;
+	optional RetentionSettings retention_settings = 6;
 	optional string local_id = 4;
 	optional string topic_and_message_id = 7;
 	optional bool history_v2 = 8;
-	//optional DYNProtoMessageInfo message_info = 9;
+	optional MessageInfo message_info = 9;
 }
 
 message CreateTopicResponse {

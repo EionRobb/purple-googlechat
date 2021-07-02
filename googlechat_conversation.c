@@ -44,6 +44,9 @@ googlechat_get_request_header(GoogleChatAccount *ha)
 	header->has_client_version = TRUE;
 	header->client_version = 2440378181258;
 	
+	header->has_trace_id = TRUE;
+	header->trace_id = g_random_int();
+	
 	return header;
 }
 
@@ -1238,6 +1241,8 @@ googlechat_conversation_send_message(GoogleChatAccount *ha, const gchar *conv_id
 	GroupId group_id;
 	SpaceId space_id;
 	DmId dm_id;
+	RetentionSettings retention_settings;
+	MessageInfo message_info;
 	
 	g_return_val_if_fail(conv_id, -1);
 	
@@ -1274,6 +1279,16 @@ googlechat_conversation_send_message(GoogleChatAccount *ha, const gchar *conv_id
 	request.topic_and_message_id = message_id;
 	request.has_history_v2 = TRUE;
 	request.history_v2 = TRUE;
+	
+	retention_settings__init(&retention_settings);
+	request.retention_settings = &retention_settings;
+	retention_settings.has_state = TRUE;
+	retention_settings.state = RETENTION_SETTINGS__RETENTION_STATE__PERMANENT;
+	
+	message_info__init(&message_info);
+	request.message_info = &message_info;
+	message_info.has_accept_format_annotations = TRUE;
+	message_info.accept_format_annotations = FALSE;
 	
 	//purple_debug_info("googlechat", "%s\n", pblite_dump_json((ProtobufCMessage *)&request)); //leaky
 	

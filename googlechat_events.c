@@ -83,6 +83,8 @@ googlechat_process_received_event(GoogleChatAccount *ha, Event *event)
 			Event__EventBody *body = bodies[i];
 			
 			event->body = body;
+			
+			event->has_type = TRUE;
 			event->type = body->event_type;
 			
 			purple_signal_emit(purple_connection_get_protocol(ha->pc), "googlechat-received-event", ha->pc, event);
@@ -302,6 +304,11 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 	
 	Message *message = message_event->message;
 	guint i;
+	
+	if (message->local_id && g_hash_table_remove(ha->sent_message_ids, message->local_id)) {
+		// This probably came from us
+		return;
+	}
 	
 	//TODO safety checks
 	sender_id = message->creator->user_id->id;

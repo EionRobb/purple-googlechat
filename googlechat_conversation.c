@@ -1226,23 +1226,6 @@ googlechat_conversation_check_message_for_images(GoogleChatAccount *ha, const gc
 	}
 }
 
-static char * 
-rand_str(size_t length) {
-    static const char charset[] = "0123456789"
-                     "abcdefghijklmnopqrstuvwxyz"
-                     "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-	char *out = g_new0(char, length + 1);
-	
-	char *dest = out;
-    while (length-- > 0) {
-        size_t index = (double) rand() / RAND_MAX * (sizeof charset - 1);
-        *dest++ = charset[index];
-    }
-    *dest = '\0';
-	
-	return out;
-}
-
 static gint
 googlechat_conversation_send_message(GoogleChatAccount *ha, const gchar *conv_id, const gchar *message)
 {
@@ -1256,7 +1239,7 @@ googlechat_conversation_send_message(GoogleChatAccount *ha, const gchar *conv_id
 	g_return_val_if_fail(conv_id, -1);
 	
 	gchar *message_dup = g_strdup(message);
-	gchar *message_id = rand_str(11);
+	gchar *message_id = g_strdup_printf("purple%" G_GUINT32_FORMAT, (guint32) g_random_int());
 	
 	//Check for any images to send first
 	googlechat_conversation_check_message_for_images(ha, conv_id, message_dup);
@@ -1285,7 +1268,7 @@ googlechat_conversation_send_message(GoogleChatAccount *ha, const gchar *conv_id
 	}
 	
 	request.text_body = message_dup;
-	request.topic_and_message_id = message_id;
+	request.local_id = message_id;
 	request.has_history_v2 = TRUE;
 	request.history_v2 = TRUE;
 	
@@ -1299,7 +1282,7 @@ googlechat_conversation_send_message(GoogleChatAccount *ha, const gchar *conv_id
 	message_info.has_accept_format_annotations = TRUE;
 	message_info.accept_format_annotations = FALSE;
 	
-	//purple_debug_info("googlechat", "%s\n", pblite_dump_json((ProtobufCMessage *)&request)); //leaky
+	purple_debug_info("googlechat", "%s\n", pblite_dump_json((ProtobufCMessage *)&request)); //leaky
 	
 	//TODO listen to response
 	googlechat_api_create_topic(ha, &request, NULL, NULL);
@@ -1309,7 +1292,6 @@ googlechat_conversation_send_message(GoogleChatAccount *ha, const gchar *conv_id
 	googlechat_request_header_free(request.request_header);
 
 	g_free(message_dup);
-	g_free(message_id);
 	
 	return 1;
 }

@@ -23,6 +23,6 @@
 #include "libgooglechat.h"
 
 void googlechat_oauth_with_code(GoogleChatAccount *ha, const gchar *auth_code);
-void googlechat_oauth_refresh_token(GoogleChatAccount *ha);
+gboolean googlechat_oauth_refresh_token(GoogleChatAccount *ha);
 
 #endif /*_GOOGLECHAT_AUTH_H_*/

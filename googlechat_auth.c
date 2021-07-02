@@ -103,7 +103,7 @@ googlechat_save_refresh_token_password(PurpleAccount *account, const gchar *pass
 }
 
 
-void googlechat_auth_get_dynamite_token(GoogleChatAccount *ha, const gchar *id_token);
+gboolean googlechat_auth_get_dynamite_token(GoogleChatAccount *ha);
 
 static void
 googlechat_oauth_refresh_token_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse *response, gpointer user_data)
@@ -118,8 +118,21 @@ googlechat_oauth_refresh_token_cb(PurpleHttpConnection *http_conn, PurpleHttpRes
 
 	if (purple_http_response_is_successful(response) && obj)
 	{
-		const gchar *id_token = g_strdup(json_object_get_string_member(obj, "access_token"));
-		googlechat_auth_get_dynamite_token(ha, id_token);
+		gchar *id_token = g_strdup(json_object_get_string_member(obj, "access_token"));
+		gint expires_in = atoi(json_object_get_string_member(obj, "expiresIn"));
+		
+		if (ha->id_token) {
+			g_free(ha->id_token);
+		}
+		ha->id_token = id_token;
+		googlechat_auth_get_dynamite_token(ha);
+		
+		if (expires_in > 30) {
+			if (ha->refresh_token_timeout) {
+				g_source_remove(ha->refresh_token_timeout);
+			}
+			ha->refresh_token_timeout = g_timeout_add_seconds(expires_in - 30, (GSourceFunc) googlechat_oauth_refresh_token, ha);
+		}
 	} else {
 		if (obj != NULL) {
 			if (json_object_has_member(obj, "error")) {
@@ -143,7 +156,7 @@ googlechat_oauth_refresh_token_cb(PurpleHttpConnection *http_conn, PurpleHttpRes
 	json_object_unref(obj);
 }
 
-void
+gboolean
 googlechat_oauth_refresh_token(GoogleChatAccount *ha)
 {
 	PurpleHttpRequest *request;
@@ -151,6 +164,9 @@ googlechat_oauth_refresh_token(GoogleChatAccount *ha)
 	GString *postdata;
 
 	pc = ha->pc;
+	if (!PURPLE_CONNECTION_IS_CONNECTED(pc)) {
+		return FALSE;
+	}
 
 	postdata = g_string_new(NULL);
 	g_string_append_printf(postdata, "client_id=%s&", purple_url_encode(GOOGLE_CLIENT_ID));
@@ -168,6 +184,8 @@ googlechat_oauth_refresh_token(GoogleChatAccount *ha)
 	purple_http_request_unref(request);
 	
 	g_string_free(postdata, TRUE);
+	
+	return FALSE;
 }
 
 
@@ -185,13 +203,17 @@ googlechat_oauth_with_code_cb(PurpleHttpConnection *http_conn, PurpleHttpRespons
 
 	if (purple_http_response_is_successful(response) && obj)
 	{
-		const gchar *id_token = g_strdup(json_object_get_string_member(obj, "id_token"));
+		gchar *id_token = g_strdup(json_object_get_string_member(obj, "id_token"));
+		if (ha->id_token) {
+			g_free(ha->id_token);
+		}
+		ha->id_token = id_token;
 		ha->refresh_token = g_strdup(json_object_get_string_member(obj, "refresh_token"));
 		
 		purple_account_set_remember_password(account, TRUE);
 		googlechat_save_refresh_token_password(account, ha->refresh_token);
 		
-		googlechat_auth_get_dynamite_token(ha, id_token);
+		googlechat_auth_get_dynamite_token(ha);
 	} else {
 		if (obj != NULL) {
 			if (json_object_has_member(obj, "error")) {
@@ -284,16 +306,28 @@ googlechat_auth_get_dynamite_token_cb(PurpleHttpConnection *http_conn, PurpleHtt
 	googlechat_get_self_user_status(ha);
 	googlechat_get_conversation_list(ha);
 	ha->poll_buddy_status_timeout = g_timeout_add_seconds(120, googlechat_poll_buddy_status, ha);
+	
+	gint expires_in = atoi(json_object_get_string_member(obj, "expiresIn"));
+	if (expires_in > 30) {
+		if (ha->dynamite_token_timeout) {
+			g_source_remove(ha->dynamite_token_timeout);
+		}
+		ha->dynamite_token_timeout = g_timeout_add_seconds(expires_in - 30, (GSourceFunc) googlechat_auth_get_dynamite_token, ha);
+	}
 }
 
-void
-googlechat_auth_get_dynamite_token(GoogleChatAccount *ha, const gchar *id_token)
+gboolean
+googlechat_auth_get_dynamite_token(GoogleChatAccount *ha)
 {
 	GString *postdata;
 	PurpleHttpRequest *request;
 
+	if (!PURPLE_CONNECTION_IS_CONNECTED(ha->pc)) {
+		return FALSE;
+	}
+
 	request = purple_http_request_new("https://oauthaccountmanager.googleapis.com/v1/issuetoken");
-	purple_http_request_header_set_printf(request, "Authorization", "Bearer %s", id_token);
+	purple_http_request_header_set_printf(request, "Authorization", "Bearer %s", ha->id_token);
 
 	postdata = g_string_new(NULL);
 	g_string_append_printf(postdata, "app_id=%s&", purple_url_encode("com.google.Dynamite"));
@@ -310,4 +344,6 @@ googlechat_auth_get_dynamite_token(GoogleChatAccount *ha, const gchar *id_token)
 	purple_http_request_unref(request);
 	
 	g_string_free(postdata, TRUE);
+	
+	return FALSE;
 }

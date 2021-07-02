@@ -421,6 +421,8 @@ googlechat_close(PurpleConnection *pc)
 	g_source_remove(ha->active_client_timeout);
 	g_source_remove(ha->channel_watchdog);
 	g_source_remove(ha->poll_buddy_status_timeout);
+	g_source_remove(ha->refresh_token_timeout);
+	g_source_remove(ha->dynamite_token_timeout);
 	
 	purple_http_conn_cancel_all(pc);
 	
@@ -428,6 +430,7 @@ googlechat_close(PurpleConnection *pc)
 	purple_http_keepalive_pool_unref(ha->api_keepalive_pool);
 	g_free(ha->self_gaia_id);
 	g_free(ha->self_phone);
+	g_free(ha->id_token);
 	g_free(ha->refresh_token);
 	g_free(ha->access_token);
 	g_free(ha->csessionid_param);

@@ -75,6 +75,7 @@ typedef struct {
 	PurpleHttpCookieJar *cookie_jar;
 	gchar *refresh_token;
 	gchar *access_token;
+	gchar *id_token;
 	gchar *csessionid_param;
 	gchar *sid_param;
 	gchar *client_id;
@@ -101,6 +102,9 @@ typedef struct {
 	GHashTable *one_to_ones_rev; // A store of known gaia_id's->conv_id's
 	GHashTable *group_chats;     // A store of known conv_id's
 	GHashTable *sent_message_ids;// A store of message id's that we generated from this instance
+	
+	guint refresh_token_timeout;
+	guint dynamite_token_timeout;
 } GoogleChatAccount;
 
 

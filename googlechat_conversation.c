@@ -1953,6 +1953,8 @@ googlechat_set_status(PurpleAccount *account, PurpleStatus *status)
 		CustomStatus custom_status;
 		
 		set_custom_status_request__init(&custom_status_request);
+		custom_status_request.request_header = googlechat_get_request_header(ha);
+		
 #if PROTOBUF_C_VERSION_NUMBER < 1001000
 		custom_status_request.has_custom_status_remaining_duration_usec = TRUE;
 #else

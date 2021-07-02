@@ -119,7 +119,7 @@ googlechat_oauth_refresh_token_cb(PurpleHttpConnection *http_conn, PurpleHttpRes
 	if (purple_http_response_is_successful(response) && obj)
 	{
 		gchar *id_token = g_strdup(json_object_get_string_member(obj, "access_token"));
-		gint expires_in = atoi(json_object_get_string_member(obj, "expiresIn"));
+		gint expires_in = json_object_get_int_member(obj, "expires_in");
 		
 		if (ha->id_token) {
 			g_free(ha->id_token);

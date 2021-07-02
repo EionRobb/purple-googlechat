@@ -164,7 +164,7 @@ googlechat_oauth_refresh_token(GoogleChatAccount *ha)
 	GString *postdata;
 
 	pc = ha->pc;
-	if (!PURPLE_CONNECTION_IS_CONNECTED(pc)) {
+	if (!PURPLE_IS_CONNECTION(pc)) {
 		return FALSE;
 	}
 
@@ -322,7 +322,7 @@ googlechat_auth_get_dynamite_token(GoogleChatAccount *ha)
 	GString *postdata;
 	PurpleHttpRequest *request;
 
-	if (!PURPLE_CONNECTION_IS_CONNECTED(ha->pc)) {
+	if (!PURPLE_IS_CONNECTION(ha->pc)) {
 		return FALSE;
 	}
 

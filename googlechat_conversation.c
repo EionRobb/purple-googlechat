@@ -36,6 +36,8 @@ RequestHeader *
 googlechat_get_request_header(GoogleChatAccount *ha)
 {
 	RequestHeader *header = g_new0(RequestHeader, 1);
+	ClientFeatureCapabilities *cfc = g_new0(ClientFeatureCapabilities, 1);
+	
 	request_header__init(header);
 	
 	header->has_client_type = TRUE;
@@ -44,12 +46,22 @@ googlechat_get_request_header(GoogleChatAccount *ha)
 	header->has_client_version = TRUE;
 	header->client_version = 2440378181258;
 	
+	header->has_trace_id = TRUE;
+	header->trace_id = g_random_int();
+	
+	client_feature_capabilities__init(cfc);
+	header->client_feature_capabilities = cfc;
+	
+	cfc->has_spam_room_invites_level = TRUE;
+	cfc->spam_room_invites_level = CLIENT_FEATURE_CAPABILITIES__CAPABILITY_LEVEL__FULLY_SUPPORTED;
+	
 	return header;
 }
 
 void
 googlechat_request_header_free(RequestHeader *header)
 {
+	g_free(header->client_feature_capabilities);
 	g_free(header);
 }
 
@@ -1172,23 +1184,6 @@ googlechat_conversation_check_message_for_images(GoogleChatAccount *ha, const gc
 	}
 }
 
-static char * 
-rand_str(size_t length) {
-    static const char charset[] = "0123456789"
-                     "abcdefghijklmnopqrstuvwxyz"
-                     "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-	char *out = g_new0(char, length + 1);
-	
-	char *dest = out;
-    while (length-- > 0) {
-        size_t index = (double) rand() / RAND_MAX * (sizeof charset - 1);
-        *dest++ = charset[index];
-    }
-    *dest = '\0';
-	
-	return out;
-}
-
 static gint
 googlechat_conversation_send_message(GoogleChatAccount *ha, const gchar *conv_id, const gchar *message)
 {
@@ -1196,11 +1191,13 @@ googlechat_conversation_send_message(GoogleChatAccount *ha, const gchar *conv_id
 	GroupId group_id;
 	SpaceId space_id;
 	DmId dm_id;
+	RetentionSettings retention_settings;
+	MessageInfo message_info;
 	
 	g_return_val_if_fail(conv_id, -1);
 	
 	gchar *message_dup = g_strdup(message);
-	gchar *message_id = rand_str(11);
+	gchar *message_id = g_strdup_printf("purple%" G_GUINT32_FORMAT, (guint32) g_random_int());
 	
 	//Check for any images to send first
 	googlechat_conversation_check_message_for_images(ha, conv_id, message_dup);
@@ -1223,11 +1220,21 @@ googlechat_conversation_send_message(GoogleChatAccount *ha, const gchar *conv_id
 	}
 	
 	request.text_body = message_dup;
-	request.topic_and_message_id = message_id;
+	request.local_id = message_id;
 	request.has_history_v2 = TRUE;
 	request.history_v2 = TRUE;
 	
-	//purple_debug_info("googlechat", "%s\n", pblite_dump_json((ProtobufCMessage *)&request)); //leaky
+	retention_settings__init(&retention_settings);
+	request.retention_settings = &retention_settings;
+	retention_settings.has_state = TRUE;
+	retention_settings.state = RETENTION_SETTINGS__RETENTION_STATE__PERMANENT;
+	
+	message_info__init(&message_info);
+	request.message_info = &message_info;
+	message_info.has_accept_format_annotations = TRUE;
+	message_info.accept_format_annotations = FALSE;
+	
+	purple_debug_info("googlechat", "%s\n", pblite_dump_json((ProtobufCMessage *)&request)); //leaky
 	
 	//TODO listen to response
 	googlechat_api_create_topic(ha, &request, NULL, NULL);
@@ -1237,7 +1244,6 @@ googlechat_conversation_send_message(GoogleChatAccount *ha, const gchar *conv_id
 	googlechat_request_header_free(request.request_header);
 
 	g_free(message_dup);
-	g_free(message_id);
 	
 	return 1;
 }
@@ -1846,6 +1852,8 @@ googlechat_set_status(PurpleAccount *account, PurpleStatus *status)
 		CustomStatus custom_status;
 		
 		set_custom_status_request__init(&custom_status_request);
+		custom_status_request.request_header = googlechat_get_request_header(ha);
+		
 		custom_status_request.has_custom_status_remaining_duration_usec = TRUE;
 		custom_status_request.custom_status_remaining_duration_usec = 172800000000;
 		

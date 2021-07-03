@@ -85,4 +85,6 @@ void googlechat_unblock_user(PurpleConnection *pc, const char *who);
 
 PurpleRoomlist *googlechat_roomlist_get_list(PurpleConnection *pc);
 
+void googlechat_lookup_group_info(GoogleChatAccount *ha, const gchar *conv_id);
+
 #endif /*_GOOGLECHAT_CONVERSATION_H_*/

@@ -432,7 +432,10 @@ googlechat_get_conversation_events(GoogleChatAccount *ha, const gchar *conv_id, 
 	
 	catch_up_group_request__init(&request);
 	request.request_header = googlechat_get_request_header(ha);
+	
+	request.has_page_size = TRUE;
 	request.page_size = 500;
+	request.has_cutoff_size = TRUE;
 	request.cutoff_size = 500;
 	
 	group_id__init(&group_id);
@@ -472,7 +475,10 @@ googlechat_get_all_events(GoogleChatAccount *ha, guint64 since_timestamp)
 	
 	catch_up_user_request__init(&request);
 	request.request_header = googlechat_get_request_header(ha);
+	
+	request.has_page_size = TRUE;
 	request.page_size = 500;
+	request.has_cutoff_size = TRUE;
 	request.cutoff_size = 500;
 	
 	catch_up_range__init(&range);
@@ -512,6 +518,85 @@ googlechat_chat_info_defaults(PurpleConnection *pc, const char *chatname)
 	return defaults;
 }
 
+static void
+googlechat_got_group_info(GoogleChatAccount *ha, GetGroupResponse *response, gpointer user_data)
+{
+	Group *group = response->group;
+	Membership **memberships = response->memberships;
+	guint i;
+	PurpleChatConversation *chatconv;
+	gchar *conv_id;
+	
+	g_return_if_fail(group != NULL);
+	
+	GroupId *group_id = group->group_id;
+	gboolean is_dm = !!group_id->dm_id;
+	if (is_dm) {
+		conv_id = group_id->dm_id->dm_id;
+	} else {
+		conv_id = group_id->space_id->space_id;
+	}
+	
+	chatconv = purple_conversations_find_chat_with_account(conv_id, ha->account);
+	
+	for (i = 0; i < response->n_memberships; i++) {
+		Membership *membership = memberships[i];
+		const gchar *user_id = membership->id->member_id->user_id->id;
+		PurpleChatUserFlags cbflags = PURPLE_CHAT_USER_NONE;
+		
+		if (membership->membership_role == MEMBERSHIP_ROLE__ROLE_OWNER) {
+			cbflags = PURPLE_CHAT_USER_OP;
+		}
+		
+		PurpleChatUser *chat_user = purple_chat_conversation_find_user(chatconv, user_id);
+		if (chat_user) {
+			purple_chat_user_set_flags(chat_user, cbflags);
+		} else {
+			purple_chat_conversation_add_user(chatconv, user_id, NULL, cbflags, FALSE);
+		}
+	}
+	
+	if (group->name) {
+		(void) group->name; //TODO - rename buddy list
+	}
+}
+
+void
+googlechat_lookup_group_info(GoogleChatAccount *ha, const gchar *conv_id)
+{
+	GetGroupRequest request;
+	GroupId group_id;
+	DmId dm_id;
+	SpaceId space_id;
+	
+	get_group_request__init(&request);
+	group_id__init(&group_id);
+	
+	request.request_header = googlechat_get_request_header(ha);
+	
+	request.group_id = &group_id;
+	if (g_hash_table_lookup(ha->one_to_ones, conv_id)) {
+		dm_id__init(&dm_id);
+		dm_id.dm_id = (gchar *) conv_id;
+		group_id.dm_id = &dm_id;
+	} else {
+		space_id__init(&space_id);
+		space_id.space_id = (gchar *) conv_id;
+		group_id.space_id = &space_id;
+	}
+	
+	request.has_include_invite_dms = TRUE;
+	request.include_invite_dms = TRUE;
+	
+	GetGroupRequest__FetchOptions fetch_options = GET_GROUP_REQUEST__FETCH_OPTIONS__MEMBERS;
+	request.n_fetch_options = 1;
+	request.fetch_options = &fetch_options;
+	
+	googlechat_api_get_group(ha, &request, googlechat_got_group_info, NULL);
+	
+	googlechat_request_header_free(request.request_header);
+}
+
 void
 googlechat_join_chat(PurpleConnection *pc, GHashTable *data)
 {
@@ -538,6 +623,7 @@ googlechat_join_chat(PurpleConnection *pc, GHashTable *data)
 	
 	//TODO store and use timestamp of last event
 	googlechat_get_conversation_events(ha, conv_id, 0);
+	googlechat_lookup_group_info(ha, conv_id);
 }
 
 /*

@@ -335,15 +335,10 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 		PurpleChatConversation *chatconv = purple_conversations_find_chat_with_account(conv_id, ha->account);
 		if (chatconv == NULL) {
 			//TODO /api/get_group
-			// chatconv = purple_serv_got_joined_chat(ha->pc, g_str_hash(conv_id), conv_id);
-			// purple_conversation_set_data(PURPLE_CONVERSATION(chatconv), "conv_id", g_strdup(conv_id));
-			// if (conversation) {
-				// guint i;
-				// for (i = 0; i < conversation->n_current_participant; i++) {
-					// PurpleChatUserFlags cbflags = PURPLE_CHAT_USER_NONE;
-					// purple_chat_conversation_add_user(chatconv, conversation->current_participant[i]->gaia_id, NULL, cbflags, FALSE);
-				// }
-			// }
+			chatconv = purple_serv_got_joined_chat(ha->pc, g_str_hash(conv_id), conv_id);
+			purple_conversation_set_data(PURPLE_CONVERSATION(chatconv), "conv_id", g_strdup(conv_id));
+			
+			googlechat_lookup_group_info(ha, conv_id);
 		}
 		pconv = PURPLE_CONVERSATION(chatconv);
 		purple_serv_got_chat_in(pc, g_str_hash(conv_id), sender_id, msg_flags, msg, message_timestamp);

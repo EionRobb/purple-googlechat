@@ -87,6 +87,7 @@ typedef struct {
 	guint poll_buddy_status_timeout;
 	gint server_time_offset;
 	gint64 last_aid;
+	gint64 last_ofs;
 	
 	GByteArray *channel_buffer;
 	guint channel_watchdog;

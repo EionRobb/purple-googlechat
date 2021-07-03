@@ -644,6 +644,12 @@ message TypingStateChangedEvent {
 	optional int64 start_timestamp_usec = 4;
 }
 
+message MembershipChangedEvent {
+	optional Membership new_membership = 1;
+	optional MembershipState prior_membership_state = 2;
+	optional MembershipRole prior_membership_role = 3;
+}
+
 
 // used in the /webchannel/events
 message StreamEventsRequest {
@@ -703,35 +709,55 @@ message ClientInfo {
 	optional string source_machine = 3;
 }
 
+message ClientNotificationsState {
+	enum DeviceNotificationSettingState {
+		DEVICE_NOTIFICATION_SETTING_STATE_UNKNOWN = 0;
+		DEVICE_NOTIFICATIONS_ENABLED = 1;
+		DEVICE_NOTIFICATIONS_DISABLED = 2;
+	}
+	optional DeviceNotificationSettingState device_setting_state = 1;
+}
+
 message PingEvent {
-//TODO
-	// enum State {
+	enum State {
+		STATE_UNSPECIFIED = 0;
+		ACTIVE = 1;
+		INACTIVE = 2;
+	}
+	optional State state = 1;
 	
-	// }
-	// optional State state = ;
+	enum ApplicationFocusState {
+		FOCUS_STATE_UNSPECIFIED = 0;
+		FOCUS_STATE_FOREGROUND = 1;
+		FOCUS_STATE_BACKGROUND = 2;
+	}
+	optional ApplicationFocusState application_focus_state = 3;
 	
-	// enum ApplicationFocusState {
+	optional int64 last_interactive_time_ms = 4;
 	
-	// }
-	// optional ApplicationFocusState application_focus_state = ;
+	enum ClientInteractiveState {
+		UNKNOWN = 0;
+		INTERACTIVE = 1;
+		FOCUSED = 2;
+		VISIBLE = 3;
+		HIDDEN = 4;
+	}
+	optional ClientInteractiveState client_interactive_state = 5;
 	
-	// optional int64 last_interactive_time_ms = ;
+	optional bool client_notifications_enabled = 6;
 	
-	// enum ClientInteractiveState {
+	optional ClientNotificationsState notifications_state = 7;
+	optional bool pwa_dedupe_enabled = 8;
 	
-	// }
-	// optional ClientInteractiveState client_interactive_state = ;
+	enum DeviceActiveState {
+		STATE_UNKNOWN = 0;
+		STATE_IDLE_LOCKED = 1;
+		STATE_IDLE_UNLOCKED = 2;
+		STATE_ACTIVE = 3;
+	}
+	optional DeviceActiveState device_active_state = 9;
 	
-	// optional bool client_notifications_enabled = ;
-	// optional ClientNotificationsState notifications_state = ;
-	// optional bool pwa_dedupe_enabled = ;
-	
-	// enum DeviceActiveState {
-	
-	// }
-	// optional DeviceActiveState device_active_state = ;
-	
-	// optional ??ComGoogleProtobufDuration web_inactivity_timeout = ;
+	// optional ??ComGoogleProtobufDuration web_inactivity_timeout = 10;
 }
 
 message ClockSyncRequest {
@@ -818,7 +844,7 @@ message Event {
 			//WebPushNotificationEvent web_push_notification = 10;
 			//GroupUnreadSubscribedTopicCountUpdatedEvent group_unread_subscribed_topic_count_updated_event = 11;
 			//InviteCountUpdatedEvent invite_count_updated = 13;
-			//MembershipChangedEvent membership_changed = 14;
+		optional	MembershipChangedEvent membership_changed = 14;
 			//GroupHideChangedEvent group_hide_changed = 15;
 			//DriveAclFixProcessedEvent drive_acl_fix_processed = 16;
 			//GroupNotificationSettingsUpdatedEvent group_notification_settings_updated = 17;

@@ -42,6 +42,9 @@ void googlechat_fetch_channel_sid(GoogleChatAccount *ha);
 void googlechat_register_webchannel(GoogleChatAccount *ha);
 void googlechat_add_channel_services(GoogleChatAccount *ha);
 
+void googlechat_send_ping_event(GoogleChatAccount *ha, PingEvent *ping_event);
+void googlechat_subscribe_to_group(GoogleChatAccount *ha, GroupId *group_id);
+
 void googlechat_default_response_dump(GoogleChatAccount *ha, ProtobufCMessage *response, gpointer user_data);
 gboolean googlechat_set_active_client(PurpleConnection *pc);
 void googlechat_search_users(PurpleProtocolAction *action);

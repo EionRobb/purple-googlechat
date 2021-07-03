@@ -824,5 +824,5 @@ googlechat_received_typing_notification(PurpleConnection *pc, Event *event)
 			break;
 	}
 	
-	purple_serv_got_typing(pc, user_id, 20, typing_state);
+	purple_serv_got_typing(pc, user_id, 7, typing_state);
 }

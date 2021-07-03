@@ -1624,6 +1624,7 @@ googlechat_create_conversation(GoogleChatAccount *ha, gboolean is_one_to_one, co
 		InviteeMemberInfo *invitee_member_infos;
 		
 		create_group_request__init(&request);
+		request.request_header = googlechat_get_request_header(ha);
 		request.has_should_find_existing_space = TRUE;
 		request.should_find_existing_space = FALSE;
 		
@@ -1831,6 +1832,10 @@ googlechat_mark_conversation_seen(PurpleConversation *conv, PurpleConversationUp
 	request.last_read_time = g_get_real_time();
 	
 	googlechat_api_mark_group_readstate(ha, &request, NULL, NULL);
+	
+	googlechat_request_header_free(request.request_header);
+	
+	googlechat_subscribe_to_group(ha, &group_id);
 }
 
 void

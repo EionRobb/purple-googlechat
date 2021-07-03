@@ -361,6 +361,11 @@ googlechat_longpoll_request_closed(PurpleHttpConnection *http_conn, PurpleHttpRe
 		return;
 	}
 	
+	if (http_conn != ha->channel_connection) {
+		// Duplicate connection
+		return;
+	}
+	
 	if (ha->channel_watchdog) {
 		g_source_remove(ha->channel_watchdog);
 		ha->channel_watchdog = 0;
@@ -370,7 +375,7 @@ googlechat_longpoll_request_closed(PurpleHttpConnection *http_conn, PurpleHttpRe
 	g_byte_array_free(ha->channel_buffer, TRUE);
 	ha->channel_buffer = g_byte_array_sized_new(GOOGLECHAT_BUFFER_DEFAULT_SIZE);
 	
-	if (purple_http_response_get_error(response) != NULL) {
+	if (purple_http_response_get_error(response) != NULL && purple_http_response_get_code(response)) {
 		//TODO error checking
 		purple_debug_error("googlechat", "longpoll_request_closed %d %s\n", purple_http_response_get_code(response), purple_http_response_get_error(response));
 		googlechat_fetch_channel_sid(ha);
@@ -473,7 +478,7 @@ googlechat_fetch_channel_sid(GoogleChatAccount *ha)
 	
 	googlechat_set_auth_headers(ha, request);
 	
-	purple_http_request(ha->pc, request, googlechat_longpoll_request_closed, ha);
+	ha->channel_connection = purple_http_request(ha->pc, request, googlechat_longpoll_request_closed, ha);
 	purple_http_request_unref(request);
 	
 	g_string_free(url, TRUE);

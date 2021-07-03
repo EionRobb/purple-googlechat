@@ -17,6 +17,11 @@ git clone https://github.com/EionRobb/purple-googlechat/ && cd purple-googlechat
 make && sudo make install
 ```
 
+## Fedora ##
+```
+json-glib-devel libpurple-devel glib2-devel libpurple-devel protobuf-c-devel protobuf-c-compiler-devel
+```
+
 ## Windows ##
 Use the Windows installer to make life easier, otherwise development builds of Windows dll's will live at https://eion.robbmob.com/libgooglechat.dll (you'll also need libprotobuf-c-1.dll and libjson-glib-1.0.dll in your Pidgin folder, included in the installer)
 

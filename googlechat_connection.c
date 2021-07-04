@@ -701,12 +701,12 @@ googlechat_default_response_dump(GoogleChatAccount *ha, ProtobufCMessage *respon
 	g_free(dump);
 }
 
-/*
+
 gboolean
 googlechat_set_active_client(PurpleConnection *pc)
 {
 	GoogleChatAccount *ha;
-	SetActiveClientRequest request;
+	PingEvent ping_event;
 	
 	switch(purple_connection_get_state(pc)) {
 		case PURPLE_CONNECTION_DISCONNECTED:
@@ -725,37 +725,38 @@ googlechat_set_active_client(PurpleConnection *pc)
 		return TRUE;
 	}
 	
-	if (ha->active_client_state == ACTIVE_CLIENT_STATE__ACTIVE_CLIENT_STATE_IS_ACTIVE) {
-		//We're already the active client
-		return TRUE;
-	}
+	ping_event__init(&ping_event);
+	
+	ping_event.has_state = TRUE;
 	if (ha->idle_time > GOOGLECHAT_ACTIVE_CLIENT_TIMEOUT) {
 		//We've gone idle
-		return TRUE;
+		ping_event.state = PING_EVENT__STATE__INACTIVE;
+	} else {
+		ping_event.state = PING_EVENT__STATE__ACTIVE;
 	}
+	
+	ping_event.has_last_interactive_time_ms = TRUE;
+	ping_event.last_interactive_time_ms = (ha->idle_time - time(NULL)) * 1000;
+	
+	ping_event.has_application_focus_state = TRUE;
 	if (!purple_presence_is_status_primitive_active(purple_account_get_presence(ha->account), PURPLE_STATUS_AVAILABLE)) {
 		//We're marked as not available somehow
-		return TRUE;
+		ping_event.application_focus_state = PING_EVENT__APPLICATION_FOCUS_STATE__FOCUS_STATE_BACKGROUND;
+	} else {
+		ping_event.application_focus_state = PING_EVENT__APPLICATION_FOCUS_STATE__FOCUS_STATE_FOREGROUND;
 	}
-	ha->active_client_state = ACTIVE_CLIENT_STATE__ACTIVE_CLIENT_STATE_IS_ACTIVE;
 	
-	set_active_client_request__init(&request);
+	ping_event.has_client_interactive_state = TRUE;
+	ping_event.client_interactive_state = PING_EVENT__CLIENT_INTERACTIVE_STATE__INTERACTIVE;
 	
-	request.request_header = googlechat_get_request_header(ha);
-	request.has_is_active = TRUE;
-	request.is_active = TRUE;
-	request.full_jid = g_strdup_printf("%s/%s", purple_account_get_username(ha->account), ha->client_id);
-	request.has_timeout_secs = TRUE;
-	request.timeout_secs = GOOGLECHAT_ACTIVE_CLIENT_TIMEOUT;
+	ping_event.has_client_notifications_enabled = TRUE;
+	ping_event.client_notifications_enabled = TRUE;
 	
-	googlechat_pblite_set_active_client(ha, &request, (GoogleChatPbliteSetActiveClientResponseFunc)googlechat_default_response_dump, NULL);
-	
-	googlechat_request_header_free(request.request_header);
-	g_free(request.full_jid);
+	googlechat_send_ping_event(ha, &ping_event);
 	
 	return TRUE;
 }
-*/
+
 
 void
 googlechat_search_results_send_im(PurpleConnection *pc, GList *row, void *user_data)

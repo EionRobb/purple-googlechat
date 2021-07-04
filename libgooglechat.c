@@ -63,10 +63,8 @@ googlechat_set_idle(PurpleConnection *pc, int time)
 	
 	ha = purple_connection_get_protocol_data(pc);
 	
-	if (time < GOOGLECHAT_ACTIVE_CLIENT_TIMEOUT) {
-		// googlechat_set_active_client(pc);
-	}
 	ha->idle_time = time;
+	googlechat_set_active_client(pc);
 }
 
 static GList *
@@ -407,7 +405,7 @@ googlechat_login(PurpleAccount *account)
 	}
 #endif
 	
-	// ha->active_client_timeout = g_timeout_add_seconds(GOOGLECHAT_ACTIVE_CLIENT_TIMEOUT, ((GSourceFunc) googlechat_set_active_client), pc);
+	ha->active_client_timeout = g_timeout_add_seconds(GOOGLECHAT_ACTIVE_CLIENT_TIMEOUT, ((GSourceFunc) googlechat_set_active_client), pc);
 }
 
 static void

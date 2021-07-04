@@ -562,6 +562,84 @@ googlechat_offline_message(const PurpleBuddy *buddy)
 /*****************************************************************************/
 
 static gboolean
+googlechat_create_account_from_hangouts_account(PurpleAccount *hangouts_account)
+{
+	PurpleAccount *new_account;
+	const gchar *username;
+	const gchar *password;
+	
+	g_return_val_if_fail(g_strcmp0(purple_account_get_protocol_id(hangouts_account), "prpl-hangouts") == 0, FALSE);
+	
+	username = purple_account_get_username(hangouts_account);
+	password = purple_account_get_password(hangouts_account);
+	
+	g_return_val_if_fail(username && *username, FALSE);
+	g_return_val_if_fail(password && *password, FALSE);
+	
+	new_account = purple_account_new(username, GOOGLECHAT_PLUGIN_ID);
+	purple_account_set_password(new_account, password, NULL, NULL);
+	
+	purple_account_set_alias(new_account, purple_account_get_alias(hangouts_account));
+	
+	//TODO enable the new, disable the old
+	purple_account_set_enabled(new_account, purple_core_get_ui(), purple_account_get_enabled(hangouts_account, purple_core_get_ui()));
+	purple_account_set_enabled(hangouts_account, purple_core_get_ui(), FALSE);
+	
+	purple_account_set_string(new_account, "self_gaia_id", purple_account_get_string(hangouts_account, "self_gaia_id", NULL));
+	
+	purple_account_set_bool(new_account, "unravel_google_url", purple_account_get_bool(hangouts_account, "unravel_google_url", TRUE));
+	purple_account_set_bool(new_account, "fetch_image_history", purple_account_get_bool(hangouts_account, "fetch_image_history", TRUE));
+	purple_account_set_bool(new_account, "treat_invisible_as_offline", purple_account_get_bool(hangouts_account, "treat_invisible_as_offline", FALSE));
+	purple_account_set_bool(new_account, "show-call-links", purple_account_get_bool(hangouts_account, "show-call-links", FALSE));
+	purple_account_set_bool(new_account, "hide_self", purple_account_get_bool(hangouts_account, "hide_self", FALSE));
+	
+	purple_account_set_int(new_account, "last_event_timestamp_high", purple_account_get_int(hangouts_account, "last_event_timestamp_high", 0));
+	purple_account_set_int(new_account, "last_event_timestamp_low", purple_account_get_int(hangouts_account, "last_event_timestamp_low", 0));
+	
+	purple_accounts_add(new_account);
+	
+	return !!purple_accounts_find(username, GOOGLECHAT_PLUGIN_ID);
+}
+
+static void
+googlechat_account_added(PurpleAccount *account, gpointer userdata)
+{
+	if (g_strcmp0(purple_account_get_protocol_id(account), "prpl-hangouts") == 0) {
+		if (purple_account_get_bool(account, "offered_to_move_to_googlechat", FALSE) == FALSE) {
+			
+			const gchar *username = purple_account_get_username(account);
+			purple_account_set_bool(account, "offered_to_move_to_googlechat", TRUE);
+			if (!purple_accounts_find(username, GOOGLECHAT_PLUGIN_ID)) {
+				gchar *msg = g_strdup_printf(_("Existing Hangouts account for %s found.  Convert to a Google Chat account?"), username);
+				purple_request_yes_no(NULL, _("Account Migration"),
+						_("Account Migration"),
+						msg,
+						1,
+						account, NULL, NULL,
+						account, googlechat_create_account_from_hangouts_account,
+						NULL);
+				g_free(msg);
+			}
+			
+		}
+	}
+}
+
+static gboolean
+googlechat_check_legacy_hangouts_accounts(gpointer ignored)
+{
+	PurpleAccount *account;
+	GList *cur;
+	
+	for(cur = purple_accounts_get_all(); cur; cur = cur->next) {
+		account = cur->data;
+		googlechat_account_added(account, NULL);
+	}
+	
+	return FALSE;
+}
+
+static gboolean
 plugin_load(PurplePlugin *plugin, GError **error)
 {
 	purple_cmd_register("leave", "", PURPLE_CMD_P_PLUGIN, PURPLE_CMD_FLAG_CHAT |
@@ -573,6 +651,14 @@ plugin_load(PurplePlugin *plugin, GError **error)
 						PURPLE_CMD_FLAG_PROTOCOL_ONLY | PURPLE_CMD_FLAG_ALLOW_WRONG_ARGS,
 						GOOGLECHAT_PLUGIN_ID, googlechat_cmd_kick,
 						_("kick <user>:  Kick a user from the room."), NULL);
+	
+	
+	if (purple_accounts_get_all()) {
+		googlechat_check_legacy_hangouts_accounts(NULL);
+	} else {
+		// The accounts (and their signals) get loaded up after plugins (so we have to wait a bit and try again)
+		g_timeout_add_seconds(5, googlechat_check_legacy_hangouts_accounts, NULL);
+	}
 	
 	return TRUE;
 }

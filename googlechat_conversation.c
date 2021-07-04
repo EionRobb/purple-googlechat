@@ -674,9 +674,12 @@ googlechat_get_chat_name(GHashTable *data)
 }
 
 void
-googlechat_add_person_to_blist(GoogleChatAccount *ha, gchar *gaia_id, gchar *alias)
+googlechat_add_person_to_blist(GoogleChatAccount *ha, const gchar *gaia_id, const gchar *alias)
 {
 	PurpleGroup *googlechat_group = purple_blist_find_group("Google Chat");
+	PurpleContact *old_contact = NULL;
+	PurpleBuddy *old_buddy = NULL;
+	PurpleAccount *old_account = NULL;
 	
 	if (purple_account_get_bool(ha->account, "hide_self", FALSE) && purple_strequal(gaia_id, ha->self_gaia_id)) {
 		return;
@@ -687,7 +690,19 @@ googlechat_add_person_to_blist(GoogleChatAccount *ha, gchar *gaia_id, gchar *ali
 		googlechat_group = purple_group_new("Google Chat");
 		purple_blist_add_group(googlechat_group, NULL);
 	}
-	purple_blist_add_buddy(purple_buddy_new(ha->account, gaia_id, alias), NULL, googlechat_group, NULL);
+	
+	old_account = purple_accounts_find(purple_account_get_username(ha->account), "prpl-hangouts");
+	if (old_account) {
+		old_buddy = purple_blist_find_buddy(old_account, gaia_id);
+	}
+	if (old_buddy) {
+		old_contact = purple_buddy_get_contact(old_buddy);
+		if (!alias || !*alias) {
+			alias = purple_buddy_get_alias(old_buddy);
+		}
+	}
+	
+	purple_blist_add_buddy(purple_buddy_new(ha->account, gaia_id, alias), old_contact, googlechat_group, NULL);
 }
 
 void
@@ -909,7 +924,6 @@ static void
 googlechat_got_buddy_list(PurpleHttpConnection *http_conn, PurpleHttpResponse *response, gpointer user_data)
 {
 	GoogleChatAccount *ha = user_data;
-	PurpleGroup *googlechat_group = NULL;
 	const gchar *response_str;
 	gsize response_len;
 	JsonObject *obj;
@@ -993,16 +1007,7 @@ googlechat_got_buddy_list(PurpleHttpConnection *http_conn, PurpleHttpResponse *r
 		}
 		
 		if (buddy == NULL) {
-			if (googlechat_group == NULL) {
-				googlechat_group = purple_blist_find_group("Google Chat");
-				if (!googlechat_group)
-				{
-					googlechat_group = purple_group_new("Google Chat");
-					purple_blist_add_group(googlechat_group, NULL);
-				}
-			}
-			buddy = purple_buddy_new(ha->account, name, alias);
-			purple_blist_add_buddy(buddy, NULL, googlechat_group, NULL);
+			googlechat_add_person_to_blist(ha, name, alias);
 		} else {
 			purple_serv_got_alias(ha->pc, name, alias);
 		}

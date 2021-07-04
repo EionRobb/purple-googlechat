@@ -88,7 +88,7 @@ json_decode(const gchar *data, gssize len)
 	
 	if (!data || !json_parser_load_from_data(parser, data, len, NULL))
 	{
-		purple_debug_error("googlechat", "Error parsing JSON: %s\n", data);
+		purple_debug_error("googlechat", "Error parsing JSON: %s\n", data ? data : "(null)");
 	} else {
 		root = json_parser_get_root(parser);
 		if (root != NULL) {

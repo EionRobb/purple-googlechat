@@ -305,6 +305,10 @@ googlechat_auth_get_dynamite_token_cb(PurpleHttpConnection *http_conn, PurpleHtt
 	//TODO trigger event instead
 	googlechat_get_self_user_status(ha);
 	googlechat_get_conversation_list(ha);
+	
+	if (ha->poll_buddy_status_timeout) {
+		g_source_remove(ha->poll_buddy_status_timeout);
+	}
 	ha->poll_buddy_status_timeout = g_timeout_add_seconds(120, googlechat_poll_buddy_status, ha);
 	
 	gint expires_in = atoi(json_object_get_string_member(obj, "expiresIn"));

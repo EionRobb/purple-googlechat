@@ -340,14 +340,15 @@ googlechat_longpoll_request_content(PurpleHttpConnection *http_conn, PurpleHttpR
 	
 	ha->last_data_received = time(NULL);
 	
-	if (!purple_http_response_is_successful(response)) {
+	if (purple_http_response_is_successful(response)) {
+		g_byte_array_append(ha->channel_buffer, (guint8 *) buffer, length);
+	
+		googlechat_process_channel_buffer(ha);
+		
+	} else {
 		purple_debug_error("googlechat", "longpoll_request_content had error: '%s'\n", purple_http_response_get_error(response));
-		return FALSE;
+		// dont return FALSE here so that the error code can go to the _request_closed
 	}
-	
-	g_byte_array_append(ha->channel_buffer, (guint8 *) buffer, length);
-	
-	googlechat_process_channel_buffer(ha);
 	
 	return TRUE;
 }

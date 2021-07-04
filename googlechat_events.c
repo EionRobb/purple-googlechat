@@ -234,7 +234,7 @@ googlechat_got_http_image_for_conv(PurpleHttpConnection *connection, PurpleHttpR
 {
 	GoogleChatAccount *ha = user_data;
 	const gchar *url;
-	const gchar *gaia_id;
+	const gchar *sender_id;
 	const gchar *conv_id;
 	PurpleMessageFlags msg_flags;
 	time_t message_timestamp;
@@ -251,7 +251,7 @@ googlechat_got_http_image_for_conv(PurpleHttpConnection *connection, PurpleHttpR
 	}
 	
 	url = g_dataset_get_data(connection, "url");
-	gaia_id = g_dataset_get_data(connection, "gaia_id");
+	sender_id = g_dataset_get_data(connection, "sender_id");
 	conv_id = g_dataset_get_data(connection, "conv_id");
 	msg_flags = GPOINTER_TO_INT(g_dataset_get_data(connection, "msg_flags"));
 	message_timestamp = GPOINTER_TO_INT(g_dataset_get_data(connection, "message_timestamp"));
@@ -264,17 +264,17 @@ googlechat_got_http_image_for_conv(PurpleHttpConnection *connection, PurpleHttpR
 	msg_flags |= PURPLE_MESSAGE_IMAGES;
 		
 	if (g_hash_table_contains(ha->group_chats, conv_id)) {
-		purple_serv_got_chat_in(ha->pc, g_str_hash(conv_id), gaia_id, msg_flags, msg, message_timestamp);
+		purple_serv_got_chat_in(ha->pc, g_str_hash(conv_id), sender_id, msg_flags, msg, message_timestamp);
 	} else {
 		if (msg_flags & PURPLE_MESSAGE_RECV) {
-			purple_serv_got_im(ha->pc, gaia_id, msg, msg_flags, message_timestamp);
+			purple_serv_got_im(ha->pc, sender_id, msg, msg_flags, message_timestamp);
 		} else {
-			gaia_id = g_hash_table_lookup(ha->one_to_ones, conv_id);
-			if (gaia_id) {
-				PurpleIMConversation *imconv = purple_conversations_find_im_with_account(gaia_id, ha->account);
-				PurpleMessage *message = purple_message_new_outgoing(gaia_id, msg, msg_flags);
+			sender_id = g_hash_table_lookup(ha->one_to_ones, conv_id);
+			if (sender_id) {
+				PurpleIMConversation *imconv = purple_conversations_find_im_with_account(sender_id, ha->account);
+				PurpleMessage *message = purple_message_new_outgoing(sender_id, msg, msg_flags);
 				if (imconv == NULL) {
-					imconv = purple_im_conversation_new(ha->account, gaia_id);
+					imconv = purple_im_conversation_new(ha->account, sender_id);
 				}
 				purple_message_set_time(message, message_timestamp);
 				purple_conversation_write_message(PURPLE_CONVERSATION(imconv), message);
@@ -377,15 +377,36 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 	
 	for (i = 0; i < message->n_annotations; i++) {
 		Annotation *annotation = message->annotations[i];
+		gchar *image_url = NULL; // Direct image URL
+		const gchar *url = NULL; // Display URL
+		
+		if (annotation->upload_metadata) {
+			UploadMetadata *upload_metadata = annotation->upload_metadata;
+			
+			//const gchar *content_type = upload_metadata->content_type;
+			const gchar *attachment_token = upload_metadata->attachment_token;
+			
+			GString *image_url_str = g_string_new(NULL);
+			
+			g_string_append(image_url_str, "https://chat.google.com/api/get_attachment_url" "?");
+			g_string_append(image_url_str, "url_type=FIFE_URL&");
+			//g_string_append_printf(image_url_str, "sz=w%d-h%d&", 0, 0); //TODO
+			//g_string_append_printf(image_url_str, "content_type=%s&", purple_url_encode(content_type));
+			g_string_append_printf(image_url_str, "attachment_token=%s&", purple_url_encode(attachment_token));
+			
+			// this url redirects to the actual url
+			url = image_url = image_url_str->str;
+			g_string_free(image_url_str, FALSE);
+		}
 		
 		if (annotation->drive_metadata) {
 			DriveMetadata *drive_metadata = annotation->drive_metadata;
-			const gchar *image_url = drive_metadata->thumbnail_url;
-			const gchar *url = drive_metadata->url_fragment;
+			image_url = g_strdup(drive_metadata->thumbnail_url);
+			url = drive_metadata->url_fragment;
+		}
+		
+		if (image_url != NULL) {
 			PurpleHttpConnection *connection;
-			
-			//TODO
-			continue;
 			
 			if (g_strcmp0(purple_core_get_ui(), "BitlBee") == 0) {
 				// Bitlbee doesn't support images, so just plop a url to the image instead
@@ -401,15 +422,24 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 					}
 				}
 			} else {
-				connection = purple_http_get(ha->pc, googlechat_got_http_image_for_conv, ha, image_url);
-				purple_http_request_set_max_len(purple_http_conn_get_request(connection), -1);
+				PurpleHttpRequest *request = purple_http_request_new(image_url);
+				
+				purple_http_request_header_set_printf(request, "Authorization", "Bearer %s", ha->access_token);
+				purple_http_request_set_max_len(request, -1);
+				
+				connection = purple_http_request(ha->pc, request, googlechat_got_http_image_for_conv, ha);
+				
 				g_dataset_set_data_full(connection, "url", g_strdup(url), g_free);
 				g_dataset_set_data_full(connection, "sender_id", g_strdup(sender_id), g_free);
 				g_dataset_set_data_full(connection, "conv_id", g_strdup(conv_id), g_free);
 				g_dataset_set_data(connection, "msg_flags", GINT_TO_POINTER(msg_flags));
 				g_dataset_set_data(connection, "message_timestamp", GINT_TO_POINTER(message_timestamp));
+				
+				purple_http_request_unref(request);
 			}
 		}
+		
+		g_free(image_url);
 	}
 }
 

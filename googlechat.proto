@@ -306,6 +306,22 @@ message DriveMetadata {
 	optional bool is_download_restricted = 17;
 }
 
+message UploadMetadata {
+	//oneof Payload {
+		optional string attachment_token = 1;
+		//optional BackendUploadMetadata backend_upload_metadata = 2;
+	// }
+	optional string content_name = 3;
+	optional string content_type = 4;
+	//optional Dimension original_dimension = 5;
+	optional string local_id = 6;
+	// optional VideoReference video_reference = 7;
+	// optional VirusScanResult virus_scan_result = 8;
+	optional string cloned_drive_id = 9;
+	// optional DriveAction cloned_drive_action = 10;
+	// optional ComGoogleAppsDriveStorageApiAuthorizedItemId cloned_authorized_item_id = 11;
+}
+
 message FormatMetadata {
 	enum FormatType {
 		TYPE_UNSPECIFIED = 0;
@@ -350,7 +366,7 @@ message Annotation {
 		
 		//DYNProtoYoutubeMetadata youtube_metadata = 6;
 		//DYNProtoUrlMetadata url_metadata = 7;
-		//DYNProtoUploadMetadata upload_metadata = 10;
+	optional	UploadMetadata upload_metadata = 10;
 		//DYNProtoMembershipChangedMetadata membership_changed = 11;
 		//DYNProtoVideoCallMetadata video_call_metadata = 12;
 		//DYNProtoRoomUpdatedMetadata room_updated = 14;

@@ -577,6 +577,7 @@ googlechat_create_account_from_hangouts_account(PurpleAccount *hangouts_account)
 	g_return_val_if_fail(password && *password, FALSE);
 	
 	new_account = purple_account_new(username, GOOGLECHAT_PLUGIN_ID);
+	purple_account_set_remember_password(new_account, TRUE);
 	purple_account_set_password(new_account, password, NULL, NULL);
 	
 	purple_account_set_alias(new_account, purple_account_get_alias(hangouts_account));

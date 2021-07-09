@@ -377,6 +377,9 @@ googlechat_login(PurpleAccount *account)
 	
 	purple_connection_set_protocol_data(pc, ha);
 	
+	// Cache intermediate certificates
+	googlechat_cache_ssl_certs(ha);
+	
 	if (password && *password) {
 		ha->refresh_token = g_strdup(password);
 		purple_connection_update_progress(pc, _("Authenticating"), 1, 3);

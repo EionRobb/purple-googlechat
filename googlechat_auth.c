@@ -351,3 +351,89 @@ googlechat_auth_get_dynamite_token(GoogleChatAccount *ha)
 	
 	return FALSE;
 }
+
+
+static void
+googlechat_cache_ssl_certs_cb(gpointer userdata, PurpleSslConnection *psc, PurpleInputCondition cond)
+{
+	// What a senseless waste of human life
+	purple_ssl_close(psc);
+}
+
+static void
+googlechat_tls_cached_verified(PurpleCertificateVerificationStatus st, gpointer userdata)
+{
+	PurpleCertificateVerificationRequest *vrq = userdata;
+	
+	if (st == PURPLE_CERTIFICATE_VALID) {
+		GList *certs = vrq->cert_chain, *cur;
+		PurpleCertificatePool *ca, *tls_peers;
+		const gchar *cert_id;
+		
+		ca = purple_certificate_find_pool("x509", "ca");
+		tls_peers = purple_certificate_find_pool("x509", "tls_peers");
+		
+		if (certs && certs->next) {
+			PurpleCertificate *cert = certs->data;
+			cert_id = purple_certificate_get_subject_name(cert);
+			if (!purple_certificate_pool_contains(tls_peers, cert_id)) {
+				purple_certificate_pool_store(tls_peers, cert_id, cert);
+			}
+			
+			for (cur = certs->next; cur; cur = cur->next) {
+				cert = cur->data;
+				cert_id = purple_certificate_get_subject_name(cert);
+				
+				if (!purple_certificate_pool_contains(ca, cert_id)) {
+					purple_certificate_pool_store(ca, cert_id, cert);
+				}
+				if (!purple_certificate_pool_contains(tls_peers, cert_id)) {
+					purple_certificate_pool_store(tls_peers, cert_id, cert);
+				}
+			}
+		}
+	}
+	
+	purple_certificate_verify_complete(vrq, st);
+}
+		 
+static void
+googlechat_tls_cached_start_verify(PurpleCertificateVerificationRequest *vrq)
+{
+	PurpleCertificateVerifier *x509_tls_cached = purple_certificate_find_verifier("x509", "tls_cached");
+	
+	if (x509_tls_cached) {
+		purple_certificate_verify(x509_tls_cached, vrq->subject_name, vrq->cert_chain, googlechat_tls_cached_verified, vrq);
+		
+	} else {
+		purple_certificate_verify_complete(vrq, PURPLE_CERTIFICATE_INVALID);
+	}
+}
+
+static void
+googlechat_tls_cached_destroy_request(PurpleCertificateVerificationRequest *vrq)
+{
+	// Neat
+}
+
+static PurpleCertificateVerifier googlechat_tls_cached = {
+	"x509",                         /* Scheme name */
+	"googlechat",                   /* Verifier name */
+	googlechat_tls_cached_start_verify,   /* Verification begin */
+	googlechat_tls_cached_destroy_request,/* Request cleanup */
+
+	NULL,
+	NULL,
+	NULL,
+	NULL
+
+};
+
+void
+googlechat_cache_ssl_certs(GoogleChatAccount *ha)
+{
+	PurpleSslConnection *ssl_conn;
+	
+	ssl_conn = purple_ssl_connect(ha->account, "chat.google.com", 443, googlechat_cache_ssl_certs_cb, NULL, ha);
+	ssl_conn->verifier = &googlechat_tls_cached;
+}

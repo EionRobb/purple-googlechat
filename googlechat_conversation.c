@@ -1319,7 +1319,8 @@ googlechat_conversation_send_message(GoogleChatAccount *ha, const gchar *conv_id
     }
 	*/
 	
-	gchar *message_dup = g_strdup(message);
+	//TODO
+	gchar *message_dup = purple_markup_strip_html(message);
 	gchar *message_id = g_strdup_printf("purple%" G_GUINT32_FORMAT, (guint32) g_random_int());
 	
 	//Check for any images to send first

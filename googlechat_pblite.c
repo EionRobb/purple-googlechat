@@ -583,6 +583,8 @@ pblite_encode_for_json(ProtobufCMessage *message)
 	const ProtobufCMessageDescriptor *descriptor = message->descriptor;
 	guint i;
 	
+	g_return_val_if_fail(descriptor != NULL, NULL);
+	
 	for (i = 0; i < descriptor->n_fields; i++) {
 		const ProtobufCFieldDescriptor *field_descriptor = descriptor->fields + i;
 		void *field = STRUCT_MEMBER_P(message, field_descriptor->offset);

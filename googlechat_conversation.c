@@ -1095,6 +1095,242 @@ googlechat_unblock_user(PurpleConnection *pc, const char *who)
 	googlechat_request_header_free(request.request_header);
 }
 
+// Annotation ***annotations  - a pointer to an array of annotation objects
+static gchar *
+googlechat_html_to_text(const gchar *html_message, Annotation ***annotations, guint *annotations_count)
+{
+	GString *text_content;
+	const gchar *c = html_message;
+	GList *annotation_list = NULL;
+	guint n_annotations;
+	guint i;
+	gint bold_pos_start, italic_pos_start, strikethrough_pos_start, underline_pos_start, link_pos_start;
+	Annotation *ann;
+	FormatMetadata *format;
+	gchar *last_link = NULL;
+	
+	if (c == NULL || *c == '\0') {
+		g_warn_if_reached();
+		
+		if (annotations_count != NULL) {
+			*annotations_count = 0;
+		}
+		if (annotations != NULL) {
+			*annotations = NULL;
+		}
+		return NULL;
+	}
+	
+	bold_pos_start = italic_pos_start = strikethrough_pos_start = underline_pos_start = link_pos_start = -1;
+	text_content = g_string_new("");
+	
+	while (c && *c) {
+		if(*c == '<') {
+			gboolean opening = TRUE;
+			GString *tag = g_string_new("");
+			c++;
+			if(*c == '/') { // closing tag
+				opening = FALSE;
+				c++;
+			}
+			while (*c != ' ' && *c != '>') {
+				g_string_append_c(tag, *c);
+				c++;
+			}
+
+#define GOOGLECHAT_CREATE_ANNOTATION(formatType, formatTypeUPPER) \
+	ann = g_new0(Annotation, 1); \
+	annotation__init(ann); \
+	format = g_new0(FormatMetadata, 1); \
+	format_metadata__init(format); \
+	 \
+	ann->has_type = TRUE; \
+	ann->type = ANNOTATION_TYPE__FORMAT_DATA; \
+	ann->has_chip_render_type = TRUE; \
+	ann->chip_render_type = ANNOTATION__CHIP_RENDER_TYPE__DO_NOT_RENDER; \
+	ann->has_start_index = TRUE; \
+	ann->start_index = formatType##_pos_start; \
+	ann->has_length = TRUE; \
+	ann->length = text_content->len - formatType##_pos_start; \
+	 \
+	format->has_format_type = TRUE; \
+	format->format_type = FORMAT_METADATA__FORMAT_TYPE__##formatTypeUPPER; \
+	ann->format_metadata = format; \
+	 \
+	annotation_list = g_list_append(annotation_list, ann); \
+	formatType##_pos_start = -1;
+			
+			if (!g_ascii_strcasecmp(tag->str, "BR") ||
+					!g_ascii_strcasecmp(tag->str, "BR/")) {
+				g_string_append_c(text_content, '\n');
+				
+			} else if (!g_ascii_strcasecmp(tag->str, "B") ||
+					!g_ascii_strcasecmp(tag->str, "BOLD") ||
+					!g_ascii_strcasecmp(tag->str, "STRONG")) {
+				if (opening) {
+					bold_pos_start = text_content->len;
+				} else if (bold_pos_start > -1) {
+					GOOGLECHAT_CREATE_ANNOTATION(bold, BOLD);
+				}
+				
+			} else if (!g_ascii_strcasecmp(tag->str, "I") ||
+					!g_ascii_strcasecmp(tag->str, "ITALIC") ||
+					!g_ascii_strcasecmp(tag->str, "EM")) {
+				if (opening) {
+					italic_pos_start = text_content->len;
+				} else if (italic_pos_start > -1) {
+					GOOGLECHAT_CREATE_ANNOTATION(italic, ITALIC);
+				}
+				
+			} else if (!g_ascii_strcasecmp(tag->str, "S") ||
+					!g_ascii_strcasecmp(tag->str, "STRIKE")) {
+				if (opening) {
+					strikethrough_pos_start = text_content->len;
+				} else if (strikethrough_pos_start > -1) {
+					GOOGLECHAT_CREATE_ANNOTATION(strikethrough, STRIKE);
+				}
+				
+			} else if (!g_ascii_strcasecmp(tag->str, "U") ||
+					!g_ascii_strcasecmp(tag->str, "UNDERLINE")) {
+				if (opening) {
+					underline_pos_start = text_content->len;
+				} else if (underline_pos_start > -1) {
+					GOOGLECHAT_CREATE_ANNOTATION(underline, UNDERLINE);
+				}
+				
+			} else if (!g_ascii_strcasecmp(tag->str, "A")) {
+				if (opening) {
+					link_pos_start = text_content->len;
+					
+					while (*c != '>') {
+						//Grab HREF for the A
+						if (g_ascii_strncasecmp(c, " HREF=", 6) == 0) {
+							gchar *href_end;
+							c += 6;
+							if (*c == '"' || *c == '\'') {
+								href_end = strchr(c + 1, *c);
+								c++;
+							} else {
+								//Wow this should not happen, but what the hell
+								href_end = MIN(strchr(c, ' '), strchr(c, '>'));
+								if (!href_end)
+									href_end = strchr(c, '>');
+							}
+							g_free(last_link);
+							
+							if (href_end > c) {
+								gchar *attrib = g_strndup(c, href_end - c);
+								last_link = purple_unescape_text(attrib);
+								g_free(attrib);
+								
+								c = href_end;
+								break;
+							}
+							
+							// Shouldn't be here :s
+							g_warn_if_reached();
+							last_link = NULL;
+						}
+						c++;
+					}
+					
+				} else {
+					UrlMetadata *url = g_new0(UrlMetadata, 1);
+					url_metadata__init(url);
+					
+					ann = g_new0(Annotation, 1);
+					annotation__init(ann);
+					
+					ann->has_type = TRUE;
+					ann->type = ANNOTATION_TYPE__URL;
+					ann->has_chip_render_type = TRUE;
+					ann->chip_render_type = ANNOTATION__CHIP_RENDER_TYPE__RENDER_IF_POSSIBLE;
+					ann->has_start_index = TRUE;
+					ann->start_index = link_pos_start;
+					ann->has_length = TRUE;
+					ann->length = text_content->len - link_pos_start;
+					
+					url->url = url->gws_url = url->redirect_url = g_new0(Url, 1);
+					url__init(url->url);
+					url->url->url = last_link;
+					ann->url_metadata = url;
+					
+					annotation_list = g_list_append(annotation_list, ann);
+					link_pos_start = -1;
+					
+					last_link = NULL;
+				}
+#undef GOOGLECHAT_CREATE_ANNOTATION
+			}
+			while (*c != '>') {
+				c++;
+			}
+			
+			c++;
+			g_string_free(tag, TRUE);
+		} else if(*c == '&') {
+			const gchar *plain;
+			gint len;
+			
+			if ((plain = purple_markup_unescape_entity(c, &len)) == NULL) {
+				g_string_append_c(text_content, *c);
+				len = 1;
+			} else {
+				g_string_append(text_content, plain);
+			}
+			c += len;
+		} else {
+			g_string_append_c(text_content, *c);
+			c++;
+		}
+	}
+	
+	if (annotations != NULL) {
+		n_annotations = g_list_length(annotation_list);
+		Annotation **annotations_out = g_new0(Annotation *, n_annotations + 1);
+		
+		for (i = 0; annotation_list && annotation_list->data; i++) {
+			annotations_out[i] = (Annotation *) annotation_list->data;
+			
+			annotation_list = g_list_delete_link(annotation_list, annotation_list);
+		}
+		
+		*annotations = annotations_out;
+	}
+	
+	if (annotations_count != NULL) {
+		*annotations_count = n_annotations;
+	}
+	
+	return g_string_free(text_content, FALSE);
+}
+
+static void
+googlechat_free_annotations(Annotation **annotations)
+{
+	guint i;
+	
+	if (annotations == NULL) {
+		// Our work here is done
+		return;
+	}
+	
+	for (i = 0; annotations[i]; i++) {
+		if (annotations[i]->format_metadata) {
+			g_free(annotations[i]->format_metadata);
+			
+		} else if (annotations[i]->url_metadata) {
+			g_free(annotations[i]->url_metadata->url->url);
+			g_free(annotations[i]->url_metadata->url);
+			g_free(annotations[i]->url_metadata);
+		}
+		
+		g_free(annotations[i]);
+	}
+	
+	g_free(annotations);
+}
+
 //Received the photoid of the sent image to be able to attach to an outgoing message
 static void
 googlechat_conversation_send_image_part2_cb(PurpleHttpConnection *connection, PurpleHttpResponse *response, gpointer user_data)
@@ -1284,6 +1520,8 @@ googlechat_conversation_send_message(GoogleChatAccount *ha, const gchar *conv_id
 	DmId dm_id;
 	RetentionSettings retention_settings;
 	MessageInfo message_info;
+	Annotation **annotations;
+	guint n_annotations;
 	
 	g_return_val_if_fail(conv_id, -1);
 	
@@ -1320,11 +1558,12 @@ googlechat_conversation_send_message(GoogleChatAccount *ha, const gchar *conv_id
 	*/
 	
 	//TODO
-	gchar *message_dup = purple_markup_strip_html(message);
 	gchar *message_id = g_strdup_printf("purple%" G_GUINT32_FORMAT, (guint32) g_random_int());
 	
 	//Check for any images to send first
-	googlechat_conversation_check_message_for_images(ha, conv_id, message_dup);
+	googlechat_conversation_check_message_for_images(ha, conv_id, message);
+	
+	gchar *message_dup = googlechat_html_to_text(message, &annotations, &n_annotations);
 	
 	create_topic_request__init(&request);
 	
@@ -1348,6 +1587,9 @@ googlechat_conversation_send_message(GoogleChatAccount *ha, const gchar *conv_id
 	request.has_history_v2 = TRUE;
 	request.history_v2 = TRUE;
 	
+	request.annotations = annotations;
+	request.n_annotations = n_annotations;
+	
 	retention_settings__init(&retention_settings);
 	request.retention_settings = &retention_settings;
 	retention_settings.has_state = TRUE;
@@ -1366,6 +1608,7 @@ googlechat_conversation_send_message(GoogleChatAccount *ha, const gchar *conv_id
 	g_hash_table_insert(ha->sent_message_ids, message_id, NULL);
 	
 	googlechat_request_header_free(request.request_header);
+	googlechat_free_annotations(annotations);
 
 	g_free(message_dup);
 	

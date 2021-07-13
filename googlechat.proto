@@ -306,6 +306,29 @@ message DriveMetadata {
 	optional bool is_download_restricted = 17;
 }
 
+//ComGoogleCommonHtmlTypesSafeUrlProto
+message Url {
+	//private_do_not_access_or_else_safe_url_wrapped_value
+	optional string url = 3;
+}
+
+message UrlMetadata {
+	optional string title = 1;
+	optional string snippet = 2;
+	optional string image_url = 3;
+	optional string image_height = 4;
+	optional string image_width = 5;
+	optional Url url = 7;
+	optional Url gws_url = 13;
+	optional Url redirect_url = 14;
+	optional int64 gws_url_expiration_timestamp = 15;
+	optional string domain = 8;
+	optional bool should_not_render = 9;
+	optional int32 int_image_height = 10;
+	optional int32 int_image_width = 11;
+	optional string mime_type = 12;
+}
+
 message UploadMetadata {
 	//oneof Payload {
 		optional string attachment_token = 1;
@@ -365,7 +388,7 @@ message Annotation {
 	optional	DriveMetadata drive_metadata = 4;
 		
 		//DYNProtoYoutubeMetadata youtube_metadata = 6;
-		//DYNProtoUrlMetadata url_metadata = 7;
+	optional	UrlMetadata url_metadata = 7;
 	optional	UploadMetadata upload_metadata = 10;
 		//DYNProtoMembershipChangedMetadata membership_changed = 11;
 		//DYNProtoVideoCallMetadata video_call_metadata = 12;

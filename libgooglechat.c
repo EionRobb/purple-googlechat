@@ -350,12 +350,12 @@ googlechat_login(PurpleAccount *account)
 	password = purple_connection_get_password(pc);
 	
 	// TODO 
-	// pc_flags = purple_connection_get_flags(pc);
-	// pc_flags |= PURPLE_CONNECTION_FLAG_HTML;
-	// pc_flags |= PURPLE_CONNECTION_FLAG_NO_FONTSIZE;
-	// pc_flags |= PURPLE_CONNECTION_FLAG_NO_BGCOLOR;
+	pc_flags = purple_connection_get_flags(pc);
+	pc_flags |= PURPLE_CONNECTION_FLAG_HTML;
+	pc_flags |= PURPLE_CONNECTION_FLAG_NO_FONTSIZE;
+	pc_flags |= PURPLE_CONNECTION_FLAG_NO_BGCOLOR;
 	// pc_flags &= ~PURPLE_CONNECTION_FLAG_NO_IMAGES;
-	// purple_connection_set_flags(pc, pc_flags);
+	purple_connection_set_flags(pc, pc_flags);
 	
 	ha = g_new0(GoogleChatAccount, 1);
 	ha->account = account;

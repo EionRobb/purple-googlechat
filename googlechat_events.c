@@ -401,8 +401,22 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 		
 		if (annotation->drive_metadata) {
 			DriveMetadata *drive_metadata = annotation->drive_metadata;
-			image_url = g_strdup(drive_metadata->thumbnail_url);
-			url = drive_metadata->url_fragment;
+			
+			if (drive_metadata->thumbnail_url) {
+				image_url = g_strdup(drive_metadata->thumbnail_url);
+				url = drive_metadata->url_fragment;
+				
+			} else {
+				const gchar *drive_id = drive_metadata->id;
+				
+				GString *image_url_str = g_string_new(NULL);
+				
+				g_string_append(image_url_str, "https://lh3.googleusercontent.com/d/");
+				g_string_append(image_url_str, purple_url_encode(drive_id));
+				
+				url = image_url = image_url_str->str;
+				g_string_free(image_url_str, FALSE);
+			}
 		}
 		
 		if (image_url != NULL) {

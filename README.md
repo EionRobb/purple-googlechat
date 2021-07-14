@@ -23,7 +23,9 @@ json-glib-devel libpurple-devel glib2-devel libpurple-devel protobuf-c-devel pro
 ```
 
 ## Windows ##
-Use the Windows installer to make life easier, otherwise development builds of Windows dll's will live at https://eion.robbmob.com/libgooglechat.dll (you'll also need libprotobuf-c-1.dll and libjson-glib-1.0.dll in your Pidgin folder, included in the installer)
+Development builds of Windows dll's will live at https://eion.robbmob.com/libgooglechat.dll (you'll also need libprotobuf-c-1.dll and libjson-glib-1.0.dll in your Pidgin folder, included in the installer)
+
+A Windows installer to make life easier is in progress.
 
 ## Like this plugin? ##
 Say "Thanks" by [sending us $1](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=PZMBF2QVF69GA)

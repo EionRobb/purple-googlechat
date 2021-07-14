@@ -389,6 +389,8 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 			GString *image_url_str = g_string_new(NULL);
 			
 			g_string_append(image_url_str, "https://chat.google.com/api/get_attachment_url" "?");
+			//could also be THUMBNAIL_URL
+			// or DOWNLOAD_URL for a file
 			g_string_append(image_url_str, "url_type=FIFE_URL&");
 			//g_string_append_printf(image_url_str, "sz=w%d-h%d&", 0, 0); //TODO
 			//g_string_append_printf(image_url_str, "content_type=%s&", purple_url_encode(content_type));
@@ -416,6 +418,16 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 				
 				url = image_url = image_url_str->str;
 				g_string_free(image_url_str, FALSE);
+			}
+		}
+		
+		if (annotation->url_metadata) {
+			UrlMetadata *url_metadata = annotation->url_metadata;
+			
+			if (url_metadata->image_url) {
+				image_url = g_strdup(url_metadata->image_url);
+				url = url_metadata->url ? url_metadata->url->url : url_metadata->image_url;
+				
 			}
 		}
 		

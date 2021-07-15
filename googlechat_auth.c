@@ -278,9 +278,15 @@ googlechat_auth_get_dynamite_token_cb(PurpleHttpConnection *http_conn, PurpleHtt
 	const gchar *raw_response;
 	gsize response_len;
 	
-	if (purple_http_response_get_error(response) != NULL) {
-		purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED, 
-			_("Auth error"));
+	if (!purple_http_response_is_successful(response)) {
+		int error_code = purple_http_response_get_code(response);
+		if (error_code == 401 || error_code == 403) {
+			purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED, 
+				_("Auth error"));
+		} else {
+			purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+				purple_http_response_get_error(response));
+		}
 		return;
 	}
 

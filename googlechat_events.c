@@ -287,6 +287,32 @@ googlechat_got_http_image_for_conv(PurpleHttpConnection *connection, PurpleHttpR
 	g_dataset_destroy(connection);
 }
 
+static const gchar *
+googlechat_format_type_to_string(FormatMetadata__FormatType format_type, gboolean close)
+{
+	static gchar output[16];
+	int p = 1;
+	
+	output[0] = '<';
+	if (close) {
+		output[1] = '/';
+		p = 2;
+	}
+	
+	if (format_type == FORMAT_METADATA__FORMAT_TYPE__BOLD) {
+		output[p] = 'B';  p++;
+	} else if (format_type == FORMAT_METADATA__FORMAT_TYPE__ITALIC) {
+		output[p] = 'I';  p++;
+	} else if (format_type == FORMAT_METADATA__FORMAT_TYPE__UNDERLINE) {
+		output[p] = 'U';  p++;
+	} // else //TODO
+	
+	output[p] = '>';
+	output[p + 1] = '\0';
+	
+	return output;
+}
+
 void
 googlechat_received_message_event(PurpleConnection *pc, Event *event)
 {
@@ -329,7 +355,89 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 	PurpleConversation *pconv = NULL;
 	
 	//TODO process Annotations to add formatting
-	gchar *msg = g_strdup(message->text_body);
+	gchar *msg = NULL;
+	GList *format_annotations = NULL;
+	for (i = 0; i < message->n_annotations; i++) {
+		Annotation *annotation = message->annotations[i];
+		if (annotation->type == ANNOTATION_TYPE__FORMAT_DATA) {
+			format_annotations = g_list_prepend(format_annotations, annotation);
+		}
+	}
+	
+	if (format_annotations == NULL) {
+		//shortcut
+		msg = purple_markup_escape_text(message->text_body, -1);
+		
+	} else {
+		GString *msg_out = g_string_new(NULL);
+		const gchar *current_char = message->text_body;
+		gunichar c;
+		gint32 pos = 0;
+		GList *format;
+		gint hidden_output = 0;
+		
+		do {
+			if (format_annotations != NULL) {
+				for(format = format_annotations; format; format = format->next) {
+					Annotation *annotation = format->data;
+					FormatMetadata__FormatType format_type = annotation->format_metadata->format_type;
+					
+					if (annotation->start_index == pos) {
+						g_string_append(msg_out, googlechat_format_type_to_string(format_type, FALSE));
+						if (format_type == FORMAT_METADATA__FORMAT_TYPE__HIDDEN) {
+							hidden_output++;
+						}
+						
+					} else if (annotation->length + annotation->start_index == pos) {
+						g_string_append(msg_out, googlechat_format_type_to_string(format_type, TRUE));
+						if (format_type == FORMAT_METADATA__FORMAT_TYPE__HIDDEN) {
+							hidden_output--;
+						}
+						
+						format_annotations = g_list_delete_link(format_annotations, format);
+					}
+				}
+			}
+			
+			if (hidden_output == 0) {
+				// from libpurple/util.c
+				switch (*current_char)
+				{
+					case '&':
+						g_string_append(msg_out, "&amp;");
+						break;
+
+					case '<':
+						g_string_append(msg_out, "&lt;");
+						break;
+
+					case '>':
+						g_string_append(msg_out, "&gt;");
+						break;
+
+					case '"':
+						g_string_append(msg_out, "&quot;");
+						break;
+
+					default:
+						c = g_utf8_get_char(current_char);
+						if ((0x1 <= c && c <= 0x8) ||
+								(0xb <= c && c <= 0xc) ||
+								(0xe <= c && c <= 0x1f) ||
+								(0x7f <= c && c <= 0x84) ||
+								(0x86 <= c && c <= 0x9f))
+							g_string_append_printf(msg_out, "&#x%x;", c);
+						else
+							g_string_append_unichar(msg_out, c);
+						break;
+				}
+			}
+			pos++;
+			
+		} while ((current_char = g_utf8_next_char(current_char)) && *current_char);
+		
+		msg = g_string_free(msg_out, FALSE);
+	}
 	
 	if (!is_dm) {
 		PurpleChatConversation *chatconv = purple_conversations_find_chat_with_account(conv_id, ha->account);

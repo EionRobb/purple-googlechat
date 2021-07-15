@@ -359,7 +359,7 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 	GList *format_annotations = NULL;
 	for (i = 0; i < message->n_annotations; i++) {
 		Annotation *annotation = message->annotations[i];
-		if (annotation->type == ANNOTATION_TYPE__FORMAT_DATA) {
+		if (annotation->type == ANNOTATION_TYPE__FORMAT_DATA || annotation->type == ANNOTATION_TYPE__URL) {
 			format_annotations = g_list_prepend(format_annotations, annotation);
 		}
 	}
@@ -380,18 +380,33 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 			if (format_annotations != NULL) {
 				for(format = format_annotations; format; format = format->next) {
 					Annotation *annotation = format->data;
-					FormatMetadata__FormatType format_type = annotation->format_metadata->format_type;
+					FormatMetadata__FormatType format_type = annotation->format_metadata ? annotation->format_metadata->format_type : 0;
 					
+					// Opening
 					if (annotation->start_index == pos) {
-						g_string_append(msg_out, googlechat_format_type_to_string(format_type, FALSE));
 						if (format_type == FORMAT_METADATA__FORMAT_TYPE__HIDDEN) {
 							hidden_output++;
+							
+						} else if (annotation->type == ANNOTATION_TYPE__URL) {
+							UrlMetadata *url_metadata = annotation->url_metadata;
+							if (url_metadata && url_metadata->url && url_metadata->url->url) {
+								gchar *escaped = g_markup_escape_text(url_metadata->url->url, -1);
+								g_string_append_printf(msg_out, "<A HREF=\"%s\">", escaped);
+								g_free(escaped);
+							}
+							
+						} else {
+							g_string_append(msg_out, googlechat_format_type_to_string(format_type, FALSE));
 						}
-						
+					
+					// Closing
 					} else if (annotation->length + annotation->start_index == pos) {
-						g_string_append(msg_out, googlechat_format_type_to_string(format_type, TRUE));
 						if (format_type == FORMAT_METADATA__FORMAT_TYPE__HIDDEN) {
 							hidden_output--;
+						} else if (annotation->type == ANNOTATION_TYPE__URL) {
+							g_string_append(msg_out, "</A>");
+						} else {
+							g_string_append(msg_out, googlechat_format_type_to_string(format_type, TRUE));
 						}
 						
 						format_annotations = g_list_delete_link(format_annotations, format);

@@ -638,7 +638,7 @@ message ListTopicsResponse {
 	//optional DYNProtoReadRevision group_revision = 3
 	optional bool contains_first_topic = 4;
 	optional bool contains_last_topic = 5;
-	//optional DYNProtoReadReceiptSet read_receipt_set
+	optional ReadReceiptSet read_receipt_set = 6;
 }
 
 message ListTopicsRequest {
@@ -669,6 +669,17 @@ message ListTopicsRequest {
 
 // }
 
+message ReadReceipt {
+	optional int64 read_time_micros = 2;
+	optional User user = 3;
+}
+
+message ReadReceiptSet {
+	optional bool enabled = 1;
+	repeated ReadReceipt read_receipts = 2;
+}
+
+
 message MessageEvent {
 	optional Message message = 1;
 	optional int64 last_message_in_topic_time = 4;
@@ -687,6 +698,11 @@ message MembershipChangedEvent {
 	optional Membership new_membership = 1;
 	optional MembershipState prior_membership_state = 2;
 	optional MembershipRole prior_membership_role = 3;
+}
+
+message ReadReceiptChangedEvent {
+	optional GroupId group_id = 1;
+	optional ReadReceiptSet read_receipt_set = 2;
 }
 
 
@@ -900,7 +916,7 @@ message Event {
 			//ClearHistoryEvent clear_history_event = 29;
 			//GroupSortTimestampChangedEvent group_sort_timestamp_changed_event = 30;
 			//MarkAsUnreadEvent mark_as_unread_event = 32;
-			//ReadReceiptChangedEvent read_receipt_changed = 33;
+		optional	ReadReceiptChangedEvent read_receipt_changed = 33;
 			//GroupNoOpEvent group_no_op_event = 34;
 			//UserNoOpEvent user_no_op_event = 35;
 			//UserDenormalizedGroupUpdatedEvent user_denormalized_group_updated_event = 36;
@@ -1148,7 +1164,7 @@ message GetGroupResponse {
 	optional MembershipState membership_state = 6;
 	repeated MemberId joined_member_ids = 7;
 	repeated MemberId invited_member_ids = 8;
-	//optional ReadReceiptSet read_receipt_set = 9;
+	optional ReadReceiptSet read_receipt_set = 9;
 	optional Message snippet = 10;
 	// repeated ?? capabilities = 11;
 }

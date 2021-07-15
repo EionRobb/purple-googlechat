@@ -2116,6 +2116,9 @@ googlechat_mark_conversation_seen(PurpleConversation *conv, PurpleConversationUp
 	if (type != PURPLE_CONVERSATION_UPDATE_UNSEEN)
 		return;
 	
+	if (!purple_conversation_has_focus(conv))
+		return;
+	
 	pc = purple_conversation_get_connection(conv);
 	if (!PURPLE_CONNECTION_IS_CONNECTED(pc))
 		return;

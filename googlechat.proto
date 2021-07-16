@@ -390,7 +390,7 @@ message Annotation {
 		//DYNProtoYoutubeMetadata youtube_metadata = 6;
 	optional	UrlMetadata url_metadata = 7;
 	optional	UploadMetadata upload_metadata = 10;
-		//DYNProtoMembershipChangedMetadata membership_changed = 11;
+	optional	MembershipChangedMetadata membership_changed = 11;
 		//DYNProtoVideoCallMetadata video_call_metadata = 12;
 		//DYNProtoRoomUpdatedMetadata room_updated = 14;
 		//DYNProtoGsuiteIntegrationMetadata gsuite_integration_metadata = 16;
@@ -468,7 +468,7 @@ message Group {
 	}
 	optional GroupType group_type = 22;
 	
-	//optional DYNProtoGroupVisibility visibility = 23;
+	optional GroupVisibility visibility = 23;
 	//repeated DYNProtoGsuiteIntegration gsuite_integration = 24;
 	optional string roster_email = 25;
 	
@@ -705,6 +705,11 @@ message ReadReceiptChangedEvent {
 	optional ReadReceiptSet read_receipt_set = 2;
 }
 
+message GroupViewedEvent {
+	optional GroupId group_id = 1;
+	optional int64 view_time = 2;
+}
+
 
 // used in the /webchannel/events
 message StreamEventsRequest {
@@ -889,7 +894,7 @@ message Event {
 	
 	message EventBody {
 		//oneof Type {
-			//GroupViewedEvent group_viewed = 3;
+		optional	GroupViewedEvent group_viewed = 3;
 			//TopicViewedEvent topic_viewed = 4;
 			//GroupUpdatedEvent group_updated = 5;
 		optional	MessageEvent message_posted = 6;
@@ -1010,6 +1015,20 @@ message MembershipChangedMetadata {
 		KICKED_DUE_TO_OTR_CONFLICT = 8;
 		ROLE_UPDATED = 9;
 	}
+	
+	message AffectedMembership {
+		optional MemberId affected_member = 1;
+		optional MembershipState prior_membership_state = 2;
+		optional MembershipRole prior_membership_role = 3;
+		optional MembershipRole target_membership_role = 4;
+	}
+	
+	optional Type type = 1;
+	repeated AffectedMembership affected_memberships = 6;
+	optional UserId initiator = 2;
+	repeated MemberId affected_members = 3;
+	optional User initiator_profile = 4;
+	repeated Member affected_member_profiles = 5;
 }
 
 message UserMentionMetadata {

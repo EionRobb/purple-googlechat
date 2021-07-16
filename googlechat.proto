@@ -661,13 +661,25 @@ message ListTopicsRequest {
 	//optional DYNProtoListTopicsRequest_SortOption sort_option = 11;
 }
 
-// message ListMembersRequest {
-	// optional RequestHeader request_header = 100;
-// }
+message ListMembersRequest {
+	optional RequestHeader request_header = 100;
+	optional SpaceId space_id = 1;
+	optional GroupId group_id = 5;
+	// repeated FetchOptions fetch_options = 2;
+	// optional Filter filter = 7;
+	optional int32 page_size = 3;
+	optional string page_token = 4;
+	// optional ReferenceRevision not_older_than = 6;
+}
 
-// message ListMembersResponse {
-
-// }
+message ListMembersResponse {
+	repeated Membership memberships = 1;
+	repeated Member members = 2;
+	repeated MemberId member_ids = 5;
+	optional string next_page_token = 3;
+	// optional ReadRevision group_revision = 4;
+	repeated MemberId invited_member_ids = 6;
+}
 
 message ReadReceipt {
 	optional int64 read_time_micros = 2;

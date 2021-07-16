@@ -512,6 +512,45 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 	g_free(msg);
 	//purple_xmlnode_free(html);
 
+	// Process join/part's
+	for (i = 0; i < message->n_annotations; i++) {
+		Annotation *annotation = message->annotations[i];
+		
+		if (annotation->membership_changed) { //if (annotation->type == ANNOTATION_TYPE__MEMBERSHIP_CHANGED) {
+			PurpleChatConversation *chatconv = purple_conversations_find_chat_with_account(conv_id, ha->account);
+			MembershipChangedMetadata *membership_change = annotation->membership_changed;
+			guint j;
+			
+			if (membership_change->type == MEMBERSHIP_CHANGED_METADATA__TYPE__LEFT ||
+				membership_change->type == MEMBERSHIP_CHANGED_METADATA__TYPE__REMOVED ||
+				membership_change->type == MEMBERSHIP_CHANGED_METADATA__TYPE__BOT_REMOVED) {
+				//TODO
+				const gchar *reason = NULL;
+				
+				for (j = 0; j < membership_change->n_affected_members; j++) {
+					MemberId *member_id = membership_change->affected_members[j];
+					
+					purple_chat_conversation_remove_user(chatconv, member_id->user_id->id, reason);
+					
+					if (g_strcmp0(member_id->user_id->id, ha->self_gaia_id) == 0) {
+						purple_serv_got_chat_left(ha->pc, g_str_hash(conv_id));
+						g_hash_table_remove(ha->group_chats, conv_id);
+						purple_blist_remove_chat(purple_blist_find_chat(ha->account, conv_id));
+					}
+				}
+			} else {
+				PurpleChatUserFlags cbflags = PURPLE_CHAT_USER_NONE; //TODO
+				
+				for (j = 0; j < membership_change->n_affected_members; j++) {
+					MemberId *member_id = membership_change->affected_members[j];
+					
+					purple_chat_conversation_add_user(chatconv, member_id->user_id->id, NULL, cbflags, TRUE);
+				}
+			}
+		}
+	}
+	
+	// Add images
 	for (i = 0; i < message->n_annotations; i++) {
 		Annotation *annotation = message->annotations[i];
 		gchar *image_url = NULL; // Direct image URL
@@ -1026,7 +1065,6 @@ googlechat_received_group_viewed(PurpleConnection *pc, Event *event)
 {
 	const gchar *user_id;
 	GroupId *group_id;
-	SpaceId *space_id;
 	const gchar *conv_id;
 	const gchar *sender_id;
 	GoogleChatAccount *ha;

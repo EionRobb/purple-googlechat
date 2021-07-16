@@ -39,6 +39,8 @@ void googlechat_received_other_notification(PurpleConnection *pc, Event *event);
 void googlechat_received_presence_notification(PurpleConnection *pc, Event *event);
 void googlechat_received_typing_notification(PurpleConnection *pc, Event *event);
 void googlechat_received_message_event(PurpleConnection *pc, Event *event);
+void googlechat_received_read_receipt(PurpleConnection *pc, Event *event);
+void googlechat_received_group_viewed(PurpleConnection *pc, Event *event);
 
 //purple_signal_emit(purple_connection_get_protocol(ha->pc), "googlechat-received-event", ha->pc, events_response.event);
 
@@ -49,6 +51,8 @@ googlechat_register_events(gpointer plugin)
 	purple_signal_connect(plugin, "googlechat-received-event", plugin, PURPLE_CALLBACK(googlechat_received_presence_notification), NULL);
 	purple_signal_connect(plugin, "googlechat-received-event", plugin, PURPLE_CALLBACK(googlechat_received_message_event), NULL);
 	purple_signal_connect(plugin, "googlechat-received-event", plugin, PURPLE_CALLBACK(googlechat_received_other_notification), NULL);
+	purple_signal_connect(plugin, "googlechat-received-event", plugin, PURPLE_CALLBACK(googlechat_received_read_receipt), NULL);
+	purple_signal_connect(plugin, "googlechat-received-event", plugin, PURPLE_CALLBACK(googlechat_received_group_viewed), NULL);
 }
 
 void
@@ -145,7 +149,11 @@ googlechat_received_other_notification(PurpleConnection *pc, Event *event)
 	gchar *json_dump;
 
 	if (event->type == EVENT__EVENT_TYPE__MESSAGE_POSTED ||
-		event->type == EVENT__EVENT_TYPE__TYPING_STATE_CHANGED) {
+		event->type == EVENT__EVENT_TYPE__TYPING_STATE_CHANGED ||
+		event->type == EVENT__EVENT_TYPE__GROUP_VIEWED ||
+		event->type == EVENT__EVENT_TYPE__USER_STATUS_UPDATED_EVENT ||
+		event->type == EVENT__EVENT_TYPE__READ_RECEIPT_CHANGED
+	) {
 		return;
 	}
 	
@@ -947,6 +955,155 @@ googlechat_process_conversation_event(GoogleChatAccount *ha, Conversation *conve
 		}
 	}
 }*/
+
+void
+googlechat_received_read_receipt(PurpleConnection *pc, Event *event)
+{
+	const gchar *user_id;
+	GroupId *group_id;
+	const gchar *conv_id;
+	GoogleChatAccount *ha;
+	ReadReceiptSet *receipt_set;
+	
+	if (event->type != EVENT__EVENT_TYPE__READ_RECEIPT_CHANGED ||
+		!event->body->read_receipt_changed ||
+		!event->body->read_receipt_changed->read_receipt_set ||
+		!event->body->read_receipt_changed->read_receipt_set->enabled ||
+		!event->body->read_receipt_changed->group_id
+	) {
+		return;
+	}
+	
+	receipt_set = event->body->read_receipt_changed->read_receipt_set;
+	guint i;
+	for (i = 0; i < receipt_set->n_read_receipts; i++) {
+		if (receipt_set->read_receipts[i]->user &&
+			receipt_set->read_receipts[i]->user->user_id &&
+			receipt_set->read_receipts[i]->user->user_id->id
+		) {
+			user_id = receipt_set->read_receipts[i]->user->user_id->id;
+			ha = purple_connection_get_protocol_data(pc);
+			
+			// don't emit our own receipts
+			if (ha->self_gaia_id && g_strcmp0(user_id, ha->self_gaia_id) != 0) {
+				group_id = event->body->read_receipt_changed->group_id;
+				gboolean is_dm = !!group_id->dm_id;
+				if (is_dm) {
+					conv_id = group_id->dm_id->dm_id;
+				} else {
+					conv_id = group_id->space_id->space_id;
+				}
+				if (conv_id) {
+					if (is_dm) {
+						// PurpleChat *chat = purple_blist_find_chat(ha->account, conv_id);
+						PurpleBuddy *buddy = purple_blist_find_buddy(ha->account, user_id);
+						if (buddy) {
+							purple_debug_warning("googlechat", "TODO: username %s read DM\n", purple_buddy_get_alias(buddy)); //purple_chat_get_name(chat));
+						} else {
+							purple_debug_warning("googlechat", "TODO: userid %s read DM\n", user_id);
+						}
+					} else {
+						PurpleChatConversation *chatconv = purple_conversations_find_chat_with_account(conv_id, ha->account);
+
+						if (chatconv) {
+							PurpleChatUser *cb = purple_chat_conversation_find_user(chatconv, user_id);
+							if (cb) {
+								purple_debug_warning("googlechat", "TODO: username %s read chat\n", cb->name);
+							} else {
+								purple_debug_warning("googlechat", "TODO: userid %s read chat\n", user_id);
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+
+void
+googlechat_received_group_viewed(PurpleConnection *pc, Event *event)
+{
+	const gchar *user_id;
+	GroupId *group_id;
+	SpaceId *space_id;
+	const gchar *conv_id;
+	const gchar *sender_id;
+	GoogleChatAccount *ha;
+	PurpleConversation *pconv = NULL;
+	
+	if (event->type != EVENT__EVENT_TYPE__GROUP_VIEWED ||
+		!event->user_id->id ||
+		!event->body->group_viewed->group_id
+	) {
+		return;
+	}
+	
+	user_id = event->user_id->id;
+	ha = purple_connection_get_protocol_data(pc);
+	
+	purple_debug_warning("googlechat", "Received groupview %p from userid %s\n", event, user_id);
+	
+	// we only expect to receive GROUP_VIEWED messages for our own user
+	if (ha->self_gaia_id && g_strcmp0(user_id, ha->self_gaia_id) == 0) {
+		purple_debug_info("googlechat", "...it's us %s\n", user_id);
+		group_id = event->body->group_viewed->group_id;
+		gboolean is_dm = !!group_id->dm_id;
+		
+		if (is_dm) {
+			conv_id = group_id->dm_id->dm_id;
+		} else {
+			conv_id = group_id->space_id->space_id;
+		}
+		
+		if (!is_dm) {
+			purple_debug_info("googlechat", "...it's not a DM\n");
+			PurpleChatConversation *chatconv = purple_conversations_find_chat_with_account(conv_id, ha->account);
+			if (chatconv == NULL) {
+				//TODO /api/get_group
+				chatconv = purple_serv_got_joined_chat(ha->pc, g_str_hash(conv_id), conv_id);
+				purple_conversation_set_data(PURPLE_CONVERSATION(chatconv), "conv_id", g_strdup(conv_id));
+				googlechat_lookup_group_info(ha, conv_id);
+			}
+			if (chatconv) {
+				pconv = PURPLE_CONVERSATION(chatconv);
+			} else {
+				purple_debug_info("googlechat", "...couldn't find chatconv\n");
+			}
+		} else {
+			purple_debug_info("googlechat", "...it's a DM\n");
+			PurpleIMConversation *imconv = NULL;
+			// It's most likely a one-to-one message
+			sender_id = g_hash_table_lookup(ha->one_to_ones, conv_id);
+			if (sender_id) {
+				imconv = purple_conversations_find_im_with_account(sender_id, ha->account);
+				if (imconv == NULL)
+				{
+					imconv = purple_im_conversation_new(ha->account, sender_id);
+				}
+			}
+			if (imconv == NULL) {
+				imconv = purple_conversations_find_im_with_account(sender_id, ha->account);
+			}
+			if (imconv) {
+				pconv = PURPLE_CONVERSATION(imconv);
+			} else {
+				purple_debug_info("googlechat", "...couldn't find imconv\n");
+			}
+		}
+		
+		// the whole point of GROUP_VIEWED seems to be to sync our own seen status
+		if (pconv) {
+			purple_debug_warning("googlechat", "TODO: mark conversation '%s' as seen \n", pconv->title);
+			// googlechat_mark_conversation_seen(pconv, PURPLE_CONVERSATION_UPDATE_UNSEEN);
+			// warning: this makes infinite loops
+		} else {
+			purple_debug_info("googlechat", "...pconv was null\n");
+		}
+	} else {
+		purple_debug_info("googlechat", "...it's not us (%s)\n", user_id);
+	}
+}
 
 void
 googlechat_received_typing_notification(PurpleConnection *pc, Event *event)

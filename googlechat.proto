@@ -493,8 +493,58 @@ message Group {
 	optional bool typing_indicators_enabled = 43;
 }
 
+message GroupReadStateId {
+	optional UserId user_id = 1;
+	optional GroupId group_id = 2;
+}
+
+message InviteState {
+	optional UserId inviter_user_id = 1;
+	optional MessageId invitation_message_id = 2;
+	optional bool show_welcome_mat = 3;
+	optional InviteType invite_type = 5;
+}
+
 message GroupReadState {
+	optional GroupReadStateId id = 1;
+	optional int64 last_read_time = 2;
+	optional int64 unread_message_count = 4;
+	optional bool starred = 5;
+	optional int64 update_timestamp = 6;
+	optional int64 unread_subscribed_topic_count = 7;
+	optional int64 unread_subscribed_topic_count_consistency_timestamp = 11;
+	repeated TopicId unread_subscribed_topics = 8;
+	optional int64 hide_timestamp = 9;
+	optional int64 clear_history_timestamp = 14;
+	optional InviteState invite_state = 10;
+	optional GroupNotificationSettings notification_settings = 12;
+	optional RetentionSettings retention_settings = 13;
+	optional bool blocked = 15;
+	optional MembershipRole membership_role = 22;
+	optional MembershipState membership_state = 16;
+	optional InviteCategory invite_category = 17;
+	optional int64 mark_as_unread_timestamp_usec = 18;
+	optional bool visible_in_world_view = 19;
+	optional bool show_notification_card_in_stream = 20;
+	//optional NotificationsCard notifications_card = 21;
 	repeated UserId joined_users = 23;
+}
+
+message GroupNotificationSettings {
+	enum GroupNotificationState {
+		UNKNOWN_NOTIFICATION_STATE = 0;
+		MUTED = 1;
+		UNMUTED = 2;
+	}
+	optional GroupNotificationState state = 1;
+	
+	enum RoomNotificationState {
+		NOTIFY_ALWAYS = 0;
+		NOTIFY_LESS_WITH_NEW_THREADS = 1;
+		NOTIFY_LESS = 2;
+		NOTIFY_NEVER = 3;
+	}
+	optional RoomNotificationState room_state = 2;
 }
 
 message RetentionSettings {

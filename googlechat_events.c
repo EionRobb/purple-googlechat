@@ -234,6 +234,7 @@ googlechat_got_http_image_for_conv(PurpleHttpConnection *connection, PurpleHttpR
 {
 	GoogleChatAccount *ha = user_data;
 	const gchar *url;
+	const gchar *drive_url;
 	const gchar *sender_id;
 	const gchar *conv_id;
 	PurpleMessageFlags msg_flags;
@@ -251,6 +252,7 @@ googlechat_got_http_image_for_conv(PurpleHttpConnection *connection, PurpleHttpR
 	}
 	
 	url = g_dataset_get_data(connection, "url");
+	drive_url = g_dataset_get_data(connection, "drive_url");
 	sender_id = g_dataset_get_data(connection, "sender_id");
 	conv_id = g_dataset_get_data(connection, "conv_id");
 	msg_flags = GPOINTER_TO_INT(g_dataset_get_data(connection, "msg_flags"));
@@ -260,7 +262,11 @@ googlechat_got_http_image_for_conv(PurpleHttpConnection *connection, PurpleHttpR
 	image = purple_image_new_from_data(g_memdup(response_data, response_size), response_size);
 	image_id = purple_image_store_add(image);
 	escaped_image_url = g_markup_escape_text(purple_http_request_get_url(purple_http_conn_get_request(connection)), -1);
-	msg = g_strdup_printf("<a href='%s'>View full image <img id='%u' src='%s' /></a>", url, image_id, escaped_image_url);
+	if (drive_url) {
+		msg = g_strdup_printf("<a href='%s'>View in Drive <img id='%u' src='%s' /></a>", drive_url, image_id, escaped_image_url);
+	} else {
+		msg = g_strdup_printf("<a href='%s'>View full image <img id='%u' src='%s' /></a>", url, image_id, escaped_image_url);
+	}
 	msg_flags |= PURPLE_MESSAGE_IMAGES;
 		
 	if (g_hash_table_contains(ha->group_chats, conv_id)) {
@@ -497,11 +503,12 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 	
 	g_free(msg);
 	//purple_xmlnode_free(html);
-	
+
 	for (i = 0; i < message->n_annotations; i++) {
 		Annotation *annotation = message->annotations[i];
 		gchar *image_url = NULL; // Direct image URL
 		const gchar *url = NULL; // Display URL
+		const gchar *drive_url = NULL; // Google Drive URL
 		
 		if (annotation->upload_metadata) {
 			UploadMetadata *upload_metadata = annotation->upload_metadata;
@@ -539,8 +546,18 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 				g_string_append(image_url_str, "https://lh3.googleusercontent.com/d/");
 				g_string_append(image_url_str, purple_url_encode(drive_id));
 				
+				// the preview
 				url = image_url = image_url_str->str;
+
+				GString *drive_url_str = g_string_new(NULL);
+				g_string_append(drive_url_str, "https://drive.google.com/open?id=");
+				g_string_append(drive_url_str, purple_url_encode(drive_id));
+
+				// the link
+				drive_url = drive_url_str->str;
+
 				g_string_free(image_url_str, FALSE);
+				g_string_free(drive_url_str, FALSE);
 			}
 		}
 		
@@ -579,6 +596,7 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 				connection = purple_http_request(ha->pc, request, googlechat_got_http_image_for_conv, ha);
 				
 				g_dataset_set_data_full(connection, "url", g_strdup(url), g_free);
+				g_dataset_set_data_full(connection, "drive_url", g_strdup(drive_url), g_free);
 				g_dataset_set_data_full(connection, "sender_id", g_strdup(sender_id), g_free);
 				g_dataset_set_data_full(connection, "conv_id", g_strdup(conv_id), g_free);
 				g_dataset_set_data(connection, "msg_flags", GINT_TO_POINTER(msg_flags));
@@ -986,7 +1004,7 @@ googlechat_received_typing_notification(PurpleConnection *pc, Event *event)
 		}
 		return;
 	}
-	
+
 	switch(typing_notification->state) {
 		case TYPING_STATE__TYPING:
 			typing_state = PURPLE_IM_TYPING;

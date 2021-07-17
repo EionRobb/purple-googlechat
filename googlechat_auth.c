@@ -344,7 +344,7 @@ googlechat_auth_get_dynamite_token(GoogleChatAccount *ha)
 	g_string_append_printf(postdata, "client_id=%s&", purple_url_encode("576267593750-sbi1m7khesgfh1e0f2nv5vqlfa4qr72m.apps.googleusercontent.com"));
 	g_string_append(postdata, "passcode_present=YES&");
 	g_string_append(postdata, "response_type=token&");
-	g_string_append_printf(postdata, "scope=%s&", purple_url_encode("https://www.googleapis.com/auth/dynamite https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/mobiledevicemanagement https://www.googleapis.com/auth/notifications https://www.googleapis.com/auth/supportcontent https://www.googleapis.com/auth/chat.integration"));
+	g_string_append_printf(postdata, "scope=%s&", purple_url_encode("https://www.googleapis.com/auth/dynamite https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/mobiledevicemanagement https://www.googleapis.com/auth/notifications https://www.googleapis.com/auth/supportcontent https://www.googleapis.com/auth/chat.integration https://www.googleapis.com/auth/peopleapi.readonly"));
 	
 	purple_http_request_set_method(request, "POST");
 	purple_http_request_header_set(request, "Content-Type", "application/x-www-form-urlencoded");

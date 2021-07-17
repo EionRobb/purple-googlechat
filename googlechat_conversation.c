@@ -1102,7 +1102,7 @@ googlechat_html_to_text(const gchar *html_message, Annotation ***annotations, gu
 	GString *text_content;
 	const gchar *c = html_message;
 	GList *annotation_list = NULL;
-	guint n_annotations;
+	guint n_annotations = 0;
 	guint i;
 	gint bold_pos_start, italic_pos_start, strikethrough_pos_start, underline_pos_start, link_pos_start;
 	Annotation *ann;
@@ -1520,8 +1520,8 @@ googlechat_conversation_send_message(GoogleChatAccount *ha, const gchar *conv_id
 	DmId dm_id;
 	RetentionSettings retention_settings;
 	MessageInfo message_info;
-	Annotation **annotations;
-	guint n_annotations;
+	Annotation **annotations = NULL;
+	guint n_annotations = 0;
 	
 	g_return_val_if_fail(conv_id, -1);
 	

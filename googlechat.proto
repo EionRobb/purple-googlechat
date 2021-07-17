@@ -861,8 +861,8 @@ message CreateTopicRequest {
 
 message CreateTopicResponse {
 	optional Topic topic = 1;
-	//optional DYNProtoWriteRevision group_revision = 2;
-	//optional DYNProtoReadRevision current_group_revision = 3;
+	optional WriteRevision group_revision = 2;
+	optional ReadRevision current_group_revision = 3;
 }
 
 message InviteeInfo {
@@ -924,8 +924,8 @@ message CreateMembershipResult {
 
 message CreateGroupResponse {
 	optional Group group = 1;
-	// optional WriteRevision group_revision = 2;
-	// optional WriteRevision user_revision = 3;
+	optional WriteRevision group_revision = 2;
+	optional WriteRevision user_revision = 3;
 	repeated CreateMembershipResult results = 4;
 	// optional Failure creator_membership_failure = 5;
 }
@@ -948,14 +948,14 @@ message CreateDmRequest {
 message CreateDmResponse {
 	optional Group dm = 1;
 	optional Topic topic = 2;
-	// optional WriteRevision group_revision = 3;
+	optional WriteRevision group_revision = 3;
 	repeated Membership memberships = 4;
 }
 
 message ListTopicsResponse {
 	repeated Topic topics = 1;
-	//optional DYNProtoReadRevision user_revision = 2
-	//optional DYNProtoReadRevision group_revision = 3
+	optional ReadRevision user_revision = 2;
+	optional ReadRevision group_revision = 3;
 	optional bool contains_first_topic = 4;
 	optional bool contains_last_topic = 5;
 	optional ReadReceiptSet read_receipt_set = 6;
@@ -976,8 +976,8 @@ message ListTopicsRequest {
 		READ_RECEIPTS = 3;
 	}
 	repeated FetchOptions fetch_options = 5;
-	//optional DYNProtoReferenceRevision user_not_older_than = 9;
-	//optional DYNProtoReferenceRevision group_not_older_than = 10;
+	optional ReferenceRevision user_not_older_than = 9;
+	optional ReferenceRevision group_not_older_than = 10;
 	//optional DYNProtoListTopicsRequest_SortOption sort_option = 11;
 }
 
@@ -989,7 +989,7 @@ message ListMembersRequest {
 	// optional Filter filter = 7;
 	optional int32 page_size = 3;
 	optional string page_token = 4;
-	// optional ReferenceRevision not_older_than = 6;
+	optional ReferenceRevision not_older_than = 6;
 }
 
 message ListMembersResponse {
@@ -997,7 +997,7 @@ message ListMembersResponse {
 	repeated Member members = 2;
 	repeated MemberId member_ids = 5;
 	optional string next_page_token = 3;
-	// optional ReadRevision group_revision = 4;
+	optional ReadRevision group_revision = 4;
 	repeated MemberId invited_member_ids = 6;
 }
 
@@ -1275,8 +1275,8 @@ message Event {
 	
 	optional UserId user_id = 5;
 	//oneof RevisionType {
-		//WriteRevision user_revision = 6;
-		//WriteRevision group_revision = 7;
+		optional	WriteRevision user_revision = 6;
+		optional	WriteRevision group_revision = 7;
 	//}
 	repeated EventBody bodies = 8;  // This is the second and subsequent event bodies in this event
 }
@@ -1502,16 +1502,16 @@ message GetGroupRequest {
 		INCLUDE_ACCOUNT_USER_CAPABILITIES = 6;
 	}
 	repeated FetchOptions fetch_options = 4;
-	//optional ReferenceRevision user_not_older_than = 2;
-	//optional ReferenceRevision group_not_older_than = 3;
+	optional ReferenceRevision user_not_older_than = 2;
+	optional ReferenceRevision group_not_older_than = 3;
 	optional bool include_invite_dms = 5;
 }
 
 message GetGroupResponse {
 	optional Group group = 1;
 	repeated Membership memberships = 4;
-	//optional ReadRevision user_revision = 2;
-	//optional ReadRevision group_revision = 3;
+	optional ReadRevision user_revision = 2;
+	optional ReadRevision group_revision = 3;
 	optional MembershipState membership_state = 6;
 	repeated MemberId joined_member_ids = 7;
 	repeated MemberId invited_member_ids = 8;
@@ -1606,7 +1606,7 @@ message NameUsers {
 
 message WorldItemLite {
 	optional GroupId group_id = 1;
-	// optional ReadRevision group_revision = 2;
+	optional ReadRevision group_revision = 2;
 	optional int64 sort_timestamp = 3;
 	optional GroupReadState read_state = 4;
 	optional string room_name = 5;
@@ -1698,7 +1698,7 @@ message PaginatedWorldRequest {
 message PaginatedWorldResponse {
 	repeated WorldSectionResponse world_section_responses = 1;
 	optional string world_consistency_token = 2;
-	// optional ReadRevision user_revision = 3;
+	optional ReadRevision user_revision = 3;
 	repeated WorldItemLite world_items = 4;
 }
 
@@ -1721,7 +1721,7 @@ message RemoveMembershipsResponse {
 	repeated RemoveMembershipResult results = 1;
 	// repeated RosterId roster_ids_without_view_acls = 2;
 	// optional RetentionSettings retention_settings = 3;
-	// optional WriteRevision retention_settings_group_revision = 4;
+	optional WriteRevision retention_settings_group_revision = 4;
 }
 
 
@@ -1733,7 +1733,7 @@ message HideGroupRequest {
 
 message HideGroupResponse {
 	optional GroupReadState read_state = 1;
-	//optional WriteRevision user_revision = 3;
+	optional WriteRevision user_revision = 3;
 }
 
 message InviteNotificationSettings {
@@ -1755,9 +1755,9 @@ message CreateMembershipRequest {
 
 message CreateMembershipResponse {
 	repeated CreateMembershipResult results = 2;
-	// repeated WriteRevision group_revision = 4;
+	repeated WriteRevision group_revision = 4;
 	// optional RetentionSettings retention_settings = 5;
-	// optional WriteRevision retention_settings_group_revision = 6;
+	optional WriteRevision retention_settings_group_revision = 6;
 }
 
 message MarkGroupReadstateRequest {
@@ -1768,7 +1768,7 @@ message MarkGroupReadstateRequest {
 
 message MarkGroupReadstateResponse {
 	optional GroupReadState read_state = 1;
-	// optional WriteRevision user_revision = 2;
+	optional WriteRevision user_revision = 2;
 }
 
 message SetPresenceSharedRequest {
@@ -1778,7 +1778,7 @@ message SetPresenceSharedRequest {
 
 message SetPresenceSharedResponse {
 	optional UserStatus user_status = 1;
-	// optional WriteRevision user_revision = 2;
+	optional WriteRevision user_revision = 2;
 }
 
 message SetDndDurationRequest {
@@ -1798,7 +1798,7 @@ message SetDndDurationRequest {
 
 message SetDndDurationResponse {
 	optional UserStatus user_status = 1;
-	// optional WriteRevision user_revision = 2;
+	optional WriteRevision user_revision = 2;
 }
 
 message UpdateGroupRequest {
@@ -1821,7 +1821,7 @@ message UpdateGroupRequest {
 
 message UpdateGroupResponse {
 	optional Group group = 1;
-	// optional WriteRevision group_revision = 2;
+	optional WriteRevision group_revision = 2;
 }
 
 message BlockEntityRequest {
@@ -1836,7 +1836,7 @@ message BlockEntityRequest {
 
 message BlockEntityResponse {
 	optional GroupReadState read_state = 1;
-	// optional WriteRevision user_revision = 2;
+	optional WriteRevision user_revision = 2;
 }
 
 message SetCustomStatusRequest {
@@ -1850,5 +1850,18 @@ message SetCustomStatusRequest {
 
 message SetCustomStatusResponse {
 	optional UserStatus user_status = 1;
-	// optional WriteRevision user_revision = 2;
+	optional WriteRevision user_revision = 2;
+}
+
+message WriteRevision {
+	optional int64 timestamp = 1;
+	optional int64 prev_timestamp = 2;
+}
+
+message ReadRevision {
+	optional int64 timestamp = 1;
+}
+
+message ReferenceRevision {
+	optional int64 timestamp = 1;
 }

@@ -99,24 +99,25 @@ googlechat_process_received_event(GoogleChatAccount *ha, Event *event)
 		event->n_bodies = n_bodies;
 		event->bodies = bodies;
 	}
-}
-
-/*void
-googlechat_received_state_update(PurpleConnection *pc, Event *event)
-{
-	GoogleChatAccount *ha = purple_connection_get_protocol_data(pc);
 	
-	if (ha != NULL && state_update->state_update_header != NULL) {
-		gint64 current_server_time = state_update->state_update_header->current_server_time;
-		
-		ha->active_client_state = state_update->state_update_header->active_client_state;
-		
+	gint64 event_time = 0;
+	if (event->user_revision) {
+		event_time = event->user_revision->timestamp;
+	}
+	if (event->group_revision) {
+		event_time = event->group_revision->timestamp;
+	}
+	
+	if (event_time && event_time > ha->last_event_timestamp) {
 		// libpurple can't store a 64bit int on a 32bit machine, so convert to something more usable instead (puke)
 		//  also needs to work cross platform, in case the accounts.xml is being shared (double puke)
-		purple_account_set_int(ha->account, "last_event_timestamp_high", current_server_time >> 32);
-		purple_account_set_int(ha->account, "last_event_timestamp_low", current_server_time & 0xFFFFFFFF);
+		purple_account_set_int(ha->account, "last_event_timestamp_high", event_time >> 32);
+		purple_account_set_int(ha->account, "last_event_timestamp_low", event_time & 0xFFFFFFFF);
+		
+		ha->last_event_timestamp = event_time;
 	}
-}*/
+}
+
 
 /*
 static void

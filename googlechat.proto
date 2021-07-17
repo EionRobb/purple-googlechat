@@ -212,10 +212,280 @@ message GetUserPresenceResponse {
 	repeated UserPresence user_presences = 1;
 }
 
+message JAddOnsIdentifier {
+	optional string id = 1;
+}
+
+message JAddOnsFormattedText {
+	enum TextAlign {
+		LEFT = 0;
+		CENTER = 1;
+		RIGHT = 2;
+	}
+	message FormattedTextElement {
+		message DateTime {
+			optional int64 time_millis = 1;
+			optional int32 time_zone_offset_minutes = 2;
+			optional bool date_only = 3;
+			optional bool floating_time = 4;
+		}
+	
+		message StyledText {
+			enum Style {
+				NONE = 0;
+				BOLD_DEPRECATED = 1;
+				ITALIC = 2;
+				UNDERLINE = 3;
+				STRIKETHROUGH = 4;
+				BR = 5;
+				UPPERCASE = 6;
+			}
+			enum FontWeight {
+				REGULAR = 0;
+				LIGHT = 1;
+				MEDIUM = 2;
+				BOLD = 3;
+			}
+		
+			optional string text = 1;
+			optional DateTime datetime = 4;
+			repeated Style styles = 2;
+			optional FontWeight font_weight = 5;
+			optional int32 color = 3;
+			optional JAddOnsThemeColors theme_colors = 7;
+		}
+	
+		message HyperLink {
+			optional string link = 1;
+			optional string original_link = 3;
+			optional string text = 2;
+		}
+		//oneof Element {
+		optional StyledText styled_text = 1;
+		optional HyperLink hyperlink = 2;
+		//}
+		
+	}
+
+	optional JAddOnsIdentifier id = 4;
+	optional string original_text = 1;
+	repeated FormattedTextElement formatted_text_elements = 2;
+	optional TextAlign text_align = 3;
+}
+
+enum JAddOnsImageCropStyle_ImageCropType {
+	CROP_TYPE_NOT_SET = 0;
+	SQUARE = 1;
+	CIRCLE = 2;
+	RECTANGLE_CUSTOM = 3;
+	RECTANGLE_4_3 = 4;
+}
+
+message JAddOnsThemeColors {
+	optional int32 light_theme_color = 1;
+	optional int32 dark_theme_color = 2;
+}
+
+message JAddOnsOpenLink {
+	enum OpenAs {
+		FULL_SIZE = 0;
+		OVERLAY = 1;
+	}
+	enum OnClose {
+		NOTHING = 0;
+		RELOAD_ADD_ON = 1;
+	}
+	enum LoadIndicator {
+		NONE = 0;
+		SPINNER = 1;
+	}
+
+	optional string url = 1;
+	optional string original_link = 5;
+	optional OpenAs open_as = 2;
+	optional OnClose on_close = 3;
+	optional LoadIndicator load_indicator = 4;
+}
+
+message JAddOnsCardItem {
+	message CardItemHeader {
+		optional JAddOnsFormattedText title = 1;
+		optional JAddOnsFormattedText subtitle = 2;
+		optional JAddOnsImageCropStyle_ImageCropType image_style = 3;
+		optional string image_url = 4;
+		optional string image_alt_text = 5;
+	}
+	message CardItemSection {
+		optional JAddOnsIdentifier id = 6;
+		optional string description = 1;
+		optional JAddOnsFormattedText header = 5;
+		repeated JAddOnsWidget widgets = 2;
+		optional bool collapsable = 3;
+		optional int32 num_uncollapsable_widgets = 4;
+	}
+	message CardItemAction {
+		optional string action_label = 1;
+		optional JAddOnsOnClick on_click = 2;
+	}
+	message CardItemFixedFooter {
+		repeated JAddOnsWidget_Button buttons = 1;
+		optional JAddOnsWidget_TextButton primary_button = 2;
+		optional JAddOnsWidget_TextButton secondary_button = 3;
+	}
+	message CardItemRefreshAction {
+		optional JAddOnsFormAction method = 1;
+	}
+	enum DisplayStyle {
+		DISPLAY_STYLE_UNSPECIFIED = 0;
+		PEEK = 1;
+		REPLACE = 2;
+	}
+
+	optional CardItemHeader header = 1;
+	repeated CardItemSection sections = 2;
+	repeated CardItemAction card_actions = 3;
+	optional string name = 4;
+	optional CardItemFixedFooter fixed_footer = 5;
+	optional CardItemRefreshAction refresh_action = 6;
+	optional DisplayStyle display_style = 7;
+	optional CardItemHeader peek_card_header = 8;
+	optional JAddOnsThemeColors background_theme_colors = 9;
+}
+
+message JAddOnsPushCard {
+	optional JAddOnsCardItem card = 1;
+}
+
+message JAddOnsOnClick {
+	//oneof DataCase {
+	optional	string link = 1;
+	optional	JAddOnsFormAction action = 2;
+	optional	JAddOnsOpenLink open_link = 5;
+	optional	JAddOnsFormAction open_link_action = 7;
+	optional	JAddOnsPushCard push_card = 8;
+	//optional	ComGoogleAppsExtensionsV1HostAppAction host_app_action = 9;
+	//}
+}
+
+message JAddOnsWidget {}
+
+message JAddOnsWidget_TextButton {
+	enum Style {
+		UNSPECIFIED = 0;
+		TEXT = 1;
+		FILLED = 2;
+	}
+	optional JAddOnsIdentifier id = 3;
+	optional JAddOnsFormattedText text = 1;
+	optional JAddOnsOnClick on_click = 2;
+	optional bool disabled = 4;
+	optional Style style = 5;
+	optional int32 background_color = 6;
+	optional JAddOnsThemeColors background_theme_colors = 7;
+	optional string alt_text = 8;
+}
+
+message JAddOnsWidget_ImageButton {
+	optional JAddOnsIdentifier id = 4;
+	optional string icon_url = 1;
+	optional JAddOnsOnClick on_click = 2;
+	optional string name = 3;
+}
+
+message JAddOnsWidget_Button {
+	//oneof Type {
+	optional	JAddOnsWidget_TextButton text_button = 1;
+	optional	JAddOnsWidget_ImageButton image_button = 2;
+	//}
+}
+
+message JAddOnsFormAction {
+	message ActionParameter {
+		optional string key = 1;
+		optional string value = 2;
+	}
+	enum LoadIndicator {
+		SPINNER = 0;
+		NONE = 1;
+	}
+	
+	optional string action_method_name = 1;
+	repeated ActionParameter parameters = 4;
+	repeated string parameters_deprecated = 3;
+	optional string encrypted_action = 7;
+	optional LoadIndicator load_indicator = 5;
+	optional bool persist_values = 6;
+}
+
+message JAddOnsContextualAddOn {
+	message Toolbar {
+		optional JAddOnsFormattedText name = 1;
+		optional string icon_url = 2;
+		optional int32 color = 3;
+		optional JAddOnsThemeColors theme_colors = 4;
+	}
+
+	optional Toolbar toolbar = 1;
+
+	message Card {
+		message CardHeader {
+			optional JAddOnsFormattedText title = 1;
+			optional JAddOnsFormattedText subtitle = 2;
+			optional JAddOnsImageCropStyle_ImageCropType image_style = 3;
+			optional string image_url = 4;
+			optional string image_alt_text = 5;
+		}
+		optional CardHeader header = 1;
+		
+		message Section {
+			optional JAddOnsIdentifier id = 6;
+			optional string description = 1;
+			optional JAddOnsFormattedText header = 5;
+			repeated JAddOnsWidget widgets = 2;
+			optional bool collapsable = 3;
+			optional int32 num_uncollapsable_widgets = 4;
+		}
+		repeated Section sections = 2;
+		
+		message CardAction {
+			optional string action_label = 1;
+			optional JAddOnsOnClick on_click = 2;
+		}
+		repeated CardAction card_actions = 3;
+		
+		optional string name = 4;
+		
+		message FixedFooter {
+			repeated JAddOnsWidget_Button buttons = 1;
+			optional JAddOnsWidget_TextButton primary_button = 2;
+			optional JAddOnsWidget_TextButton secondary_button = 3;
+		}
+		optional FixedFooter fixed_footer = 5;
+		
+		message RefreshAction {
+			optional JAddOnsFormAction method = 1;
+		}
+		optional RefreshAction refresh_action = 6;
+		
+		optional JAddOnsThemeColors background_theme_colors = 7;
+	}
+
+	repeated Card cards = 2;
+}
+
+message Html { //ComGoogleCommonHtmlTypesSafeHtmlProto
+	//private_do_not_access_or_else_safe_html_wrapped_value
+	optional string html = 2;
+}
+	
+message HtmlAttachment {
+	optional Html html = 2;
+}
+
 message Attachment {
 	//oneof Type {
-		//HtmlAttachment html = 1;
-		//?? add_on_data = 2;
+	optional	HtmlAttachment html = 1;
+	optional	JAddOnsContextualAddOn add_on_data = 2;
 	//}
 	optional UserId app_id = 5;
 	optional User app_user = 6;

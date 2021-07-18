@@ -1011,6 +1011,52 @@ message ReadReceiptSet {
 	repeated ReadReceipt read_receipts = 2;
 }
 
+enum NotificationCause {
+	UNKNOWN_NOTIFICATION_CAUSE = 0;
+	DIRECT_MESSAGE = 1;
+	AT_MENTION = 2;
+	NEW_TOPIC = 3;
+	SUBSCRIBED_TOPIC_REPLY = 4;
+	UNSUBSCRIBED_TOPIC_REPLY = 5;
+}
+
+message WebPushNotification {
+	optional Message message = 1;
+	optional string sender_name = 2;
+	optional string sender_avatar_url = 3;
+	optional string group_name = 4;
+	optional NotificationCause cause = 5;
+}
+
+message AndroidLocalNotification {
+	optional string thread_id = 1;
+	optional string type_id = 2;
+	optional string group_name = 3;
+	optional string text_body = 6;
+	optional string icon_url = 4;
+	// optional ComGoogleProtobufAny chime_notification_payload = 5;
+	optional string title = 7;
+	optional string group_id = 8;
+	optional string sub_text = 9;
+}
+
+message IosLocalNotification {
+	optional string apns_collapse_id = 1;
+	optional string thread_id = 2;
+	optional string title = 3;
+	optional string body = 4;
+	optional string category = 5;
+	optional bool group_is_flat = 6;
+	optional bool message_is_off_the_record = 7;
+	//optional ?? attribute_checker_group_type = 9;
+	optional string navigation = 8;
+}
+
+message MobileLocalNotification {
+	optional AndroidLocalNotification android_local_notification = 1;
+	optional IosLocalNotification ios_local_notification = 2;
+}
+
 
 message MessageEvent {
 	optional Message message = 1;
@@ -1040,6 +1086,25 @@ message ReadReceiptChangedEvent {
 message GroupViewedEvent {
 	optional GroupId group_id = 1;
 	optional int64 view_time = 2;
+}
+
+message WebPushNotificationEvent {
+	enum DispatchApproachType {
+		DISPATCH_APPROACH_TYPE_UNSPECIFIED = 0;
+		INTERACTIVE_SESSION = 1;
+		BROADCAST_TO_WEB_SESSIONS = 2;
+		INTERACTIVE_SESSIONS_INCLUDE_VISIBLE_WEB_UNDER_TTL = 3;
+	}
+	enum EndpointType {
+		ENDPOINT_TYPE_UNSPECIFIED = 0;
+		MOBILE_WEBCHANNEL = 1;
+		DESKTOP_WEBCHANNEL = 2;
+	}
+
+	optional WebPushNotification notification = 1;
+	optional DispatchApproachType dispatch_approach_type = 2;
+	optional MobileLocalNotification mobile_local_notification = 3;
+	repeated EndpointType endpoint_types = 4;
 }
 
 
@@ -1233,7 +1298,7 @@ message Event {
 			//TopicMuteChangedEvent topic_mute_changed = 7;
 			//UserSettingsChangedEvent user_settings_changed = 8;
 			//GroupStarredEvent group_starred = 9;
-			//WebPushNotificationEvent web_push_notification = 10;
+		optional	WebPushNotificationEvent web_push_notification = 10;
 			//GroupUnreadSubscribedTopicCountUpdatedEvent group_unread_subscribed_topic_count_updated_event = 11;
 			//InviteCountUpdatedEvent invite_count_updated = 13;
 		optional	MembershipChangedEvent membership_changed = 14;

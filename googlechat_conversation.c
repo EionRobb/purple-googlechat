@@ -452,6 +452,7 @@ googlechat_get_conversation_events(GoogleChatAccount *ha, const gchar *conv_id, 
 	}
 	
 	catch_up_range__init(&range);
+	request.range = &range;
 	
 	if (since_timestamp > 0) {
 		range.has_from_revision_timestamp = TRUE;
@@ -484,6 +485,7 @@ googlechat_get_all_events(GoogleChatAccount *ha, guint64 since_timestamp)
 	catch_up_range__init(&range);
 	range.has_from_revision_timestamp = TRUE;
 	range.from_revision_timestamp = since_timestamp;
+	request.range = &range;
 	
 	googlechat_api_catch_up_user(ha, &request, googlechat_got_events, NULL);
 	

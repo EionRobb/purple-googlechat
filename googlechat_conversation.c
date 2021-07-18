@@ -626,6 +626,46 @@ googlechat_join_chat(PurpleConnection *pc, GHashTable *data)
 	//TODO store and use timestamp of last event
 	googlechat_get_conversation_events(ha, conv_id, 0);
 	googlechat_lookup_group_info(ha, conv_id);
+	
+	// Forcibly join the chat, even if we're already in it
+	CreateMembershipRequest request;
+	MemberId member_id, *member_ids;
+	GroupId group_id;
+	SpaceId space_id;
+	DmId dm_id;
+	UserId user_id;
+	
+	create_membership_request__init(&request);
+	
+	group_id__init(&group_id);
+	request.group_id = &group_id;
+	
+	if (g_hash_table_contains(ha->one_to_ones, conv_id)) {
+		dm_id__init(&dm_id);
+		dm_id.dm_id = (gchar *) conv_id;
+		group_id.dm_id = &dm_id;
+	} else {
+		space_id__init(&space_id);
+		space_id.space_id = (gchar *) conv_id;
+		group_id.space_id = &space_id;
+	}
+	
+	request.request_header = googlechat_get_request_header(ha);
+	
+	user_id__init(&user_id);
+	user_id.id = (gchar *) ha->self_gaia_id;
+	
+	member_id__init(&member_id);
+	member_id.user_id = &user_id;
+	
+	member_ids = &member_id;
+	
+	request.member_ids = &member_ids;
+	request.n_invitee_member_infos = 1;
+	
+	googlechat_api_create_membership(ha, &request, NULL, NULL);
+	
+	googlechat_request_header_free(request.request_header);
 }
 
 /*

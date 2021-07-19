@@ -661,7 +661,7 @@ googlechat_join_chat(PurpleConnection *pc, GHashTable *data)
 	member_ids = &member_id;
 	
 	request.member_ids = &member_ids;
-	request.n_invitee_member_infos = 1;
+	request.n_member_ids = 1;
 	
 	googlechat_api_create_membership(ha, &request, NULL, NULL);
 	

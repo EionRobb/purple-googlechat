@@ -1072,6 +1072,7 @@ googlechat_received_group_viewed(PurpleConnection *pc, Event *event)
 	PurpleConversation *pconv = NULL;
 	
 	if (event->type != EVENT__EVENT_TYPE__GROUP_VIEWED ||
+		!event->user_id || 
 		!event->user_id->id ||
 		!event->body->group_viewed->group_id
 	) {

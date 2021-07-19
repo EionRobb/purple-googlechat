@@ -273,12 +273,17 @@ message JAddOnsFormattedText {
 	optional TextAlign text_align = 3;
 }
 
-enum JAddOnsImageCropStyle_ImageCropType {
-	CROP_TYPE_NOT_SET = 0;
-	SQUARE = 1;
-	CIRCLE = 2;
-	RECTANGLE_CUSTOM = 3;
-	RECTANGLE_4_3 = 4;
+message JAddOnsImageCropStyle {
+	enum ImageCropType {
+		CROP_TYPE_NOT_SET = 0;
+		SQUARE = 1;
+		CIRCLE = 2;
+		RECTANGLE_CUSTOM = 3;
+		RECTANGLE_4_3 = 4;
+	}
+	
+	optional ImageCropType type = 1;
+	optional double aspect_ratio = 2;
 }
 
 message JAddOnsThemeColors {
@@ -311,7 +316,7 @@ message JAddOnsCardItem {
 	message CardItemHeader {
 		optional JAddOnsFormattedText title = 1;
 		optional JAddOnsFormattedText subtitle = 2;
-		optional JAddOnsImageCropStyle_ImageCropType image_style = 3;
+		optional JAddOnsImageCropStyle.ImageCropType image_style = 3;
 		optional string image_url = 4;
 		optional string image_alt_text = 5;
 	}
@@ -328,9 +333,9 @@ message JAddOnsCardItem {
 		optional JAddOnsOnClick on_click = 2;
 	}
 	message CardItemFixedFooter {
-		repeated JAddOnsWidget_Button buttons = 1;
-		optional JAddOnsWidget_TextButton primary_button = 2;
-		optional JAddOnsWidget_TextButton secondary_button = 3;
+		repeated JAddOnsWidget.Button buttons = 1;
+		optional JAddOnsWidget.TextButton primary_button = 2;
+		optional JAddOnsWidget.TextButton secondary_button = 3;
 	}
 	message CardItemRefreshAction {
 		optional JAddOnsFormAction method = 1;
@@ -367,37 +372,256 @@ message JAddOnsOnClick {
 	//}
 }
 
-message JAddOnsWidget {}
+message JAddOnsTextWidget {
+	repeated string line = 1;
+}
 
-message JAddOnsWidget_TextButton {
-	enum Style {
-		UNSPECIFIED = 0;
-		TEXT = 1;
-		FILLED = 2;
+message JAddOnsImageComponent {
+	optional string image_url = 1;
+	optional string alt_text = 2;
+	optional JAddOnsImageCropStyle crop_style = 3;
+	optional JAddOnsBorderStyle border_style = 4;
+}
+
+message JAddOnsGrid {
+	message GridItem {
+		enum GridItemLayout {
+			NOT_SET = 0;
+			TEXT_BELOW = 1;
+			TEXT_ABOVE = 2;
+		}
+	
+		optional string identifier = 1;
+		optional JAddOnsImageComponent image = 2;
+		optional string title = 3;
+		optional string subtitle = 4;
+		optional JAddOnsWidget.HorizontalAlign text_alignment = 5;
+		optional GridItemLayout layout = 9;
+		optional JAddOnsOnClick on_click = 10;
 	}
-	optional JAddOnsIdentifier id = 3;
-	optional JAddOnsFormattedText text = 1;
-	optional JAddOnsOnClick on_click = 2;
-	optional bool disabled = 4;
-	optional Style style = 5;
-	optional int32 background_color = 6;
-	optional JAddOnsThemeColors background_theme_colors = 7;
-	optional string alt_text = 8;
+
+	optional JAddOnsIdentifier id = 1;
+	optional string title = 2;
+	repeated GridItem items = 3;
+	optional JAddOnsBorderStyle border_style = 4;
+	optional int32 num_columns = 5;
+	optional JAddOnsOnClick on_click = 6;
 }
 
-message JAddOnsWidget_ImageButton {
-	optional JAddOnsIdentifier id = 4;
-	optional string icon_url = 1;
-	optional JAddOnsOnClick on_click = 2;
-	optional string name = 3;
+message JAddOnsBorderStyle {
+	enum BorderType {
+		BORDER_TYPE_NOT_SET = 0;
+		NO_BORDER = 1;
+		STROKE = 2;
+	}
+	
+	optional BorderType type = 1;
+	optional JAddOnsThemeColors stroke_color = 2;
+	optional int32 corner_radius = 3;
 }
 
-message JAddOnsWidget_Button {
-	//oneof Type {
-	optional	JAddOnsWidget_TextButton text_button = 1;
-	optional	JAddOnsWidget_ImageButton image_button = 2;
+message JAddOnsLabelContentPair {
+	optional string label = 1;
+	optional string content = 2;
+}
+
+message JAddOnsLabelContentPairWidget {
+	repeated JAddOnsLabelContentPair label_content_pair = 1;
+}
+
+message JAddOnsWidget {
+	message TextParagraph {
+		optional JAddOnsFormattedText text = 1;
+	}
+	message TextKeyValue {
+		optional JAddOnsFormattedText key = 1;
+		optional JAddOnsFormattedText text = 2;
+		optional JAddOnsOnClick on_click = 3;
+	}
+	message ImageKeyValue {
+		optional string icon_url = 1;
+		optional JAddOnsFormattedText text = 2;
+		optional JAddOnsOnClick on_click = 3;
+	}
+	message Image {
+		optional JAddOnsIdentifier id = 5;
+		optional string fife_image_url = 1;
+		optional JAddOnsOnClick on_click = 2;
+		optional double aspect_ratio = 3;
+		optional string alt_text = 4;
+	}
+	message Icon {
+		optional string icon_url = 1;
+		optional string alt_text = 2;
+		optional JAddOnsImageCropStyle.ImageCropType image_style = 3;
+	}
+	message KeyValue {
+		message SwitchWidget {
+			enum ControlType {
+				UNSPECIFIED = 0;
+				SWITCH = 1;
+				CHECKBOX = 2;
+			}
+			optional JAddOnsIdentifier id = 5;
+			optional string name = 1;
+			optional string value = 2;
+			optional bool selected = 3;
+			optional JAddOnsFormAction on_change = 4;
+			optional ControlType control_type = 6;
+		}
+		optional string icon_url = 1;
+		optional string icon_alt_text = 9;
+		optional JAddOnsImageCropStyle.ImageCropType image_style = 10;
+		optional Icon start_icon = 11;
+		optional JAddOnsFormattedText top_label = 2;
+		optional JAddOnsFormattedText content = 3;
+		optional bool content_multiline = 8;
+		optional JAddOnsFormattedText bottom_label = 4;
+		optional JAddOnsOnClick on_click = 5;
+		//oneof Control {
+		optional Button button = 6;
+		optional SwitchWidget switch_widget = 7;
+		optional Icon end_icon = 12;
+		//}
+	}
+	message Divider {
+		// This protobuf intentionally left blank
+	}
+	message Menu {
+		message MenuItem {
+			optional string text = 1;
+			optional string value = 4;
+			optional bool selected = 3;
+		}
+		optional string name = 1;
+		repeated MenuItem items = 2;
+		optional JAddOnsFormAction on_change = 4;
+		optional string label = 5;
+	}
+	message AutoComplete {
+		message AutoCompleteItem {
+			optional string text = 1;
+		}
+		repeated AutoCompleteItem items = 1;
+	}
+	message TextField {
+		enum TextFieldType {
+			REGULAR = 0;
+			FLOATING = 1;
+		}
+		enum LineType {
+			SINGLE = 0;
+			MULTIPLE = 1;
+		}
+		optional JAddOnsIdentifier id = 11;
+		optional string name = 1;
+		optional int32 max_lines = 2;
+		optional TextFieldType type = 5;
+		optional string label = 3;
+		optional string hint_text = 4;
+		optional string value = 6;
+		optional LineType line_type = 7;
+		optional JAddOnsFormAction on_change = 8;
+		optional AutoComplete auto_complete = 9;
+		optional JAddOnsFormAction auto_complete_callback = 10;
+		optional bool auto_complete_multiple_selections = 12;
+	}
+	message SelectionControl {
+		enum SelectionType {
+			CHECK_BOX = 0;
+			RADIO_BUTTON = 1;
+			SWITCH = 2;
+			DROPDOWN = 3;
+		}
+		message SelectionItem {
+			optional JAddOnsIdentifier id = 4;
+			optional string text = 1;
+			optional bool selected = 2;
+			optional string value = 3;
+		}
+		
+		optional JAddOnsIdentifier id = 6;
+		optional string name = 1;
+		optional SelectionType type = 2;
+		repeated SelectionItem items = 3;
+		optional JAddOnsFormAction on_change = 4;
+		optional string label = 5;
+	}
+	message DateTimePicker {
+		enum DateTimePickerType {
+			UNSPECIFIED_TYPE = 0;
+			DATE_AND_TIME = 1;
+			DATE_ONLY = 2;
+			TIME_ONLY = 3;
+		}
+		
+		optional string name = 1;
+		optional string label = 2;
+		optional DateTimePickerType type = 3;
+		optional int64 value_ms_epoch = 4;
+		optional int32 timezone_offset_date = 5;
+		optional JAddOnsFormAction on_change = 6;
+		optional int32 color = 7;
+		optional JAddOnsThemeColors theme_colors = 8;
+	}
+	message TextButton {
+		enum Style {
+			UNSPECIFIED = 0;
+			TEXT = 1;
+			FILLED = 2;
+		}
+		optional JAddOnsIdentifier id = 3;
+		optional JAddOnsFormattedText text = 1;
+		optional JAddOnsOnClick on_click = 2;
+		optional bool disabled = 4;
+		optional Style style = 5;
+		optional int32 background_color = 6;
+		optional JAddOnsThemeColors background_theme_colors = 7;
+		optional string alt_text = 8;
+	}
+
+	message ImageButton {
+		optional JAddOnsIdentifier id = 4;
+		optional string icon_url = 1;
+		optional JAddOnsOnClick on_click = 2;
+		optional string name = 3;
+	}
+
+	message Button {
+		//oneof Type {
+		optional	TextButton text_button = 1;
+		optional	ImageButton image_button = 2;
+		//}
+	}
+	
+	enum HorizontalAlign {
+		NOT_SET = 0;
+		START = 1;
+		CENTER = 2;
+		END = 3;
+	}
+
+
+	//oneof Data {
+	optional JAddOnsTextWidget text_widget = 1;
+	optional JAddOnsLabelContentPairWidget label_content_pair_widget = 2;
+	optional TextParagraph text_paragraph = 3;
+	optional TextKeyValue text_key_value = 4;
+	optional ImageKeyValue image_key_value = 5;
+	optional Image image = 9;
+	optional KeyValue key_value = 13;
+	optional Divider divider = 16;
+	optional JAddOnsGrid grid = 17;
+	optional Menu menu = 10;
+	optional TextField text_field = 11;
+	optional SelectionControl selection_control = 12;
+	optional DateTimePicker date_time_picker = 14;
 	//}
+	repeated Button buttons = 8;
+	optional HorizontalAlign horizontal_align = 15;
+	
 }
+
 
 message JAddOnsFormAction {
 	message ActionParameter {
@@ -431,7 +655,7 @@ message JAddOnsContextualAddOn {
 		message CardHeader {
 			optional JAddOnsFormattedText title = 1;
 			optional JAddOnsFormattedText subtitle = 2;
-			optional JAddOnsImageCropStyle_ImageCropType image_style = 3;
+			optional JAddOnsImageCropStyle.ImageCropType image_style = 3;
 			optional string image_url = 4;
 			optional string image_alt_text = 5;
 		}
@@ -456,9 +680,9 @@ message JAddOnsContextualAddOn {
 		optional string name = 4;
 		
 		message FixedFooter {
-			repeated JAddOnsWidget_Button buttons = 1;
-			optional JAddOnsWidget_TextButton primary_button = 2;
-			optional JAddOnsWidget_TextButton secondary_button = 3;
+			repeated JAddOnsWidget.Button buttons = 1;
+			optional JAddOnsWidget.TextButton primary_button = 2;
+			optional JAddOnsWidget.TextButton secondary_button = 3;
 		}
 		optional FixedFooter fixed_footer = 5;
 		

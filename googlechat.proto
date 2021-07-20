@@ -3,6 +3,15 @@
 syntax = "proto2";
 
 
+// Hand-coded reverse-engineered protobuf, based on info extracted from Android and iOS Gmail and Google Talk apps
+//
+// Most messages normally start with DYNProto but that got boring, so I stripped that all out
+//
+// oneof's have been commented out because they're a pain in the butt with protobuf-c, but I've tried to keep them in there in case other non-silly protobuf libraries want to take advantage of them
+//
+// Feel free to use this .proto for whatever you want to, under whatever license you want.
+
+
 enum UserType {
 	HUMAN = 0;
 	BOT = 1;
@@ -91,7 +100,7 @@ message GetSelfUserStatusRequest {
 
 message GetSelfUserStatusResponse {
 	optional UserStatus user_status = 1;
-	//optional DYNProtoReadRevision user_revision = 2;
+	optional ReadRevision user_revision = 2;
 }
 
 message ClientFeatureCapabilities {
@@ -790,7 +799,7 @@ message DriveMetadata {
 	optional string organization_display_name = 13;
 	optional bool encrypted_doc_id = 10;
 	optional string url_fragment = 16;
-	//optional ?? embed_url = 18;
+	optional TrustedResourceUrl embed_url = 18;
 	optional bool is_owner = 19;
 	optional bool can_share = 5;
 	optional bool can_edit = 15;
@@ -804,6 +813,12 @@ message DriveMetadata {
 message Url {
 	//private_do_not_access_or_else_safe_url_wrapped_value
 	optional string url = 3;
+}
+
+//ComGoogleCommonHtmlTypesTrustedResourceUrlProto
+message TrustedResourceUrl {
+	//private_do_not_access_or_else_trusted_resource_url_wrapped_value
+	optional string resource_url = 4;
 }
 
 message UrlMetadata {
@@ -876,9 +891,9 @@ message Annotation {
 	optional bool server_invalidated = 13;
 	
 	//oneof Metadata {
-		//DYNProtoUserMentionMetadata user_mention_metadata = 5;
+	optional	UserMentionMetadata user_mention_metadata = 5;
 	optional	FormatMetadata format_metadata = 8;
-		//DYNProtoSlashCommandMetadata slash_command_metadata = 15;
+	optional	SlashCommandMetadata slash_command_metadata = 15;
 	optional	DriveMetadata drive_metadata = 4;
 		
 		//DYNProtoYoutubeMetadata youtube_metadata = 6;
@@ -1445,6 +1460,12 @@ message ClockSyncRequest {
 	optional int64 origin_time_msec = 1;
 }
 
+message ClockSyncResponse {
+	optional int64 origin_time_msec = 1;
+	optional int64 receive_time_msec = 2;
+	optional int64 transmit_time_msec = 3;
+}
+
 message GroupSubscriptionEvent {
 	repeated GroupId group_ids = 1;
 }
@@ -1453,7 +1474,7 @@ message GroupSubscriptionEvent {
 message StreamEventsResponse {
 	optional Event event = 1;
 	optional string sample_id = 2;
-	//optional ClockSyncResponse clock_sync_response = ?;
+	optional ClockSyncResponse clock_sync_response = 3;
 }
 
 message Event {
@@ -1661,6 +1682,11 @@ message UserMentionMetadata {
 		MENTION_ALL = 4;
 		FAILED_TO_ADD = 5;
 	}
+	optional UserId id = 1;
+	optional InviteeInfo invitee_info = 3;
+	optional Type type = 2;
+	optional string display_name = 4;
+	optional string gender = 5;
 }
 
 message SlashCommandMetadata {
@@ -1670,6 +1696,12 @@ message SlashCommandMetadata {
 		INVOKE = 2;
 		FAILED_TO_ADD = 3;
 	}
+	optional UserId id = 1;
+	optional Type type = 2;
+	optional string command_name = 3;
+	optional int64 command_id = 4;
+	optional string arguments_hint = 5;
+	optional bool triggers_dialog = 6;
 }
 
 message GroupVisibility {

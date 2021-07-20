@@ -762,7 +762,7 @@ message Message {
 	optional string local_id = 14;
 	repeated Attachment attachments = 15;
 	//optional DYNProtoAppProfile app_profile = 16;
-	//optional DYNProtoRetentionSettings retention_settings = 18;
+	optional RetentionSettings retention_settings = 18;
 	repeated Reaction reactions = 21;
 	//repeated DYNProtoCommunalLabelTag communal_labels = 27;
 	//repeated DYNProtoPersonalLabelTag personal_labels = 26;
@@ -962,7 +962,7 @@ message Group {
 	optional int64 retention_horizon_time = 14;
 	//optional DYNProtoDasherDomainPolicies dasher_domain_policies = 15;
 	//optional ?? group_policies = 40;
-	//optional DYNProtoRetentionSettings retention_settings = 16;
+	optional RetentionSettings retention_settings = 16;
 	optional bool is_flat = 17;
 	optional bool interop_enabled = 18;
 	optional int64 retention_duration_seconds = 19;
@@ -1179,7 +1179,7 @@ message CreateDmRequest {
 	repeated UserId members = 1;
 	repeated InviteeInfo invitees = 7;
 	// optional MessageCreationInfo message_creation_info = 2;
-	// optional RetentionSettings retention_settings = 3;
+	optional RetentionSettings retention_settings = 3;
 	optional string local_id = 4;
 	optional string topic_and_message_id = 5;
 }
@@ -1948,7 +1948,7 @@ message WorldItemLite {
 		optional UserId creator_id = 1;
 		optional int64 create_time = 2;
 		optional bool is_flat = 3;
-		// optional RetentionSettings retention_settings = 4;
+		optional RetentionSettings retention_settings = 4;
 		optional bool interop_enabled = 5;
 		//optional DasherDomainPolicies dasher_domain_policies = 6;
 		optional string roster_email = 7;
@@ -2041,7 +2041,7 @@ message RemoveMembershipResult {
 message RemoveMembershipsResponse {
 	repeated RemoveMembershipResult results = 1;
 	// repeated RosterId roster_ids_without_view_acls = 2;
-	// optional RetentionSettings retention_settings = 3;
+	optional RetentionSettings retention_settings = 3;
 	optional WriteRevision retention_settings_group_revision = 4;
 }
 
@@ -2077,7 +2077,7 @@ message CreateMembershipRequest {
 message CreateMembershipResponse {
 	repeated CreateMembershipResult results = 2;
 	repeated WriteRevision group_revision = 4;
-	// optional RetentionSettings retention_settings = 5;
+	optional RetentionSettings retention_settings = 5;
 	optional WriteRevision retention_settings_group_revision = 6;
 }
 

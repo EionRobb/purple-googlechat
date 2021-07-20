@@ -239,6 +239,11 @@ googlechat_got_users_information_member(GoogleChatAccount *ha, Member *member)
 	if (gaia_id != NULL) {
 		PurpleBuddy *buddy = purple_blist_find_buddy(ha->account, gaia_id);
 		
+		if (buddy == NULL) {
+			//TODO add to buddy list?
+			return;
+		}
+		
 		// Give a best-guess for the buddy's alias
 		if (user->name)
 			purple_serv_got_alias(ha->pc, gaia_id, user->name);
@@ -283,8 +288,8 @@ googlechat_got_users_information(GoogleChatAccount *ha, GetMembersResponse *resp
 	}
 }
 
-void
-googlechat_get_users_information(GoogleChatAccount *ha, GList *user_ids)
+static void
+googlechat_get_users_information_internal(GoogleChatAccount *ha, GList *user_ids, GoogleChatApiGetMembersResponseFunc callback, gpointer userdata)
 {
 	GetMembersRequest request;
 	size_t n_member_ids;
@@ -318,7 +323,7 @@ googlechat_get_users_information(GoogleChatAccount *ha, GList *user_ids)
 	request.member_ids = member_ids;
 	request.n_member_ids = n_member_ids;
 	
-	googlechat_api_get_members(ha, &request, googlechat_got_users_information, NULL);
+	googlechat_api_get_members(ha, &request, callback, userdata);
 	
 	googlechat_request_header_free(request.request_header);
 	for (i = 0; i < n_member_ids; i++) {
@@ -326,6 +331,12 @@ googlechat_get_users_information(GoogleChatAccount *ha, GList *user_ids)
 		g_free(member_ids[i]);
 	}
 	g_free(member_ids);
+}
+
+void
+googlechat_get_users_information(GoogleChatAccount *ha, GList *user_ids)
+{
+	googlechat_get_users_information_internal(ha, user_ids, googlechat_got_users_information, NULL);
 }
 
 static void
@@ -521,6 +532,80 @@ googlechat_chat_info_defaults(PurpleConnection *pc, const char *chatname)
 }
 
 static void
+googlechat_alias_group_user_hack(PurpleChatConversation *chat, const char *who, const char *alias)
+{
+	PurpleChatUser *cb;
+	gboolean ui_update_sent = FALSE;
+	PurpleConversation *conv = PURPLE_CONVERSATION(chat);
+	PurpleAccount *account = purple_conversation_get_account(conv);
+	PurpleConversationUiOps *convuiops = purple_conversation_get_ui_ops(conv);
+	
+	cb = purple_chat_conversation_find_user(chat, who);
+	if (cb == NULL) {
+		return;
+	}
+	purple_chat_user_set_alias(cb, g_strdup(alias));
+	
+	if (convuiops != NULL) {
+		// Horrible hack.  Don't try this at home!
+		if (convuiops->chat_rename_user != NULL) {
+#if PURPLE_VERSION_CHECK(3, 0, 0)
+			convuiops->chat_rename_user(chat, who, who, alias);
+#else
+			convuiops->chat_rename_user(conv, who, who, alias);
+#endif
+			ui_update_sent = TRUE;
+		} else if (convuiops->chat_update_user != NULL) {
+#if PURPLE_VERSION_CHECK(3, 0, 0)
+			convuiops->chat_update_user(cb);
+#else
+			convuiops->chat_update_user(conv, who);
+#endif
+			ui_update_sent = TRUE;
+		}
+	}
+	
+	if (ui_update_sent == FALSE) {
+		// Bitlbee doesn't have the above two functions, lets do an even worse hack
+		PurpleBuddy *fakebuddy;
+		PurpleGroup *temp_group = purple_blist_find_group("Google Chat Temporary Chat Buddies");
+		if (!temp_group)
+		{
+			temp_group = purple_group_new("Google Chat Temporary Chat Buddies");
+			purple_blist_add_group(temp_group, NULL);
+		}
+		
+		fakebuddy = purple_buddy_new(account, who, alias);
+		purple_blist_node_set_transient(PURPLE_BLIST_NODE(fakebuddy), TRUE);
+		purple_blist_add_buddy(fakebuddy, NULL, temp_group, NULL);
+	}
+}
+
+static void
+googlechat_got_group_users(GoogleChatAccount *ha, GetMembersResponse *response, gpointer user_data)
+{
+	gchar *conv_id = user_data;
+	
+	if (response != NULL) {
+		guint i;
+		PurpleChatConversation *chatconv = purple_conversations_find_chat_with_account(conv_id, ha->account);
+		
+		for (i = 0; i < response->n_members; i++) {
+			Member *member = response->members[i];
+			User *user = member ? member->user : NULL;
+			const gchar *user_id = user && user->user_id ? user->user_id->id : NULL;
+			
+			if (user_id && user && user->name) {
+				googlechat_alias_group_user_hack(chatconv, user_id, user->name);
+			}
+		}
+		
+	}
+	
+	g_free(conv_id);
+}
+
+static void
 googlechat_got_group_info(GoogleChatAccount *ha, GetGroupResponse *response, gpointer user_data)
 {
 	Group *group = response->group;
@@ -528,6 +613,7 @@ googlechat_got_group_info(GoogleChatAccount *ha, GetGroupResponse *response, gpo
 	guint i;
 	PurpleChatConversation *chatconv;
 	gchar *conv_id;
+	GList *unknown_user_ids = NULL;
 	
 	g_return_if_fail(group != NULL);
 	
@@ -556,10 +642,18 @@ googlechat_got_group_info(GoogleChatAccount *ha, GetGroupResponse *response, gpo
 		} else {
 			purple_chat_conversation_add_user(chatconv, user_id, NULL, cbflags, FALSE);
 		}
+		
+		if (!purple_blist_find_buddy(ha->account, user_id)) {
+			unknown_user_ids = g_list_append(unknown_user_ids, (gchar *) user_id);
+		}
 	}
 	
 	if (group->name) {
 		(void) group->name; //TODO - rename buddy list
+	}
+	
+	if (unknown_user_ids != NULL) {
+		googlechat_get_users_information_internal(ha, unknown_user_ids, googlechat_got_group_users, g_strdup(conv_id));
 	}
 }
 
@@ -1579,38 +1673,6 @@ googlechat_conversation_send_message(GoogleChatAccount *ha, const gchar *conv_id
 	
 	g_return_val_if_fail(conv_id, -1);
 	
-	// TODO HTML -> Annotation
-	/*
-	 text_body: "<b>bold</b>"
-    annotations {
-      type: FORMAT_DATA
-      start_index: 0
-      length: 3
-      format_metadata {
-        format_type: HIDDEN
-      }
-      chip_render_type: DO_NOT_RENDER
-    }
-    annotations {
-      type: FORMAT_DATA
-      start_index: 3
-      length: 4
-      format_metadata {
-        format_type: BOLD
-      }
-      chip_render_type: DO_NOT_RENDER
-    }
-    annotations {
-      type: FORMAT_DATA
-      start_index: 7
-      length: 4
-      format_metadata {
-        format_type: HIDDEN
-      }
-      chip_render_type: DO_NOT_RENDER
-    }
-	*/
-	
 	gchar *message_id = g_strdup_printf("purple%" G_GUINT32_FORMAT, (guint32) g_random_int());
 	
 	//Check for any images to send first
@@ -1694,7 +1756,7 @@ const gchar *who, const gchar *message, PurpleMessageFlags flags)
 		
 		//We don't have any known conversations for this person
 		googlechat_create_conversation(ha, TRUE, who, message);
-		return -1;
+		return 0;
 		
 		//TODO wait for the create dm response and use that
 	}
@@ -1987,6 +2049,7 @@ googlechat_create_conversation(GoogleChatAccount *ha, gboolean is_one_to_one, co
 		CreateDmRequest request;
 		UserId *members;
 		InviteeInfo *invitees;
+		RetentionSettings retention_settings;
 		
 		create_dm_request__init(&request);
 		request.request_header = googlechat_get_request_header(ha);
@@ -1998,6 +2061,11 @@ googlechat_create_conversation(GoogleChatAccount *ha, gboolean is_one_to_one, co
 		invitees = &invitee_info;
 		request.invitees = &invitees;
 		request.n_invitees = 1;
+		
+		retention_settings__init(&retention_settings);
+		request.retention_settings = &retention_settings;
+		retention_settings.has_state = TRUE;
+		retention_settings.state = RETENTION_SETTINGS__RETENTION_STATE__PERMANENT;
 		
 		googlechat_api_create_dm(ha, &request, googlechat_created_dm, message_dup);
 		

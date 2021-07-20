@@ -393,7 +393,9 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 		
 		do {
 			if (format_annotations != NULL) {
-				for(format = format_annotations; format; format = format->next) {
+				format = format_annotations;
+				while(format != NULL) {
+					GList *next_format = format->next;
 					Annotation *annotation = format->data;
 					FormatMetadata__FormatType format_type = annotation->format_metadata ? annotation->format_metadata->format_type : 0;
 					
@@ -426,6 +428,8 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 						
 						format_annotations = g_list_delete_link(format_annotations, format);
 					}
+					
+					format = next_format;
 				}
 			}
 			

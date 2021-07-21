@@ -595,7 +595,7 @@ googlechat_got_group_users(GoogleChatAccount *ha, GetMembersResponse *response, 
 			User *user = member ? member->user : NULL;
 			const gchar *user_id = user && user->user_id ? user->user_id->id : NULL;
 			
-			if (user_id && user && user->name) {
+			if (user_id && user && user->name && !purple_strequal(ha->self_gaia_id, user_id)) {
 				googlechat_alias_group_user_hack(chatconv, user_id, user->name);
 			}
 		}

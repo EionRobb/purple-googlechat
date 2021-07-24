@@ -2346,6 +2346,7 @@ googlechat_set_status(PurpleAccount *account, PurpleStatus *status)
 	if (message && *message) {
 		SetCustomStatusRequest custom_status_request;
 		CustomStatus custom_status;
+		Emoji emoji;
 		
 		set_custom_status_request__init(&custom_status_request);
 		custom_status_request.request_header = googlechat_get_request_header(ha);
@@ -2356,6 +2357,10 @@ googlechat_set_status(PurpleAccount *account, PurpleStatus *status)
 		custom_status__init(&custom_status);
 		custom_status_request.custom_status = &custom_status;
 		custom_status.status_text = (gchar *) message;
+		
+		emoji__init(&emoji);
+		emoji.unicode = "";
+		custom_status.emoji = &emoji;
 		
 		googlechat_api_set_custom_status(ha, &custom_status_request, NULL, NULL);
 		

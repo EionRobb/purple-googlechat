@@ -404,6 +404,8 @@ channel_watchdog_check(gpointer data)
 		
 		if (!purple_http_conn_is_running(conn)) {
 			googlechat_longpoll_request(ha);
+			ha->channel_watchdog = 0;
+			return FALSE;
 		}
 		
 		return TRUE;

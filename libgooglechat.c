@@ -551,7 +551,9 @@ googlechat_buddy_free(PurpleBuddy *buddy)
 {
 	GoogleChatBuddy *hbuddy = purple_buddy_get_protocol_data(buddy);
 	
-	g_return_if_fail(hbuddy != NULL);
+	if (hbuddy == NULL) {
+		return;
+	}
 	
 	g_free(hbuddy);
 }

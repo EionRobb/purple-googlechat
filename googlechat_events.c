@@ -113,8 +113,6 @@ googlechat_process_received_event(GoogleChatAccount *ha, Event *event)
 		//  also needs to work cross platform, in case the accounts.xml is being shared (double puke)
 		purple_account_set_int(ha->account, "last_event_timestamp_high", event_time >> 32);
 		purple_account_set_int(ha->account, "last_event_timestamp_low", event_time & 0xFFFFFFFF);
-		
-		ha->last_event_timestamp = event_time;
 	}
 }
 

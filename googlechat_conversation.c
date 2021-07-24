@@ -471,10 +471,8 @@ googlechat_get_conversation_events(GoogleChatAccount *ha, const gchar *conv_id, 
 	catch_up_range__init(&range);
 	request.range = &range;
 	
-	if (since_timestamp > 0) {
-		range.has_from_revision_timestamp = TRUE;
-		range.from_revision_timestamp = since_timestamp;
-	}
+	range.has_from_revision_timestamp = TRUE;
+	range.from_revision_timestamp = since_timestamp;
 	
 	googlechat_api_catch_up_group(ha, &request, googlechat_got_events, NULL);
 	
@@ -724,7 +722,7 @@ googlechat_join_chat(PurpleConnection *pc, GHashTable *data)
 	purple_conversation_present(PURPLE_CONVERSATION(chatconv));
 	
 	//TODO store and use timestamp of last event
-	googlechat_get_conversation_events(ha, conv_id, 0);
+	//googlechat_get_conversation_events(ha, conv_id, ha->last_event_timestamp);
 	googlechat_lookup_group_info(ha, conv_id);
 	
 	// Forcibly join the chat, even if we're already in it
@@ -1011,6 +1009,10 @@ googlechat_got_conversation_list(GoogleChatAccount *ha, PaginatedWorldResponse *
 					purple_chat_set_alias(chat, name);
 				}
 			}
+		}
+		
+		if (world_item_lite->read_state->last_read_time > ha->last_event_timestamp) {
+			googlechat_get_conversation_events(ha, conv_id, ha->last_event_timestamp);
 		}
 	}
 	
@@ -2017,7 +2019,19 @@ googlechat_created_dm(GoogleChatAccount *ha, CreateDmResponse *response, gpointe
 	googlechat_get_conversation_events(ha, conv_id, 0);
 	
 	if (message != NULL) {
-		googlechat_conversation_send_message(ha, conv_id, message);
+		if (googlechat_conversation_send_message(ha, conv_id, message) > 0) {
+			//TODO write into chat
+			// if (sender_id) {
+				// imconv = purple_conversations_find_im_with_account(sender_id, ha->account);
+				// PurpleMessage *pmessage = purple_message_new_outgoing(sender_id, msg, msg_flags);
+				// if (imconv == NULL)
+				// {
+					// imconv = purple_im_conversation_new(ha->account, sender_id);
+				// }
+				// purple_message_set_time(pmessage, message_timestamp);
+				// purple_conversation_write_message(PURPLE_CONVERSATION(imconv), pmessage);
+			// }
+		}
 		g_free(message);
 	}
 }

@@ -246,10 +246,16 @@ googlechat_got_users_information_member(GoogleChatAccount *ha, Member *member)
 		
 		// Give a best-guess for the buddy's alias
 		if (user->name)
-			purple_serv_got_alias(ha->pc, gaia_id, user->name);
+			purple_blist_server_alias_buddy(buddy, user->name);
 		else if (user->email)
-			purple_serv_got_alias(ha->pc, gaia_id, user->email);
+			purple_blist_server_alias_buddy(buddy, user->email);
 		//TODO first+last name
+		
+		const gchar *balias = purple_buddy_get_local_buddy_alias(buddy);
+		const gchar *salias = purple_buddy_get_server_alias(buddy);
+		if ((!balias || !*balias) && !purple_strequal(balias, salias)) {
+			purple_blist_alias_buddy(buddy, salias);
+		}
 		
 		// Set the buddy photo, if it's real
 		if (user->avatar_url != NULL) {
@@ -863,10 +869,18 @@ googlechat_add_conversation_to_blist(GoogleChatAccount *ha, Group *group, GHashT
 		g_hash_table_replace(ha->one_to_ones, g_strdup(conv_id), g_strdup(other_person));
 		g_hash_table_replace(ha->one_to_ones_rev, g_strdup(other_person), g_strdup(conv_id));
 		
-		if (!purple_blist_find_buddy(ha->account, other_person)) {
+		PurpleBuddy *buddy = purple_blist_find_buddy(ha->account, other_person);
+		if (!buddy) {
 			googlechat_add_person_to_blist(ha, other_person, other_person_alias);
 		} else {
-			// purple_serv_got_alias(ha->pc, other_person, other_person_alias);
+			if (other_person_alias && *other_person_alias) {
+				purple_blist_server_alias_buddy(buddy, other_person_alias);
+		
+				const gchar *balias = purple_buddy_get_local_buddy_alias(buddy);
+				if ((!balias || !*balias) && !purple_strequal(balias, other_person_alias)) {
+					purple_blist_alias_buddy(buddy, other_person_alias);
+				}
+			}
 		}
 		
 		if (unique_user_ids == NULL) {
@@ -953,11 +967,18 @@ googlechat_got_conversation_list(GoogleChatAccount *ha, PaginatedWorldResponse *
 			g_hash_table_replace(ha->one_to_ones, g_strdup(conv_id), g_strdup(other_person));
 			g_hash_table_replace(ha->one_to_ones_rev, g_strdup(other_person), g_strdup(conv_id));
 			
-			
-			if (!purple_blist_find_buddy(ha->account, other_person)) {
+			PurpleBuddy *buddy = purple_blist_find_buddy(ha->account, other_person);
+			if (!buddy) {
 				googlechat_add_person_to_blist(ha, other_person, other_person_alias);
 			} else {
-				// purple_serv_got_alias(ha->pc, other_person, other_person_alias);
+				if (other_person_alias && *other_person_alias) {
+					purple_blist_server_alias_buddy(buddy, other_person_alias);
+		
+					const gchar *balias = purple_buddy_get_local_buddy_alias(buddy);
+					if ((!balias || !*balias) && !purple_strequal(balias, other_person_alias)) {
+						purple_blist_alias_buddy(buddy, other_person_alias);
+					}
+				}
 			}
 			
 			g_hash_table_replace(unique_user_ids, other_person, NULL);
@@ -1145,7 +1166,9 @@ googlechat_got_buddy_list(PurpleHttpConnection *http_conn, PurpleHttpResponse *r
 		if (buddy == NULL) {
 			googlechat_add_person_to_blist(ha, name, alias);
 		} else {
-			purple_serv_got_alias(ha->pc, name, alias);
+			if (alias && *alias) {
+				purple_blist_server_alias_buddy(buddy, alias);
+			}
 		}
 		
 		if (!purple_strequal(purple_buddy_icons_get_checksum_for_user(buddy), photo)) {
@@ -2070,6 +2093,11 @@ googlechat_create_conversation(GoogleChatAccount *ha, gboolean is_one_to_one, co
 		googlechat_api_create_dm(ha, &request, googlechat_created_dm, message_dup);
 		
 		googlechat_request_header_free(request.request_header);
+		
+		
+		GList tmp_usr_list;
+		tmp_usr_list.data = (gpointer) who;
+		googlechat_get_users_information(ha, &tmp_usr_list);
 		
 		
 	} else {

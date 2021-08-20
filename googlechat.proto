@@ -901,7 +901,7 @@ message Annotation {
 	optional	UploadMetadata upload_metadata = 10;
 	optional	MembershipChangedMetadata membership_changed = 11;
 		//DYNProtoVideoCallMetadata video_call_metadata = 12;
-		//DYNProtoRoomUpdatedMetadata room_updated = 14;
+	optional	RoomUpdatedMetadata room_updated = 14;
 		//DYNProtoGsuiteIntegrationMetadata gsuite_integration_metadata = 16;
 		//DYNProtoGroupRetentionSettingsUpdatedMetaData group_retention_settings_updated = 17;
 		//DYNProtoBabelPlaceholderMetadata babel_placeholder_metadata = 18
@@ -992,10 +992,10 @@ message Group {
 	//optional DYNProtoGroupIntegrationSettings group_integration_settings = 36;
 	//repeated ?? space_integration_payloads = 29;
 	//optional DYNProtoAvatarInfo avatar_info = 30;
-	//optional ?? attribute_checker_group_type = 33;
+	optional SharedAttributeCheckerGroupType attribute_checker_group_type = 33;
 	optional NameUsers name_users = 34;
 	//optional ?? space_details = 37;
-	//optional DYNProtoGroupSupportLevel group_support_level = 38;
+	optional GroupSupportLevel group_support_level = 38;
 	optional GroupUnsupportedReason group_unsupported_reason = 39;
 	//optional DYNProtoHubGroupProperties hub_group_properties = 41;
 	//optional ?? ufr_upgrade_info = 42;
@@ -1006,6 +1006,12 @@ enum GroupUnsupportedReason {
 	GROUP_UNSUPPORTED_REASON_UNSPECIFIED = 0;
 	GROUP_DISABLED_ON_CLIENT = 1;
 	GROUP_DISABLED_ON_SERVER = 2;
+}
+
+enum GroupSupportLevel {
+	UNSUPPORTED = 0;
+	DATA_SUPPORTED = 1;
+	FULLY_SUPPORTED = 2;
 }
 
 message GroupReadStateId {
@@ -1148,7 +1154,7 @@ message SpaceCreationInfo {
 	optional SpaceType space_type = 11;
 
 	// optional ?? space_details = 12;
-	// optional ?? attribute_checker_group_type = 13;
+	optional SharedAttributeCheckerGroupType attribute_checker_group_type = 13;
 	optional string shared_drive_name = 14;
 }
 
@@ -1293,7 +1299,7 @@ message IosLocalNotification {
 	optional string category = 5;
 	optional bool group_is_flat = 6;
 	optional bool message_is_off_the_record = 7;
-	//optional ?? attribute_checker_group_type = 9;
+	optional SharedAttributeCheckerGroupType attribute_checker_group_type = 9;
 	optional string navigation = 8;
 }
 
@@ -1649,6 +1655,202 @@ enum AnnotationType {
 	CONSENTED_APP_UNFURL = 24;
 }
 
+message GroupDetails {
+	optional string description = 1;
+	optional string guidelines = 2;
+}
+
+message RoomUpdatedMetadata {
+	optional string name = 2;
+	optional GroupVisibility visibility = 3;
+	optional bool group_link_sharing_enabled = 5;
+	
+	message RoomRenameMetadata {
+		optional string new_name = 1;
+		optional string prev_name = 2;
+	}
+	optional RoomRenameMetadata rename_metadata = 6;
+	
+	message GroupDetailsUpdatedMetadata {
+		optional GroupDetails new_group_details = 1;
+		optional GroupDetails prev_group_details = 2;
+	}
+	optional GroupDetailsUpdatedMetadata group_details_metadata = 7;
+	optional User initiator = 4;
+}
+
+//ComGoogleRtcMeetingsV1DialInNumberClass
+enum DialInNumberClass {
+	NUMBER_CLASS_UNSPECIFIED = 0;
+	LOW_COST = 1;
+	HIGH_COST = 2;
+	LEGACY = 3;
+}
+
+//ComGoogleRtcMeetingsV1RecordingApplicationType
+enum RecordingApplicationType {
+	RECORDING_APPLICATION_TYPE_UNSPECIFIED = 0;
+	RECORDING = 1;
+	GLIVE_STREAM = 3;
+	BROADCAST = 4;
+}
+
+//ComGoogleRtcMeetingsV1BroadcastAccessPolicy
+enum BroadcastAccessPolicy {
+	BROADCASTING_ACCESS_POLICY_UNSPECIFIED = 0;
+	ORGANIZATION = 1;
+	PUBLIC = 2;
+}
+
+//ComGoogleRtcMeetingsV1MeetingSpace
+message MeetingSpace {
+	optional string meeting_space_id = 1;
+	optional string meeting_code = 2;
+	optional string meeting_url = 3;
+	
+	message PhoneAccess {
+		optional string phone_number = 1;
+		optional string formatted_phone_number = 5;
+		optional string pin = 2;
+		optional string region_code = 3;
+		optional string language_code = 4;
+	}
+	repeated PhoneAccess phone_access = 5;
+	
+	message UniversalPhoneAccess {
+		optional string pin = 1;
+		optional string pstn_info_url = 2;
+	}
+	optional UniversalPhoneAccess universal_phone_access = 8;
+	
+	message Presenter {
+		optional string presenter_device_id = 1;
+		optional string by_device_id = 2;
+	}
+	message RecordingInfo {
+		enum RecordingStatus {
+			RECORDING_UNSPECIFIED = 0;
+			RECORDING_INACTIVE = 1;
+			RECORDING_STARTING = 2;
+			RECORDING_STARTED = 3;
+		}
+		optional RecordingStatus recording_status = 1;
+		optional string recording_id = 2;
+		optional string producer_device_id = 3;
+		
+		message RecordingEvent {
+			optional string device_id = 1;
+			
+			enum EventType {
+				RECORDING_EVENT_UNSPECIFIED = 0;
+				USER_ACTION = 1;
+			}
+			optional EventType type = 2;
+		}
+		optional RecordingEvent latest_recording_event = 4;
+		optional string owner_display_name = 5;
+		optional RecordingApplicationType recording_application_type = 6;
+	}
+	message StreamingSessionInfo {
+		enum Status {
+			STATUS_UNSPECIFIED = 0;
+			INACTIVE = 1;
+			STARTING = 2;
+			LIVE = 3;
+		}
+		optional Status status = 1;
+		optional string session_id = 2;
+		optional RecordingApplicationType application_type = 3;
+		
+		message SessionEvent {
+			enum EventType {
+				EVENT_UNSPECIFIED = 0;
+			}
+			optional string device_id = 1;
+			optional EventType type = 2;
+		}
+		optional SessionEvent latest_session_event = 4;
+		optional string owner_display_name = 5;
+		optional BroadcastAccessPolicy viewer_access_policy = 6;
+		optional bool training_enabled = 7;
+		
+		message StreamViewerStats {
+			optional int64 estimated_viewer_count = 1;
+		}
+		optional StreamViewerStats viewer_stats = 8;
+	}
+	message CallInfo {
+		optional Presenter presenter = 1;
+		optional RecordingInfo recording_info = 2;
+		optional string calendar_event_id = 3;
+		optional string organization_name = 4;
+		optional int32 max_joined_devices = 6;
+		optional string media_backend_info = 8;
+		repeated StreamingSessionInfo streaming_sessions = 9;
+		
+		message CallSettings {
+			optional bool access_lock = 1;
+			optional bool chat_lock = 2;
+			optional bool present_lock = 3;
+			optional bool attendance_report_enabled = 4;
+			optional bool audio_lock = 5;
+			optional bool video_lock = 6;
+			optional bool moderation_enabled = 7;
+			optional bool cse_enabled = 8;
+		}
+		optional CallSettings settings = 11;
+		//repeated ComGoogleRtcMeetingsV1DocumentInfo attached_documents = 12;
+		message PaygateInfo {
+			optional bool show_upgrade_promos = 1;
+			optional ComGoogleProtobufTimestamp call_ending_soon_warning_time = 2;
+			optional ComGoogleProtobufTimestamp call_ending_time = 3;
+		}
+		optional PaygateInfo paygate_info = 13;
+		repeated string supported_caption_languages = 14;
+		
+		message CseInfo {
+			optional bytes wrapped_key = 1;
+		}
+		optional CseInfo cse_info = 15;
+	}
+	optional CallInfo call_info = 6;
+	optional string meeting_alias = 7;
+	
+	message GatewayAccess {
+		optional bool enabled = 1;
+	}
+	optional GatewayAccess gateway_access = 9;
+	optional string more_join_url = 10;
+	repeated DialInNumberClass accepted_number_class = 11;
+	
+	message GatewaySipAccess {
+		optional string uri = 1;
+		optional string sip_access_code = 2;
+	}
+	repeated GatewaySipAccess gateway_sip_access = 13;
+	
+	message BroadcastAccess {
+		optional string view_url = 1;
+		//optional ComGoogleRtcMeetingsV1BroadcastAccessPolicy access_policy = 2; 
+	}
+	optional BroadcastAccess broadcast_access = 14;
+	
+	message Settings {
+		optional bool access_lock = 1;
+		optional bool attendance_report_enabled = 2;
+		optional bool chat_lock = 3;
+		optional bool present_lock = 4;
+		optional bool moderation_enabled = 5;
+		optional bool cse_enabled = 6;
+	}
+	optional Settings settings = 15;
+}
+
+message VideoCallMetadata {
+	optional MeetingSpace meeting_space = 1;
+	optional bool was_created_in_current_group = 2;
+	optional bool should_not_render = 3;
+}
 
 message MembershipChangedMetadata {
 	enum Type {
@@ -1978,8 +2180,8 @@ message WorldItemLite {
 	//repeated ?? space_integration_payloads = 17;
 	//optional GroupIntegrationSettings group_integration_settings = 22;
 	// optional AvatarInfo avatar_info = 18;
-	// optional ?? attribute_checker_group_type = 19;
-	// optional GroupSupportLevel group_support_level = 23;
+	optional SharedAttributeCheckerGroupType attribute_checker_group_type = 19;
+	optional GroupSupportLevel group_support_level = 23;
 	optional GroupUnsupportedReason group_unsupported_reason = 24;
 	// optional ?? group_policies = 26;
 }
@@ -2191,4 +2393,15 @@ message ReadRevision {
 
 message ReferenceRevision {
 	optional int64 timestamp = 1;
+}
+
+enum SharedAttributeCheckerGroupType {
+	ATTRIBUTE_CHECKER_GROUP_TYPE_UNSPECIFIED = 0;
+	ONE_TO_ONE_HUMAN_DM = 1;
+	ONE_TO_ONE_BOT_DM = 2;
+	IMMUTABLE_MEMBERSHIP_GROUP_DM = 3;
+	FLAT_ROOM = 4;
+	THREADED_ROOM = 5;
+	IMMUTABLE_MEMBERSHIP_HUMAN_DM = 6;
+	POST_ROOM = 7;
 }

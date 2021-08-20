@@ -996,10 +996,16 @@ message Group {
 	optional NameUsers name_users = 34;
 	//optional ?? space_details = 37;
 	//optional DYNProtoGroupSupportLevel group_support_level = 38;
-	//optional DYNProtoGroupUnsupportedReason group_unsupported_reason = 39;
+	optional GroupUnsupportedReason group_unsupported_reason = 39;
 	//optional DYNProtoHubGroupProperties hub_group_properties = 41;
 	//optional ?? ufr_upgrade_info = 42;
 	optional bool typing_indicators_enabled = 43;
+}
+
+enum GroupUnsupportedReason {
+	GROUP_UNSUPPORTED_REASON_UNSPECIFIED = 0;
+	GROUP_DISABLED_ON_CLIENT = 1;
+	GROUP_DISABLED_ON_SERVER = 2;
 }
 
 message GroupReadStateId {
@@ -1974,7 +1980,7 @@ message WorldItemLite {
 	// optional AvatarInfo avatar_info = 18;
 	// optional ?? attribute_checker_group_type = 19;
 	// optional GroupSupportLevel group_support_level = 23;
-	// optional GroupUnsupportedReason group_unsupported_reason = 24;
+	optional GroupUnsupportedReason group_unsupported_reason = 24;
 	// optional ?? group_policies = 26;
 }
 

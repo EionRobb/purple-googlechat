@@ -750,10 +750,10 @@ googlechat_set_active_client(PurpleConnection *pc)
 	}
 	
 	ping_event.has_client_interactive_state = TRUE;
-	ping_event.client_interactive_state = PING_EVENT__CLIENT_INTERACTIVE_STATE__INTERACTIVE;
+	ping_event.client_interactive_state = PING_EVENT__CLIENT_INTERACTIVE_STATE__FOCUSED;
 	
 	ping_event.has_client_notifications_enabled = TRUE;
-	ping_event.client_notifications_enabled = TRUE;
+	ping_event.client_notifications_enabled = FALSE;
 	
 	googlechat_send_ping_event(ha, &ping_event);
 	

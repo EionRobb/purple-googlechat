@@ -56,8 +56,11 @@ googlechat_process_data_chunks(GoogleChatAccount *ha, const gchar *data, gsize l
 		array = json_array_get_array_element(chunk, 1);
 		array0 = json_array_get_element(array, 0);
 		if (JSON_NODE_HOLDS_VALUE(array0)) {
+			const gchar *status_string = json_node_get_string(array0);
+			purple_debug_misc("googlechat", "Received event status string: '%s'\n", status_string ? status_string : "(null)");
+			
 			//probably a nooooop
-			if (g_strcmp0(json_node_get_string(array0), "noop") == 0) {
+			if (g_strcmp0(status_string, "noop") == 0) {
 				//A nope ninja delivers a wicked dragon kick
 #ifdef DEBUG
 				printf("noop\n");
@@ -66,6 +69,7 @@ googlechat_process_data_chunks(GoogleChatAccount *ha, const gchar *data, gsize l
 		} else {
 			JsonObject *obj = json_node_get_object(array0);
 			if (json_object_has_member(obj, "data")) {
+				purple_debug_misc("googlechat", "Received event data chunk\n");
 				//Contains protobuf data, base64 encoded
 				ProtobufCMessage *unpacked_message;
 				StreamEventsResponse *events_response;
@@ -84,6 +88,8 @@ googlechat_process_data_chunks(GoogleChatAccount *ha, const gchar *data, gsize l
 				g_free(decoded_response);
 				
 				continue;
+			} else {
+				purple_debug_misc("googlechat", "Received event with no data chunk\n");
 			}
 		}
 	}

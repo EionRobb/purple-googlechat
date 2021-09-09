@@ -1492,13 +1492,13 @@ static gboolean _purple_http_reconnect(PurpleHttpConnection *hc)
 	_purple_http_disconnect(hc, TRUE);
 
 	if (purple_debug_is_verbose()) {
-		if (purple_debug_is_unsafe()) {
+		//if (purple_debug_is_unsafe()) {
 			gchar *urlp = purple_http_url_print(hc->url);
 			purple_debug_misc("http", "Connecting to %s...\n", urlp);
 			g_free(urlp);
-		} else
-			purple_debug_misc("http", "Connecting to %s...\n",
-				hc->url->host);
+		//} else
+		//	purple_debug_misc("http", "Connecting to %s...\n",
+		//		hc->url->host);
 	}
 
 	url = hc->url;
@@ -1623,12 +1623,12 @@ PurpleHttpConnection * purple_http_request(PurpleConnection *gc,
 
 	hc->url = purple_http_url_parse(request->url);
 
-	if (purple_debug_is_unsafe())
+	//if (purple_debug_is_unsafe())
 		purple_debug_misc("http", "Performing new request %p for %s.\n",
 			hc, request->url);
-	else
-		purple_debug_misc("http", "Performing new request %p to %s.\n",
-			hc, hc->url ? hc->url->host : "(null)");
+	//else
+	//	purple_debug_misc("http", "Performing new request %p to %s.\n",
+	//		hc, hc->url ? hc->url->host : "(null)");
 
 	if (!hc->url || hc->url->host == NULL || hc->url->host[0] == '\0') {
 		purple_debug_error("http", "Invalid URL requested.\n");

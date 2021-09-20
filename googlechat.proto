@@ -1078,6 +1078,10 @@ message RetentionSettings {
 	optional int64 expiry_timestamp = 2;
 }
 
+message GroupData {
+	optional RetentionSettings.RetentionState retention_state = 1;
+}
+
 message TopicId {
 	optional GroupId group_id = 3;
 	optional string topic_id = 2;
@@ -1114,6 +1118,21 @@ message CreateTopicResponse {
 	optional Topic topic = 1;
 	optional WriteRevision group_revision = 2;
 	optional ReadRevision current_group_revision = 3;
+}
+
+message CreateMessageRequest {
+	optional RequestHeader request_header = 100;
+	optional MessageParentId parent_id = 1;
+	optional string text_body = 2;
+	repeated Annotation annotations = 3;
+	optional string local_id = 4;
+	optional string message_id = 6;
+}
+
+message CreateMessageResponse {
+	optional Message message = 1;
+	optional WriteRevision group_revision = 3;
+	optional ReadRevision current_group_revision = 4;
 }
 
 message InviteeInfo {
@@ -2015,7 +2034,7 @@ message CatchUpResponse {
 		ABORTED_FROM_REVISION_TOO_OLD = 5;
 	}
 	optional ResponseStatus status = 2;
-	//optional GroupData group_data = 3;
+	optional GroupData group_data = 3;
 }
 
 message GetGroupRequest {

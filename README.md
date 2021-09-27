@@ -1,6 +1,6 @@
 # Google Chat Plugin for libpurple #
 
-A *WORK IN PROGRESS* replacement prpl for Google Chat in Pidgin/libpurple to support the proprietary protocol that Google uses for its "Google Chat" service.
+A replacement prpl for Google Chat in Pidgin/libpurple to support the proprietary protocol that Google uses for its "Google Chat" service.
 
 This plugin is written by [Eion Robb](https://github.com/EionRobb/) based on the old Hangouts plugin written by [Eion Robb](https://github.com/EionRobb/) and [Mike 'Maiku' Ruprecht](https://github.com/cmaiku).
 
@@ -23,7 +23,7 @@ json-glib-devel libpurple-devel glib2-devel libpurple-devel protobuf-c-devel pro
 ```
 
 ## Windows ##
-Development builds of Windows dll's will live at https://eion.robbmob.com/libgooglechat.dll (you'll also need libprotobuf-c-1.dll and libjson-glib-1.0.dll in your Pidgin folder, included in the installer)
+Development builds of Windows dll's will live at https://eion.robbmob.com/libgooglechat.dll (you'll also need [libprotobuf-c-1.dll](https://github.com/EionRobb/purple-googlechat/raw/master/libprotobuf-c-1.dll) and [libjson-glib-1.0.dll](https://github.com/EionRobb/purple-googlechat/raw/master/libjson-glib-1.0.dll) in your Pidgin folder)
 
 A Windows installer to make life easier is in progress.
 

@@ -1,9 +1,9 @@
 %global plugin_name googlechat
 
-%global commit0 4302f901fd4fb5c1d5ad3b083fa5b29380332b9c
+%global commit0 1f4939a343e26afef5ca54cdf6bafc5fd8a91872
 %global shortcommit0 %(c=%{commit0}; echo ${c:0:7})
 %global archcommit0 %(c=%{commit0}; echo ${c:0:12})
-%global date 20160714
+%global date 20211001
 
 Name: purple-%{plugin_name}
 Version: 0

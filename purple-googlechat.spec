@@ -55,7 +55,7 @@ chmod 755 %{buildroot}%{_libdir}/purple-2/lib%{plugin_name}.so
 
 %files
 %{_libdir}/purple-2/lib%{plugin_name}.so
-%license gpl3.txt
+%license LICENSE
 %doc README.md
 
 %files -n pidgin-%{plugin_name}

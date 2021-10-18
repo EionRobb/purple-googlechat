@@ -7,7 +7,7 @@
 
 Name: purple-%{plugin_name}
 Version: 0
-Release: 1.%{date}hg%{shortcommit0}%{?dist}
+Release: 1.%{date}git%{shortcommit0}%{?dist}
 Summary: Google Chat plugin for libpurple
 
 License: GPLv3+

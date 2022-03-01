@@ -315,6 +315,7 @@ googlechat_get_users_information_internal(GoogleChatAccount *ha, GList *user_ids
 		if (G_UNLIKELY(!googlechat_is_valid_id(who))) {
 			i--;
 			n_member_ids--;
+			continue;
 		}
 		
 		member_ids[i] = g_new0(MemberId, 1);

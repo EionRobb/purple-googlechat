@@ -19,7 +19,7 @@ make && sudo make install
 
 ## Fedora ##
 ```
-json-glib-devel libpurple-devel glib2-devel libpurple-devel protobuf-c-devel protobuf-c-compiler-devel
+json-glib-devel libpurple-devel glib2-devel libpurple-devel protobuf-c-devel protobuf-c-compiler
 ```
 
 ## Windows ##

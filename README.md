@@ -23,9 +23,10 @@ json-glib-devel libpurple-devel glib2-devel libpurple-devel protobuf-c-devel pro
 ```
 
 ## Windows ##
-Development builds of Windows dll's will live at https://eion.robbmob.com/libgooglechat.dll (you'll also need [libprotobuf-c-1.dll](https://github.com/EionRobb/purple-googlechat/raw/master/libprotobuf-c-1.dll) and [libjson-glib-1.0.dll](https://github.com/EionRobb/purple-googlechat/raw/master/libjson-glib-1.0.dll) in your Pidgin folder)
+Development builds of Windows dll's will live at https://eion.robbmob.com/libgooglechat.dll - copy this into your C:\Program Files (x86)\Pidgin\plugins folder.  You'll also need [libprotobuf-c-1.dll](https://github.com/EionRobb/purple-googlechat/raw/master/libprotobuf-c-1.dll) and [libjson-glib-1.0.dll](https://github.com/EionRobb/purple-googlechat/raw/master/libjson-glib-1.0.dll) in your C:\Program Files (x86)\Pidgin folder (not the plugins subfolder)
 
-A Windows installer to make life easier is in progress.
+## Bitlbee ##
+If you're using this plugin with bitlbee, authentication might be a little confusing.  After you follow the prompts, you should get a DM from a `purple_request_0` user asking for the token.  You can also set the token as the password on the account, if you don't see the DM.
 
 ## Like this plugin? ##
 Say "Thanks" by [sending us $1](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=PZMBF2QVF69GA)

@@ -1733,8 +1733,8 @@ googlechat_conversation_send_message(GoogleChatAccount *ha, const gchar *conv_id
 	
 	retention_settings__init(&retention_settings);
 	request.retention_settings = &retention_settings;
-	retention_settings.has_state = TRUE;
-	retention_settings.state = RETENTION_SETTINGS__RETENTION_STATE__PERMANENT;
+	// TODO: set retention state based on conversation's history setting?
+	retention_settings.has_state = FALSE;
 	
 	message_info__init(&message_info);
 	request.message_info = &message_info;

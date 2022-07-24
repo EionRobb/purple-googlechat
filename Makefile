@@ -43,6 +43,9 @@ else
   else
     INCLUDES = -I/usr/include/protobuf-c
     CC ?= gcc
+	ifneq ($(UNAME_S), BSD)
+		INCLUDES += -ldl
+	endif
   endif
 
   ifeq ($(shell $(PKG_CONFIG) --exists libprotobuf-c && echo "true"),true)
@@ -98,10 +101,10 @@ googlechat.pb-c.c: googlechat.proto
 	$(PROTOC_C) -o googlechat.proto.desc googlechat.proto
 
 libgooglechat.so: $(PURPLE_C_FILES) $(PURPLE_COMPAT_FILES)
-	$(CC) -fPIC $(CFLAGS) -shared -o $@ $^ $(LDFLAGS) $(PROTOBUF_OPTS) `$(PKG_CONFIG) purple glib-2.0 json-glib-1.0 zlib --libs --cflags` -ldl $(INCLUDES) -Ipurple2compat -g -ggdb
+	$(CC) -fPIC $(CFLAGS) -shared -o $@ $^ $(LDFLAGS) $(PROTOBUF_OPTS) `$(PKG_CONFIG) purple glib-2.0 json-glib-1.0 zlib --libs --cflags` $(INCLUDES) -Ipurple2compat -g -ggdb
 
 libgooglechat3.so: $(PURPLE_C_FILES)
-	$(CC) -fPIC $(CFLAGS) -shared -o $@ $^ $(LDFLAGS) $(PROTOBUF_OPTS) `$(PKG_CONFIG) purple-3 glib-2.0 json-glib-1.0 zlib --libs --cflags` -ldl $(INCLUDES) -g -ggdb
+	$(CC) -fPIC $(CFLAGS) -shared -o $@ $^ $(LDFLAGS) $(PROTOBUF_OPTS) `$(PKG_CONFIG) purple-3 glib-2.0 json-glib-1.0 zlib --libs --cflags` $(INCLUDES) -g -ggdb
 
 libgooglechat.dll: $(PURPLE_C_FILES) $(PURPLE_COMPAT_FILES)
 	$(WIN32_CC) -shared -o $@ $^ $(WIN32_PIDGIN2_CFLAGS) $(WIN32_PIDGIN2_LDFLAGS) -Ipurple2compat

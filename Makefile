@@ -43,7 +43,7 @@ else
   else
     INCLUDES = -I/usr/include/protobuf-c
     CC ?= gcc
-	ifneq ($(UNAME_S), BSD)
+	ifeq ($(UNAME_S), Linux)
 		INCLUDES += -ldl
 	endif
   endif

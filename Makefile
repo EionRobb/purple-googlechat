@@ -127,6 +127,22 @@ FAILNOPURPLE:
 clean:
 	rm -f $(PLUGIN_TARGET) googlechat.pb-c.h googlechat.pb-c.c
 
+po/purple-googlechat.pot: $(PURPLE_C_FILES)
+	xgettext $^ -k_ --no-location -o $@
+
+po/%.po: po/purple-googlechat.pot
+	msgmerge $@ po/purple-googlechat.pot > tmp-$*
+	mv -f tmp-$* $@
+
+po/%.mo: po/%.po
+	msgfmt -o $@ $^
+
+build-locales: $(LOCALES)
+
+%-locale-install: po/%.mo
+	mkdir -m $(DIR_PERM) -p $(LOCALE_DEST)/$(*F)/LC_MESSAGES
+	install -m $(FILE_PERM) -p po/$(*F).mo $(LOCALE_DEST)/$(*F)/LC_MESSAGES/purple-googlechat.mo
+
 
 installer: purple-googlechat.nsi libgooglechat.dll
 	$(MAKENSIS) purple-googlechat.nsi

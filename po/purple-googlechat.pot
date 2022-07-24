@@ -1,0 +1,159 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2022-07-12 09:38+1200\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Initiate _Chat"
+msgstr ""
+
+msgid "_Leave Chat"
+msgstr ""
+
+msgid "Search for friends..."
+msgstr ""
+
+msgid "Authenticating"
+msgstr ""
+
+msgid "User cancelled authorization"
+msgstr ""
+
+msgid "Authorization Code"
+msgstr ""
+
+msgid "Please follow the YouTube video to get the OAuth code"
+msgstr ""
+
+msgid "and then paste the Google OAuth code here"
+msgstr ""
+
+msgid "OK"
+msgstr ""
+
+msgid "Cancel"
+msgstr ""
+
+msgid "Status"
+msgstr ""
+
+msgid "Message"
+msgstr ""
+
+msgid "Last seen"
+msgstr ""
+
+msgid "In call"
+msgstr ""
+
+msgid "Device Type"
+msgstr ""
+
+msgid "Desktop"
+msgstr ""
+
+msgid "Tablet"
+msgstr ""
+
+msgid "Mobile"
+msgstr ""
+
+msgid "Unknown"
+msgstr ""
+
+msgid "Mood"
+msgstr ""
+
+msgid "Do Not Disturb"
+msgstr ""
+
+msgid "Phone"
+msgstr ""
+
+#, c-format
+msgid ""
+"Existing Hangouts account for %s found.  Convert to a Google Chat account?"
+msgstr ""
+
+msgid "Account Migration"
+msgstr ""
+
+msgid "leave:  Leave the group chat"
+msgstr ""
+
+msgid "kick <user>:  Kick a user from the room."
+msgstr ""
+
+msgid "Search Error"
+msgstr ""
+
+msgid "There was an error searching for the user"
+msgstr ""
+
+#, c-format
+msgid "Your search for the user \"%s\" returned no results"
+msgstr ""
+
+msgid "No users found"
+msgstr ""
+
+msgid "ID"
+msgstr ""
+
+msgid "Display Name"
+msgstr ""
+
+msgid "_Search"
+msgstr ""
+
+msgid "_Cancel"
+msgstr ""
+
+msgid "Invalid response"
+msgstr ""
+
+msgid "Auth error"
+msgstr ""
+
+msgid "First Name"
+msgstr ""
+
+msgid "Last Name"
+msgstr ""
+
+msgid "Photo"
+msgstr ""
+
+msgid "Email"
+msgstr ""
+
+msgid "Gender"
+msgstr ""
+
+msgid "Conversation ID"
+msgstr ""
+
+msgid "Image Send Error"
+msgstr ""
+
+msgid "There was an error sending the image"
+msgstr ""
+
+msgid "Users"
+msgstr ""
+
+msgid "Name"
+msgstr ""

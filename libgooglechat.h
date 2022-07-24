@@ -40,11 +40,19 @@
 
 #define GOOGLECHAT_BUFFER_DEFAULT_SIZE 4096
 
-#ifndef N_
-#	define N_(a) (a)
-#endif
-#ifndef _
+#ifdef ENABLE_NLS
+#	define GETTEXT_PACKAGE "purple-googlechat"
+#	include <glib/gi18n-lib.h>
+#	ifdef _WIN32
+#		ifdef LOCALEDIR
+#			unset LOCALEDIR
+#		endif
+extern const char *wpurple_locale_dir(void);
+#		define LOCALEDIR  wpurple_locale_dir()
+#	endif
+#else
 #	define _(a) (a)
+#	define N_(a) (a)
 #endif
 
 #define GOOGLECHAT_API_OAUTH2_TOKEN_URL "https://www.googleapis.com/oauth2/v4/token"

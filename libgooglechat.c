@@ -837,6 +837,11 @@ libpurple3_plugin_unload(PurplePlugin *plugin, GError **error)
 static PurplePluginInfo *
 plugin_query(GError **error)
 {
+#ifdef ENABLE_NLS
+	bindtextdomain(GETTEXT_PACKAGE, LOCALEDIR);
+	bind_textdomain_codeset(GETTEXT_PACKAGE, "UTF-8");
+#endif
+
 	return purple_plugin_info_new(
 		"id",          GOOGLECHAT_PLUGIN_ID,
 		"name",        "Google Chat",
@@ -922,6 +927,11 @@ init_plugin(PurplePlugin *plugin)
 {
 	PurplePluginInfo *info;
 	PurplePluginProtocolInfo *prpl_info = g_new0(PurplePluginProtocolInfo, 1);
+	
+#ifdef ENABLE_NLS
+	bindtextdomain(GETTEXT_PACKAGE, LOCALEDIR);
+	bind_textdomain_codeset(GETTEXT_PACKAGE, "UTF-8");
+#endif
 	
 	info = plugin->info;
 	if (info == NULL) {

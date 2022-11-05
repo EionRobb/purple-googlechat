@@ -965,7 +965,7 @@ googlechat_got_conversation_list(GoogleChatAccount *ha, PaginatedWorldResponse *
 
 			PurpleBuddy *buddy = purple_blist_find_buddy(ha->account, other_person);
 			
-			if (!world_item_lite->read_state->hide_timestamp && !world_item_lite->read_state->blocked) {
+			if (!world_item_lite->read_state->hide_timestamp) {
 				g_hash_table_replace(ha->one_to_ones, g_strdup(conv_id), g_strdup(other_person));
 				g_hash_table_replace(ha->one_to_ones_rev, g_strdup(other_person), g_strdup(conv_id));
 				if (!buddy) {

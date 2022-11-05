@@ -992,6 +992,24 @@ googlechat_got_conversation_list(GoogleChatAccount *ha, PaginatedWorldResponse *
 			gboolean has_name = name ? TRUE : FALSE;
 			
 			g_hash_table_replace(ha->group_chats, g_strdup(conv_id), NULL);
+
+			if (!has_name) {
+				gchar *new = NULL;
+
+				for (int i = 0; i < world_item_lite->name_users->n_name_user_ids; i++) {
+					const gchar *id = world_item_lite->name_users->name_user_ids[i]->id;
+					PurpleBuddy *buddy = purple_blist_find_buddy(ha->account, id);
+					if (buddy) {
+						if (name) {
+							new = g_strdup_printf("%s, %s", name, buddy->alias);
+							g_free(name);
+							name = new;
+						} else {
+							name = g_strdup(buddy->alias);
+						}
+					}
+				}
+			}
 			
 			if (chat == NULL) {
 				googlechat_group = purple_blist_find_group("Google Chat");
@@ -1009,10 +1027,16 @@ googlechat_got_conversation_list(GoogleChatAccount *ha, PaginatedWorldResponse *
 				purple_blist_add_chat(purple_chat_new(ha->account, name, googlechat_chat_info_defaults(ha->pc, conv_id)), googlechat_group, NULL);
 				// if (!has_name)
 					// g_free(name);
-			} else {
-				if(has_name && strstr(purple_chat_get_name(chat), _("Unknown")) != NULL) {
+			} else if (name) {
+				const gchar *cur = purple_chat_get_name(chat);
+
+				if (!cur || strstr(cur, _("Unknown")) || !strcmp(cur, conv_id)) {
 					purple_chat_set_alias(chat, name);
 				}
+			}
+
+			if (!has_name && name) {
+				g_free(name);
 			}
 		}
 		

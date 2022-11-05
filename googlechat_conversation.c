@@ -1956,16 +1956,18 @@ googlechat_chat_leave_by_conv_id(PurpleConnection *pc, const gchar *conv_id, con
 	
 	remove_memberships_request__init(&request);
 	
+	member_id__init(&member_id);
+	user_id__init(&user_id);
+	member_id.user_id = &user_id;
+
 	if (who != NULL) {
-		member_id__init(&member_id);
-		user_id__init(&user_id);
-		member_id.user_id = &user_id;
-		
 		user_id.id = (gchar *) who;
-		member_ids = &member_id;
-		request.member_ids = &member_ids;
-		request.n_member_ids = 1;
+	} else {
+		user_id.id = ha->self_gaia_id;
 	}
+	member_ids = &member_id;
+	request.member_ids = &member_ids;
+	request.n_member_ids = 1;
 	
 	group_id__init(&group_id);
 	request.group_id = &group_id;

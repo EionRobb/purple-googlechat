@@ -995,8 +995,9 @@ googlechat_got_conversation_list(GoogleChatAccount *ha, PaginatedWorldResponse *
 
 			if (!has_name) {
 				gchar *new = NULL;
+				unsigned int i;
 
-				for (int i = 0; i < world_item_lite->name_users->n_name_user_ids; i++) {
+				for (i = 0; i < world_item_lite->name_users->n_name_user_ids; i++) {
 					const gchar *id = world_item_lite->name_users->name_user_ids[i]->id;
 					PurpleBuddy *buddy = purple_blist_find_buddy(ha->account, id);
 					if (buddy) {

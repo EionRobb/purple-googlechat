@@ -2142,6 +2142,7 @@ googlechat_create_conversation(GoogleChatAccount *ha, gboolean is_one_to_one, co
 		
 		
 		GList tmp_usr_list;
+		tmp_usr_list.next = tmp_usr_list.prev = NULL;
 		tmp_usr_list.data = (gpointer) who;
 		googlechat_get_users_information(ha, &tmp_usr_list);
 		

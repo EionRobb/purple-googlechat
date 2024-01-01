@@ -1,0 +1,15 @@
+Source: purple-googlechat
+Section: net
+Priority: optional
+Maintainer: Patrice Levesque <purple-googlechat.wayne@ptaff.ca>
+Build-Depends: debhelper (>= 13), libjson-glib-dev, libprotobuf-c-dev, libpurple-dev, make, protobuf-c-compiler
+Standards-Version: 4.5.1
+Vcs-Git: https://github.com/EionRobb/purple-googlechat.git
+Vcs-browser: https://github.com/EionRobb/purple-googlechat
+Homepage: https://github.com/EionRobb/purple-googlechat
+
+Package: purple-googlechat
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libjson-glib-1.0-0, libprotobuf-c1, libpurple0
+Description: Google Chat protocol plugin for libpurple
+	Allows the purple IM library to connect to Google Chat servers.

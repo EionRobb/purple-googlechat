@@ -164,7 +164,7 @@ googlechat_received_other_notification(PurpleConnection *pc, Event *event)
 }
 
 void 
-googlechat_process_presence_result(GoogleChatAccount *ha, UserPresence *presence)
+googlechat_process_presence_result(GoogleChatAccount *ha, DYNProtoUserPresence *presence)
 {
 	
 }

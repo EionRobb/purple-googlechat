@@ -202,7 +202,8 @@ enum DndState_State {
 	DND = 2;
 }
 
-message UserPresence {
+// Needs the DYNProto prefix to not clash with winnt headers
+message DYNProtoUserPresence {
 	optional UserId user_id = 1;
 	optional Presence presence = 2;
 	optional int64 active_until = 4;
@@ -218,7 +219,7 @@ message GetUserPresenceRequest {
 }
 
 message GetUserPresenceResponse {
-	repeated UserPresence user_presences = 1;
+	repeated DYNProtoUserPresence user_presences = 1;
 }
 
 message JAddOnsIdentifier {

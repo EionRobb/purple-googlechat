@@ -109,7 +109,7 @@ googlechat_got_users_presence(GoogleChatAccount *ha, GetUserPresenceResponse *re
 	guint i;
 	
 	for (i = 0; i < response->n_user_presences; i++) {
-		UserPresence *user_presence = response->user_presences[i];
+		DYNProtoUserPresence *user_presence = response->user_presences[i];
 		UserStatus *user_status = user_presence->user_status;
 		
 		const gchar *user_id = user_presence->user_id->id;

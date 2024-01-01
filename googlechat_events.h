@@ -24,7 +24,7 @@
 #include "googlechat.pb-c.h"
 
 void googlechat_register_events(gpointer plugin);
-void googlechat_process_presence_result(GoogleChatAccount *ha, UserPresence *presence);
+void googlechat_process_presence_result(GoogleChatAccount *ha, DYNProtoUserPresence *presence);
 void googlechat_process_received_event(GoogleChatAccount *ha, Event *event);
 
 #endif /*_GOOGLECHAT_EVENTS_H_*/

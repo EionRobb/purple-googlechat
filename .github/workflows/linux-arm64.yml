@@ -1,16 +1,16 @@
-name: Linux
+name: Linux ARM64
 on:
   - push
   - pull_request
 jobs:
   build:
     name: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     permissions:
       id-token: write
       contents: write
       attestations: write
-    
+
     steps:
       - uses: actions/checkout@v4
 
@@ -21,22 +21,25 @@ jobs:
           # We only need these to build, not to run.  Skip the dependency check.
           sudo apt download libpurple0t64 libpurple-dev
           sudo dpkg --force-depends -i libpurple0t64*.deb libpurple-dev*.deb
-      
+
       - name: make
-        run: make
+        run: |
+          make
+          file libgooglechat.so
+          mv libgooglechat.so libgooglechat_arm64.so
 
       - name: archive
         if: ${{ !env.ACT }}
         uses: actions/upload-artifact@v4
         with: 
             name: plugin 
-            path: libgooglechat.so
+            path: libgooglechat_arm64.so
 
       - name: release
         if: ${{ !env.ACT }}
         uses: ncipollo/release-action@v1
         with:
-          artifacts: libgooglechat.so
+          artifacts: libgooglechat_arm64.so
           tag: nightly-${{ github.sha }}
           name: Nightly ${{ github.sha }}
           allowUpdates: true
@@ -46,4 +49,4 @@ jobs:
         if: ${{ !env.ACT }}
         uses: actions/attest-build-provenance@v1
         with:
-          subject-path: libgooglechat.so
+          subject-path: libgooglechat_arm64.so

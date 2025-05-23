@@ -10,6 +10,8 @@ syntax = "proto2";
 // oneof's have been commented out because they're a pain in the butt with protobuf-c, but I've tried to keep them in there in case other non-silly protobuf libraries want to take advantage of them
 //
 // Feel free to use this .proto for whatever you want to, under whatever license you want.
+//
+// https://github.com/EionRobb/purple-googlechat/
 
 
 enum UserType {

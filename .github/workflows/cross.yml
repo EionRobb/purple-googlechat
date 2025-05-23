@@ -6,8 +6,13 @@ jobs:
   build:
     name: build
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+      attestations: write
+
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Set up MinGW
         run: |
@@ -16,7 +21,7 @@ jobs:
 
       - name: Load Pidgin from cache
         id: pidgin-cache
-        uses: actions/cache@v1
+        uses: actions/cache@v4
         with:
           path: pidgin
           key: pidgin-2.14.1
@@ -33,7 +38,7 @@ jobs:
       
       - name: Load Win32 deps from cache
         id: win32-cache
-        uses: actions/cache@v1
+        uses: actions/cache@v4
         with:
           path: win32-dev
           key: win32-dev
@@ -74,7 +79,24 @@ jobs:
           make libgooglechat.dll
 
       - name: archive
-        uses: actions/upload-artifact@v3
+        if: ${{ !env.ACT }}
+        uses: actions/upload-artifact@v4
         with: 
             name: plugin 
-            path: lib*.dll
+            path: libgooglechat.dll
+
+      - name: release
+        if: ${{ !env.ACT }}
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: libgooglechat.dll
+          tag: nightly-${{ github.sha }}
+          name: Nightly ${{ github.sha }}
+          allowUpdates: true
+          makeLatest: true
+
+      - name: attest
+        if: ${{ !env.ACT }}
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: libgooglechat.dll

@@ -103,5 +103,6 @@ GOOGLECHAT_DEFINE_API_REQUEST_FUNC(set_custom_status, SetCustomStatus, "set_cust
 GOOGLECHAT_DEFINE_API_REQUEST_FUNC(update_group, UpdateGroup, "update_group");
 GOOGLECHAT_DEFINE_API_REQUEST_FUNC(block_entity, BlockEntity, "block_entity");
 GOOGLECHAT_DEFINE_API_REQUEST_FUNC(list_members, ListMembers, "list_members");
+GOOGLECHAT_DEFINE_API_REQUEST_FUNC(update_reaction, UpdateReaction, "update_reaction");
 
 #endif /*_GOOGLECHAT_CONNECTION_H_*/

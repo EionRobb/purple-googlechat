@@ -59,9 +59,33 @@ message DndSettings {
 	optional int64 state_remaining_duration_usec = 3;
 }
 
+enum EmojiState {
+	EMOJI_STATE_UNSPECIFIED = 0;
+	EMOJI_ENABLED = 1;
+	EMOJI_SYSTEM_DISABLED = 2;
+	EMOJI_HIDDEN = 3;
+	EMOJI_DELETED = 4;
+}
+
+message CustomEmoji {
+	optional string uuid = 1;
+	optional string shortcode = 3;
+	optional EmojiState state = 4;
+	optional UserId creator_user_id = 5;
+	//optional CustomerId owner_customer_id = 6;
+	optional string blob_id = 7;
+	optional int64 create_time_micros = 8;
+	optional string read_token = 9;
+	optional int64 update_time_micros = 10;
+	optional string ephemeral_url = 11;
+	optional string content_type = 12;
+	optional int64 delete_time_micros = 13;
+}
+
 message Emoji {
 	//oneof Content {
 	optional	string unicode = 1;
+	optional    CustomEmoji custom_emoji = 2;
 	//}
 }
 
@@ -770,8 +794,14 @@ message Message {
 	//repeated DYNProtoCommunalLabelTag communal_labels = 27;
 	//repeated DYNProtoPersonalLabelTag personal_labels = 26;
 	//optional ?? message_integration_payload = 23;
-	//optional DYNProtoMessage_MessagePermission editable_by = 24;
-	//optional DYNProtoMessage_MessagePermission deletable_by = 25;
+	enum MessagePermission {
+		PERMISSION_UNSPECIFIED = 0;
+		NO_ONE = 1;
+		CREATOR = 2;
+		MEMBER = 3;
+	}
+	optional MessagePermission editable_by = 24;
+	optional MessagePermission deletable_by = 25;
 	optional int64 last_reply_time = 5;
 	optional int64 last_view_time = 6;
 	optional int64 last_mention_time = 7;
@@ -789,6 +819,20 @@ message Message {
 	optional Membership creator_membership = 30;
 	//optional DYNProtoMessageAttributes attributes = 31;
 	//optional ?? tombstone_metadata = 32;
+	// optional DlpMetricsMetadata dlp_metrics_metadata = 33;
+	optional bool is_inline_reply = 34;
+	// repeated PrivateMessage private_messages = 35;
+	// optional PrivateMessageContent private_message_content = 36;
+	// optional QuotedMessageMetadata quoted_message_metadata = 37;
+	// optional ENUM quoted_by_state = 38;
+	optional User updater = 39;
+	// optional ENUM rich_text_formatting_type = 40;
+	// optional MessageSearchInfo message_search_info = 41;
+	// optional MessageReference message_reference = 42;
+	// repeated MessageLabel message_labels = 43;
+	// optional int32 number_of_unicode_emojis = 44;
+	// optional bool request_reply_in_thread = 45;
+	// repeated MessageLabelId message_label_ids = 46;
 }
 
 message DriveMetadata {
@@ -872,6 +916,7 @@ message FormatMetadata {
 		BULLETED_LIST = 10;
 		BULLETED_LIST_ITEM = 11;
 		CLIENT_HIDDEN = 12;
+		SEARCH_HIGHLIGHT = 13;
 	}
 	optional FormatType format_type = 1;
 	optional int32 font_color = 2;
@@ -1099,6 +1144,11 @@ message Topic {
 	optional bool is_system_message = 12;
 	optional RetentionSettings retention_settings = 13;
 	optional bool contains_more_unread_replies = 14;
+}
+
+message TopicCreatedEvent {
+	optional Topic topic = 1;
+	optional bool has_more_replied = 2;
 }
 
 message MessageInfo {
@@ -1336,6 +1386,8 @@ message MessageEvent {
 	optional int64 last_message_in_topic_time = 4;
 	optional int64 prev_revision_time = 5;
 	optional bool is_head_message = 6;
+	optional int32 num_recipients = 7;
+	optional Group group = 8;
 }
 
 message TypingStateChangedEvent {
@@ -1378,6 +1430,38 @@ message WebPushNotificationEvent {
 	optional DispatchApproachType dispatch_approach_type = 2;
 	optional MobileLocalNotification mobile_local_notification = 3;
 	repeated EndpointType endpoint_types = 4;
+}
+
+message ReactionSummary {
+	optional Emoji emoji = 1;
+	repeated UserId reactors = 2;
+	optional int64 count = 3;
+	optional bool current_user_reacted = 4;
+	repeated UserId users_removed_reaction = 5;
+	repeated UserId users_added_reaction = 6;
+}
+
+message MessageReactionsSummaryEvent {
+	optional MessageId message_id = 1;
+	repeated ReactionSummary reaction_summary = 2;
+	optional int64 update_timestamp_micros = 3;
+}
+
+enum ReactionOption {
+	REACTION_OPTION_UNSPECIFIED = 0;
+	ADD = 1;
+	REMOVE = 2;
+}
+
+message UpdateReactionRequest {
+	optional MessageId message_id = 1;
+	optional Emoji emoji = 2;
+	optional ReactionOption option = 3;
+	optional RequestHeader request_header = 100;
+}
+
+message UpdateReactionResponse {
+	optional WriteRevision group_revision = 1;
 }
 
 
@@ -1487,7 +1571,7 @@ message PingEvent {
 	}
 	optional DeviceActiveState device_active_state = 9;
 	
-	// optional ??ComGoogleProtobufDuration web_inactivity_timeout = 10;
+	// optional Duration web_inactivity_timeout = 10;
 }
 
 message ClockSyncRequest {
@@ -1566,6 +1650,28 @@ message Event {
 		SHARED_DRIVE_UPDATED = 48;
 		MESSAGE_PERSONAL_LABEL_UPDATED = 49;
 		USER_QUOTA_EXCEEDED = 50;
+		USER_GROUP_SCOPED_CAPABILITIES_UPDATED = 51;
+		MEET_EVENT = 52;
+		GROUP_UNREAD_THREAD_STATE_UPDATED = 53;
+		DO_NOT_RECONNECT = 54;
+		WEBCHANNEL_CHECK = 55;
+		USER_RECURRING_DND_UPDATED_EVENT = 56;
+		MESSAGE_LABELS_UPDATED = 57;
+		BATCH_REACTIONS_UPDATED = 58;
+		GROUP_DEFAULT_SORT_ORDER_UPDATED = 64;
+		TOPIC_LABEL_APPLIED = 65;
+		TOPIC_LABEL_REMOVED = 66;
+		STRING_SORT_ORDER_UPDATED = 67;
+		MESSAGE_LABEL_APPLIED = 68;
+		MESSAGE_LABEL_REMOVED = 69;
+		GROUP_LABEL_APPLIED = 70;
+		GROUP_LABEL_REMOVED = 71;
+		ROSTER_SECTION_CREATED = 72;
+		ROSTER_SECTION_DELETED = 73;
+		ROSTER_SECTION_UPDATED = 74;
+		BADGE_COUNT_UPDATED = 75;
+		WORLD_REFRESHED = 76;
+		JOIN_REQUESTED = 77;
 	}
 	
 	message EventBody {
@@ -1586,7 +1692,7 @@ message Event {
 			//GroupNotificationSettingsUpdatedEvent group_notification_settings_updated = 17;
 			//MessageDeletedEvent message_deleted = 18;
 			//RetentionSettingsUpdatedEvent retention_settings_updated = 19;
-			//TopicCreatedEvent topic_created = 21;
+		optional TopicCreatedEvent topic_created = 21;
 			//MessageReactionEvent message_reaction = 22;
 		optional	UserStatusUpdatedEvent user_status_updated_event = 23;
 			//WorkingHoursSettingsUpdatedEvent working_hours_settings_updated_event = 24;
@@ -1602,12 +1708,28 @@ message Event {
 			//UserNoOpEvent user_no_op_event = 35;
 			//UserDenormalizedGroupUpdatedEvent user_denormalized_group_updated_event = 36;
 			//NotificationsCardEvent notifications_card_event = 37;
-			//?? user_hub_availability_event = 38;
+			// UserHubAvailabilityUpdatedEvent user_hub_availability_event = 38;
 			//PresenceSharedUpdatedEvent presence_shared_updated_event = 39;
 			//UserOwnershipUpdatedEvent user_ownership_updated_event = 40;
 			//SharedDriveCreateScheduledEvent shared_drive_create_scheduled_event = 41;
 			//SharedDriveUpdatedEvent shared_drive_updated_event = 42;
 			//MessagePersonalLabelUpdatedEvent message_personal_label_updated = 43;
+			// GroupScopedCapabilitiesUpdatedEvent group_scoped_capabilities_event = 44;
+			// MeetEvent meet_event = 45;
+			// GroupUnreadThreadStateUpdatedEvent group_unread_thread_state_updated_event = 46;
+			// WebchannelCheckEvent webchannel_check_event = 47;
+			// RecurringDndSettingsUpdatedEvent recurring_dnd_settings_updated_event = 48;
+			// MessageLabelsUpdatedEvent message_labels_updated_event = 49;
+			optional MessageReactionsSummaryEvent message_reactions_summary = 50;
+			// GroupDefaultSortOrderUpdatedEvent group_default_sort_order_updated_event = 53;
+			// TopicLabelEvent topic_label_event = 54;
+			// StringSortOrderUpdatedEvent string_sort_order_updated_event = 55;
+			// MessageLabelEvent message_label_event = 56;
+			// GroupLabelEvent group_label_event = 57;
+			// RosterSectionEvent roster_section_event = 58;
+			// BadgeCountUpdatedEvent badge_count_updated_event = 59;
+			// WorldRefreshedEvent world_refreshed_event = 60;
+			// JoinRequestedEvent join_requested_event = 61;
 		//}
 
 		optional EventType event_type = 12;
@@ -1623,6 +1745,9 @@ message Event {
 		optional	WriteRevision group_revision = 7;
 	//}
 	repeated EventBody bodies = 8;  // This is the second and subsequent event bodies in this event
+
+	// BackendMetadata backend_metadata = 9;
+	// WorldItemLite world_item_lite = 10;
 }
 
 

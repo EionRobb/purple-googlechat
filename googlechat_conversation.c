@@ -719,6 +719,7 @@ googlechat_join_chat(PurpleConnection *pc, GHashTable *data)
 	
 	chatconv = purple_serv_got_joined_chat(pc, g_str_hash(conv_id), conv_id);
 	purple_conversation_set_data(PURPLE_CONVERSATION(chatconv), "conv_id", g_strdup(conv_id));
+	g_hash_table_replace(ha->group_chats, g_strdup(conv_id), NULL);
 	
 	purple_conversation_present(PURPLE_CONVERSATION(chatconv));
 	

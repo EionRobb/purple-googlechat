@@ -477,6 +477,7 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 			//TODO /api/get_group
 			chatconv = purple_serv_got_joined_chat(ha->pc, g_str_hash(conv_id), conv_id);
 			purple_conversation_set_data(PURPLE_CONVERSATION(chatconv), "conv_id", g_strdup(conv_id));
+			g_hash_table_replace(ha->group_chats, g_strdup(conv_id), NULL);
 			
 			googlechat_lookup_group_info(ha, conv_id);
 		}
@@ -778,6 +779,8 @@ googlechat_received_group_viewed(PurpleConnection *pc, Event *event)
 				//TODO /api/get_group
 				chatconv = purple_serv_got_joined_chat(ha->pc, g_str_hash(conv_id), conv_id);
 				purple_conversation_set_data(PURPLE_CONVERSATION(chatconv), "conv_id", g_strdup(conv_id));
+				g_hash_table_replace(ha->group_chats, g_strdup(conv_id), NULL);
+				
 				googlechat_lookup_group_info(ha, conv_id);
 			}
 			if (chatconv) {

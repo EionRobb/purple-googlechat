@@ -31,6 +31,7 @@
 #define GOOGLECHAT_PBLITE_XORIGIN_URL "https://chat.google.com"
 #define GOOGLECHAT_PBLITE_API_URL "https://chat.google.com"
 #define GOOGLECHAT_CHANNEL_URL_PREFIX "https://chat.google.com/webchannel/"
+#define GOOGLECHAT_USER_AGENT "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
 
 void googlechat_process_data_chunks(GoogleChatAccount *ha, const gchar *data, gsize len);
 

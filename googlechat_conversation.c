@@ -1106,7 +1106,7 @@ googlechat_got_buddy_photo(PurpleHttpConnection *connection, PurpleHttpResponse 
 	}
 	
 	response_str = purple_http_response_get_data(response, &response_len);
-	response_dup = g_memdup(response_str, response_len);
+	response_dup = g_memdup2(response_str, response_len);
 	purple_buddy_icons_set_for_user(account, name, response_dup, response_len, photo_url);
 }
 

@@ -266,7 +266,7 @@ googlechat_got_http_image_for_conv(PurpleHttpConnection *connection, PurpleHttpR
 	message_timestamp = GPOINTER_TO_INT(g_dataset_get_data(connection, "message_timestamp"));
 	
 	response_data = purple_http_response_get_data(response, &response_size);
-	image = purple_image_new_from_data(g_memdup(response_data, response_size), response_size);
+	image = purple_image_new_from_data(g_memdup2(response_data, response_size), response_size);
 	image_id = purple_image_store_add(image);
 	escaped_image_url = g_markup_escape_text(purple_http_request_get_url(purple_http_conn_get_request(connection)), -1);
 	if (drive_url) {

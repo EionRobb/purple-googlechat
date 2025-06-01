@@ -31,6 +31,7 @@
 #include "googlechat_events.h"
 #include "googlechat_connection.h"
 #include "googlechat_conversation.h"
+#include "http.h"
 
 
 /*****************************************************************************/
@@ -85,6 +86,21 @@ googlechat_add_account_options(GList *account_options)
 	account_options = g_list_append(account_options, option);
 
 	option = purple_account_option_bool_new(N_("Fetch image history when opening group chats"), "fetch_image_history", TRUE);
+	account_options = g_list_append(account_options, option);
+
+	option = purple_account_option_string_new(N_("COMPASS Cookie"), "COMPASS_token", NULL);
+	account_options = g_list_append(account_options, option);
+
+	option = purple_account_option_string_new(N_("SSID Cookie"), "SSID_token", NULL);
+	account_options = g_list_append(account_options, option);
+
+	option = purple_account_option_string_new(N_("SID Cookie"), "SID_token", NULL);
+	account_options = g_list_append(account_options, option);
+
+	option = purple_account_option_string_new(N_("OSID Cookie"), "OSID_token", NULL);
+	account_options = g_list_append(account_options, option);
+
+	option = purple_account_option_string_new(N_("HSID Cookie"), "HSID_token", NULL);
 	account_options = g_list_append(account_options, option);
 	
 	return account_options;
@@ -386,7 +402,10 @@ googlechat_login(PurpleAccount *account)
 		purple_connection_update_progress(pc, _("Authenticating"), 1, 3);
 		googlechat_oauth_refresh_token(ha);
 	} else {
-		//TODO get this code automatically
+		//TODO remove this as it doesn't work
+		(void) googlechat_authcode_input_cb;
+		(void) googlechat_authcode_input_cancel_cb;
+		/*
 		purple_notify_uri(pc, "https://www.youtube.com/watch?v=hlDhp-eNLMU");
 		purple_request_input(pc, _("Authorization Code"), "https://www.youtube.com/watch?v=hlDhp-eNLMU",
 			_ ("Please follow the YouTube video to get the OAuth code"),
@@ -394,6 +413,22 @@ googlechat_login(PurpleAccount *account)
 			_("OK"), G_CALLBACK(googlechat_authcode_input_cb), 
 			_("Cancel"), G_CALLBACK(googlechat_authcode_input_cancel_cb), 
 			purple_request_cpar_from_connection(pc), ha);
+		*/
+#define googlechat_try_get_cookie_value(cookie_name) \
+		if (purple_account_get_string(account, cookie_name "_token", NULL) != NULL) { \
+			purple_http_cookie_jar_set(ha->cookie_jar, cookie_name, purple_account_get_string(account, cookie_name "_token", NULL)); \
+		} else { \
+			purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_AUTHENTICATION_IMPOSSIBLE, N_("Cookie " cookie_name " is required")); \
+			return; \
+		}
+
+		googlechat_try_get_cookie_value("COMPASS");
+		googlechat_try_get_cookie_value("SSID");
+		googlechat_try_get_cookie_value("SID");
+		googlechat_try_get_cookie_value("OSID");
+		googlechat_try_get_cookie_value("HSID");
+
+		googlechat_auth_refresh_xsrf_token(ha);
 	}
 	
 	purple_signal_connect(purple_blist_get_handle(), "blist-node-removed", account, PURPLE_CALLBACK(googlechat_blist_node_removed), NULL);
@@ -438,6 +473,7 @@ googlechat_close(PurpleConnection *pc)
 	g_free(ha->csessionid_param);
 	g_free(ha->sid_param);
 	g_free(ha->client_id);
+	g_free(ha->xsrf_token);
 	purple_http_cookie_jar_unref(ha->cookie_jar);
 	g_byte_array_free(ha->channel_buffer, TRUE);
 	

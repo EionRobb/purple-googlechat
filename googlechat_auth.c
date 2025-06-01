@@ -21,6 +21,7 @@
 #include <glib.h>
 #include <purple.h>
 
+#include "connection.h"
 #include "http.h"
 #include "googlechat_json.h"
 #include "googlechat_connection.h"
@@ -400,11 +401,19 @@ googlechat_auth_refresh_xsrf_token_cb(PurpleHttpConnection *http_conn, PurpleHtt
 	obj = json_decode_object(wiz_data, -1);
 
 	if (obj) {
-		gchar *xsrf_token = g_strdup(json_object_get_string_member(obj, "SMqcke"));
 		if (ha->xsrf_token) {
 			g_free(ha->xsrf_token);
+			ha->xsrf_token = NULL;
 		}
-		ha->xsrf_token = xsrf_token;
+
+		const gchar *signin_ui_type = json_object_get_string_member(obj, "qwAQke");
+		if (purple_strequal(signin_ui_type, "AccountsSignInUi")) {
+			purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+			_("Invalid response"));
+		} else {
+			gchar *xsrf_token = g_strdup(json_object_get_string_member(obj, "SMqcke"));
+			ha->xsrf_token = xsrf_token;
+		}
 	} else {
 		purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
 			_("Invalid response"));
@@ -416,7 +425,7 @@ googlechat_auth_refresh_xsrf_token_cb(PurpleHttpConnection *http_conn, PurpleHtt
 	googlechat_auth_finished_auth(ha);
 }
 
-void
+gboolean
 googlechat_auth_refresh_xsrf_token(GoogleChatAccount *ha)
 {
 	PurpleHttpRequest *request;
@@ -425,7 +434,7 @@ googlechat_auth_refresh_xsrf_token(GoogleChatAccount *ha)
 
 	pc = ha->pc;
 	if (!PURPLE_IS_CONNECTION(pc)) {
-		return;
+		return FALSE;
 	}
 
 	// from https://github.com/mautrix/googlechat/blob/master/maugclib/client.py
@@ -446,6 +455,8 @@ googlechat_auth_refresh_xsrf_token(GoogleChatAccount *ha)
 	purple_http_request_unref(request);
 	
 	g_string_free(url, TRUE);
+
+	return TRUE;
 }
 
 

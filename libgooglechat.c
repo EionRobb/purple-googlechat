@@ -429,6 +429,7 @@ googlechat_login(PurpleAccount *account)
 		googlechat_try_get_cookie_value("HSID");
 
 		googlechat_auth_refresh_xsrf_token(ha);
+		ha->refresh_token_timeout = g_timeout_add_seconds(86400, (GSourceFunc) googlechat_auth_refresh_xsrf_token, ha);
 	}
 	
 	purple_signal_connect(purple_blist_get_handle(), "blist-node-removed", account, PURPLE_CALLBACK(googlechat_blist_node_removed), NULL);

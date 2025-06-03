@@ -1,7 +1,10 @@
 name: Linux
 on:
-  - push
-  - pull_request
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+  pull_request:
 jobs:
   build:
     name: build
@@ -33,7 +36,7 @@ jobs:
             path: libgooglechat.so
 
       - name: release
-        if: ${{ !env.ACT }}
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master' && !env.ACT
         uses: ncipollo/release-action@v1
         with:
           artifacts: libgooglechat.so
@@ -43,7 +46,7 @@ jobs:
           makeLatest: true
 
       - name: attest
-        if: ${{ !env.ACT }}
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master' && !env.ACT
         uses: actions/attest-build-provenance@v1
         with:
           subject-path: libgooglechat.so

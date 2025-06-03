@@ -88,7 +88,7 @@ googlechat_add_account_options(GList *account_options)
 	option = purple_account_option_bool_new(N_("Fetch image history when opening group chats"), "fetch_image_history", TRUE);
 	account_options = g_list_append(account_options, option);
 
-	option = purple_account_option_string_new(N_("COMPASS Cookie"), "COMPASS_token", NULL);
+	option = purple_account_option_string_new(N_("See https://github.com/EionRobb/purple-googlechat#Authentication \nfor info on how to set this up\n\nCOMPASS Cookie"), "COMPASS_token", NULL);
 	account_options = g_list_append(account_options, option);
 
 	option = purple_account_option_string_new(N_("SSID Cookie"), "SSID_token", NULL);
@@ -320,24 +320,6 @@ PurpleConnection *pc
 	return m;
 }
 
-static void
-googlechat_authcode_input_cb(gpointer user_data, const gchar *auth_code)
-{
-	GoogleChatAccount *ha = user_data;
-	PurpleConnection *pc = ha->pc;
-
-	purple_connection_update_progress(pc, _("Authenticating"), 1, 3);
-	googlechat_oauth_with_code(ha, auth_code);
-}
-
-static void
-googlechat_authcode_input_cancel_cb(gpointer user_data)
-{
-	GoogleChatAccount *ha = user_data;
-	purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_AUTHENTICATION_IMPOSSIBLE, 
-		_("User cancelled authorization"));
-}
-
 static gulong chat_conversation_typing_signal = 0;
 
 #if !PURPLE_VERSION_CHECK(3, 0, 0)
@@ -398,22 +380,14 @@ googlechat_login(PurpleAccount *account)
 	googlechat_cache_ssl_certs(ha);
 	
 	if (password && *password) {
+		// Use legacy token auth
+
 		ha->refresh_token = g_strdup(password);
 		purple_connection_update_progress(pc, _("Authenticating"), 1, 3);
 		googlechat_oauth_refresh_token(ha);
 	} else {
-		//TODO remove this as it doesn't work
-		(void) googlechat_authcode_input_cb;
-		(void) googlechat_authcode_input_cancel_cb;
-		/*
-		purple_notify_uri(pc, "https://www.youtube.com/watch?v=hlDhp-eNLMU");
-		purple_request_input(pc, _("Authorization Code"), "https://www.youtube.com/watch?v=hlDhp-eNLMU",
-			_ ("Please follow the YouTube video to get the OAuth code"),
-			_ ("and then paste the Google OAuth code here"), FALSE, FALSE, NULL, 
-			_("OK"), G_CALLBACK(googlechat_authcode_input_cb), 
-			_("Cancel"), G_CALLBACK(googlechat_authcode_input_cancel_cb), 
-			purple_request_cpar_from_connection(pc), ha);
-		*/
+		// Use cookie-based authentication
+
 #define googlechat_try_get_cookie_value(cookie_name) \
 		if (purple_account_get_string(account, cookie_name "_token", NULL) != NULL) { \
 			purple_http_cookie_jar_set(ha->cookie_jar, cookie_name, purple_account_get_string(account, cookie_name "_token", NULL)); \

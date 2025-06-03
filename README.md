@@ -55,5 +55,10 @@ account <account id> set OSID_token <value>
 account <account id> set HSID_token <value>
 ```
 
+## Spectrum2 ##
+Set the password on the account manually in the format
+`COMPASS=<value>&SSID=<value>&SID=<value>&OSID=<value>&HSID=<value>`
+(making sure *not* to encode `=` in the value as `%3D`)
+
 ## Like this plugin? ##
 Say "Thanks" by [buying me a coffee](https://buymeacoffee.com/eionrobb)

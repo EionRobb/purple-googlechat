@@ -379,28 +379,66 @@ googlechat_login(PurpleAccount *account)
 	// Cache intermediate certificates
 	googlechat_cache_ssl_certs(ha);
 	
-	if (password && *password) {
+	if (password && *password && password[0] == '1' && password[1] == '/') {
 		// Use legacy token auth
+		// which starts with "1/"
 
 		ha->refresh_token = g_strdup(password);
 		purple_connection_update_progress(pc, _("Authenticating"), 1, 3);
 		googlechat_oauth_refresh_token(ha);
 	} else {
 		// Use cookie-based authentication
+		if (password && *password) {
+			// Expect password in key=value&key2=value2 format
+			// Only accept these cookie names
+			const gchar *required_cookies[] = { "COMPASS", "SSID", "SID", "OSID", "HSID", NULL };
+			gboolean cookie_found[5] = { FALSE, FALSE, FALSE, FALSE, FALSE };
+			gchar **cookies = g_strsplit(password, "&", -1);
+			gchar **cookie_pair;
+			gchar *cookie_name, *cookie_value;
+			gint i, j;
+			for (i = 0; cookies[i] != NULL; i++) {
+				cookie_pair = g_strsplit(cookies[i], "=", 2);
+				if (cookie_pair[0] && cookie_pair[1]) {
+					cookie_name = g_strstrip(cookie_pair[0]);
+					cookie_value = g_strstrip(cookie_pair[1]);
+					for (j = 0; required_cookies[j] != NULL; j++) {
+						if (g_strcmp0(cookie_name, required_cookies[j]) == 0) {
+							purple_http_cookie_jar_set(ha->cookie_jar, cookie_name, cookie_value);
+							cookie_found[j] = TRUE;
+							break;
+						}
+					}
+				}
+				g_strfreev(cookie_pair);
+			}
+			g_strfreev(cookies);
 
+			// Check that all required cookies are set
+			for (j = 0; required_cookies[j] != NULL; j++) {
+				if (!cookie_found[j]) {
+					purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_AUTHENTICATION_IMPOSSIBLE,
+						g_strdup_printf(N_("Cookie %s is required"), required_cookies[j]));
+					return;
+				}
+			}
+
+		} else {
+			// Pull cookies from account settings
 #define googlechat_try_get_cookie_value(cookie_name) \
-		if (purple_account_get_string(account, cookie_name "_token", NULL) != NULL) { \
-			purple_http_cookie_jar_set(ha->cookie_jar, cookie_name, purple_account_get_string(account, cookie_name "_token", NULL)); \
-		} else { \
-			purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_AUTHENTICATION_IMPOSSIBLE, N_("Cookie " cookie_name " is required")); \
-			return; \
-		}
+			if (purple_account_get_string(account, cookie_name "_token", NULL) != NULL) { \
+				purple_http_cookie_jar_set(ha->cookie_jar, cookie_name, purple_account_get_string(account, cookie_name "_token", NULL)); \
+			} else { \
+				purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_AUTHENTICATION_IMPOSSIBLE, N_("Cookie " cookie_name " is required")); \
+				return; \
+			}
 
-		googlechat_try_get_cookie_value("COMPASS");
-		googlechat_try_get_cookie_value("SSID");
-		googlechat_try_get_cookie_value("SID");
-		googlechat_try_get_cookie_value("OSID");
-		googlechat_try_get_cookie_value("HSID");
+			googlechat_try_get_cookie_value("COMPASS");
+			googlechat_try_get_cookie_value("SSID");
+			googlechat_try_get_cookie_value("SID");
+			googlechat_try_get_cookie_value("OSID");
+			googlechat_try_get_cookie_value("HSID");
+		}
 
 		googlechat_auth_refresh_xsrf_token(ha);
 		ha->refresh_token_timeout = g_timeout_add_seconds(86400, (GSourceFunc) googlechat_auth_refresh_xsrf_token, ha);

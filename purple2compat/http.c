@@ -262,31 +262,31 @@ static void
 purple_http_connection_set_remove(PurpleHttpConnectionSet *set,
 	PurpleHttpConnection *http_conn);
 
-static GRegex *purple_http_re_url, *purple_http_re_url_host,
-	*purple_http_re_rfc1123;
+static GRegex *purple_http_re_url = NULL, *purple_http_re_url_host = NULL,
+	*purple_http_re_rfc1123 = NULL;
 
 /*
  * Values: pointers to running PurpleHttpConnection.
  */
-static GList *purple_http_hc_list;
+static GList *purple_http_hc_list = NULL;
 
 /*
  * Keys: pointers to PurpleConnection.
  * Values: GList of pointers to running PurpleHttpConnection.
  */
-static GHashTable *purple_http_hc_by_gc;
+static GHashTable *purple_http_hc_by_gc = NULL;
 
 /*
  * Keys: pointers to PurpleConnection.
  * Values: gboolean TRUE.
  */
-static GHashTable *purple_http_cancelling_gc;
+static GHashTable *purple_http_cancelling_gc = NULL;
 
 /*
  * Keys: pointers to PurpleHttpConnection.
  * Values: pointers to links in purple_http_hc_list.
  */
-static GHashTable *purple_http_hc_by_ptr;
+static GHashTable *purple_http_hc_by_ptr = NULL;
 
 /*** Helper functions *********************************************************/
 
@@ -338,7 +338,7 @@ static time_t purple_http_rfc1123_to_time(const gchar *str)
 		g_free(iso_date);
 		return 0;
 	}
-	
+
 	g_free(d_month);
 
 	t = purple_str_to_time(iso_date, TRUE, NULL, NULL, NULL);
@@ -583,7 +583,7 @@ static void purple_http_headers_add(PurpleHttpHeaders *hdrs, const gchar *key,
 static void purple_http_headers_remove(PurpleHttpHeaders *hdrs,
 	const gchar *key)
 {
-	GList *it, *curr;
+	GList *it;
 
 	g_return_if_fail(hdrs != NULL);
 	g_return_if_fail(key != NULL);
@@ -595,7 +595,7 @@ static void purple_http_headers_remove(PurpleHttpHeaders *hdrs,
 	it = g_list_first(hdrs->list);
 	while (it) {
 		PurpleKeyValuePair *kvp = it->data;
-		curr = it;
+		GList *curr = it;
 		it = g_list_next(it);
 		if (g_ascii_strcasecmp(kvp->key, key) != 0)
 			continue;
@@ -746,7 +746,7 @@ static void _purple_http_gen_headers(PurpleHttpConnection *hc)
 
 	PurpleProxyInfo *proxy;
 	gboolean proxy_http = FALSE;
-	const gchar *proxy_username, *proxy_password;
+	const gchar *proxy_username;
 
 	g_return_if_fail(hc != NULL);
 
@@ -761,7 +761,7 @@ static void _purple_http_gen_headers(PurpleHttpConnection *hc)
 
 	proxy_http = (purple_proxy_info_get_proxy_type(proxy) == PURPLE_PROXY_HTTP ||
 		purple_proxy_info_get_proxy_type(proxy) == PURPLE_PROXY_USE_ENVVAR);
-	/* this is HTTP proxy, but used with tunelling with CONNECT */
+	/* this is HTTP proxy, but used with tunneling with CONNECT */
 	if (proxy_http && url->port != 80)
 		proxy_http = FALSE;
 
@@ -806,6 +806,7 @@ static void _purple_http_gen_headers(PurpleHttpConnection *hc)
 
 	proxy_username = purple_proxy_info_get_username(proxy);
 	if (proxy_http && proxy_username != NULL && proxy_username[0] != '\0') {
+		const gchar *proxy_password;
 		gchar *proxy_auth, *ntlm_type1, *tmp;
 		int len;
 
@@ -893,7 +894,7 @@ static gboolean _purple_http_recv_headers(PurpleHttpConnection *hc,
 				} else {
 					purple_debug_warning("http", "Got empty"
 						" line at the beginning - this "
-						"may be a HTTP server quirk\n");
+						"may be an HTTP server quirk\n");
 				}
 			} else /* hc->main_header_got */ {
 				hc->headers_got = TRUE;
@@ -1271,6 +1272,7 @@ static gboolean _purple_http_recv_loopbody(PurpleHttpConnection *hc, gint fd)
 			hc->request->max_redirects > hc->redirects_count))
 		{
 			PurpleHttpURL *url = purple_http_url_parse(redirect);
+			PurpleHttpRequest *req = hc->request;
 
 			hc->redirects_count++;
 
@@ -1289,6 +1291,9 @@ static gboolean _purple_http_recv_loopbody(PurpleHttpConnection *hc, gint fd)
 			purple_http_url_relative(hc->url, url);
 			purple_http_url_free(url);
 
+			purple_http_request_set_method(req, "GET");
+			purple_http_request_set_contents(req, NULL, 0);
+	
 			_purple_http_reconnect(hc);
 			return FALSE;
 		}
@@ -1342,6 +1347,8 @@ static void _purple_http_send(gpointer _hc, gint fd, PurpleInputCondition cond)
 	int written, write_len;
 	const gchar *write_from;
 	gboolean writing_headers;
+	
+	g_return_if_fail(hc->socket);
 
 	/* Waiting for data. This could be written more efficiently, by removing
 	 * (and later, adding) hs->inpa. */
@@ -1447,7 +1454,7 @@ static void _purple_http_disconnect(PurpleHttpConnection *hc,
 	if (hc->response_buffer)
 		g_string_free(hc->response_buffer, TRUE);
 	hc->response_buffer = NULL;
-	
+
 	if (hc->gz_stream)
 		purple_http_gz_free(hc->gz_stream);
 	hc->gz_stream = NULL;
@@ -1492,13 +1499,13 @@ static gboolean _purple_http_reconnect(PurpleHttpConnection *hc)
 	_purple_http_disconnect(hc, TRUE);
 
 	if (purple_debug_is_verbose()) {
-		//if (purple_debug_is_unsafe()) {
+		if (purple_debug_is_unsafe()) {
 			gchar *urlp = purple_http_url_print(hc->url);
 			purple_debug_misc("http", "Connecting to %s...\n", urlp);
 			g_free(urlp);
-		//} else
-		//	purple_debug_misc("http", "Connecting to %s...\n",
-		//		hc->url->host);
+		} else
+			purple_debug_misc("http", "Connecting to %s...\n",
+				hc->url->host);
 	}
 
 	url = hc->url;
@@ -1623,12 +1630,12 @@ PurpleHttpConnection * purple_http_request(PurpleConnection *gc,
 
 	hc->url = purple_http_url_parse(request->url);
 
-	//if (purple_debug_is_unsafe())
+	if (purple_debug_is_unsafe())
 		purple_debug_misc("http", "Performing new request %p for %s.\n",
 			hc, request->url);
-	//else
-	//	purple_debug_misc("http", "Performing new request %p to %s.\n",
-	//		hc, hc->url ? hc->url->host : "(null)");
+	else
+		purple_debug_misc("http", "Performing new request %p to %s.\n",
+			hc, hc->url ? hc->url->host : "(null)");
 
 	if (!hc->url || hc->url->host == NULL || hc->url->host[0] == '\0') {
 		purple_debug_error("http", "Invalid URL requested.\n");
@@ -1702,14 +1709,15 @@ static void purple_http_connection_free(PurpleHttpConnection *hc)
 	if (hc->gc) {
 		GList *gc_list, *gc_list_new;
 		gc_list = g_hash_table_lookup(purple_http_hc_by_gc, hc->gc);
-		g_assert(gc_list != NULL);
-
-		gc_list_new = g_list_delete_link(gc_list, hc->link_gc);
-		if (gc_list != gc_list_new) {
-			g_hash_table_steal(purple_http_hc_by_gc, hc->gc);
-			if (gc_list_new)
-				g_hash_table_insert(purple_http_hc_by_gc,
-					hc->gc, gc_list_new);
+		
+		if(gc_list != NULL) {
+			gc_list_new = g_list_delete_link(gc_list, hc->link_gc);
+			if (gc_list != gc_list_new) {
+				g_hash_table_steal(purple_http_hc_by_gc, hc->gc);
+				if (gc_list_new)
+					g_hash_table_insert(purple_http_hc_by_gc,
+						hc->gc, gc_list_new);
+			}
 		}
 	}
 
@@ -2050,13 +2058,13 @@ void purple_http_cookie_jar_set(PurpleHttpCookieJar *cookie_jar,
 {
 	gchar *escaped_name = g_strdup(purple_url_encode(name));
 	gchar *escaped_value = NULL;
-	
+
 	if (value) {
 		escaped_value = g_strdup(purple_url_encode(value));
 	}
-	
+
 	purple_http_cookie_jar_set_ext(cookie_jar, escaped_name, escaped_value, -1);
-	
+
 	g_free(escaped_name);
 	g_free(escaped_value);
 }
@@ -2500,6 +2508,11 @@ static void purple_http_request_free(PurpleHttpRequest *request)
 	purple_http_headers_free(request->headers);
 	purple_http_cookie_jar_unref(request->cookie_jar);
 	purple_http_keepalive_pool_unref(request->keepalive_pool);
+	
+	request->headers = NULL;
+	request->cookie_jar = NULL;
+	request->keepalive_pool = NULL;
+	
 	g_free(request->method);
 	g_free(request->contents);
 	g_free(request->url);
@@ -2617,10 +2630,9 @@ purple_http_request_get_keepalive_pool(PurpleHttpRequest *request)
 }
 
 void purple_http_request_set_contents(PurpleHttpRequest *request,
-	const gchar *contents, int length)
+	const gchar *contents, gssize length)
 {
 	g_return_if_fail(request != NULL);
-	g_return_if_fail(length >= -1);
 
 	request->contents_reader = NULL;
 	request->contents_reader_data = NULL;
@@ -2634,16 +2646,22 @@ void purple_http_request_set_contents(PurpleHttpRequest *request,
 
 	if (length == -1)
 		length = strlen(contents);
-	request->contents = g_memdup(contents, length);
+	request->contents = g_memdup2(contents, length);
 	request->contents_length = length;
 }
 
+const gchar * purple_http_request_get_contents(PurpleHttpRequest *request)
+{
+	g_return_val_if_fail(request != NULL, NULL);
+
+	return request->contents;
+}
+
 void purple_http_request_set_contents_reader(PurpleHttpRequest *request,
-	PurpleHttpContentReader reader, int contents_length, gpointer user_data)
+	PurpleHttpContentReader reader, gsize contents_length, gpointer user_data)
 {
 	g_return_if_fail(request != NULL);
 	g_return_if_fail(reader != NULL);
-	g_return_if_fail(contents_length >= -1);
 
 	g_free(request->contents);
 	request->contents = NULL;

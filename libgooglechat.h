@@ -89,6 +89,7 @@ typedef struct {
 	gchar *client_id;
 	gchar *self_gaia_id;
 	gchar *self_phone;
+	gchar *xsrf_token;
 	
 	gint64 last_event_timestamp;
 	PurpleConversation *last_conversation_focused;

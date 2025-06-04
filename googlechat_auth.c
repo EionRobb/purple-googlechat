@@ -21,6 +21,7 @@
 #include <glib.h>
 #include <purple.h>
 
+#include "connection.h"
 #include "http.h"
 #include "googlechat_json.h"
 #include "googlechat_connection.h"
@@ -268,12 +269,37 @@ googlechat_oauth_with_code(GoogleChatAccount *ha, const gchar *auth_code)
 
 /*****************************************************************************/
 
+void
+googlechat_auth_finished_auth(GoogleChatAccount *ha)
+{
+	guint64 last_event_timestamp;
+
+	//Restore the last_event_timestamp before it gets overridden by new events
+	last_event_timestamp = purple_account_get_int(ha->account, "last_event_timestamp_high", 0);
+	if (last_event_timestamp != 0) {
+		last_event_timestamp = (last_event_timestamp << 32) | ((guint64) purple_account_get_int(ha->account, "last_event_timestamp_low", 0) & 0xFFFFFFFF);
+		ha->last_event_timestamp = last_event_timestamp;
+	}
+	
+	// SOUND THE TRUMPETS
+	//googlechat_fetch_channel_sid(ha);
+	googlechat_register_webchannel(ha);
+	purple_connection_set_state(ha->pc, PURPLE_CONNECTION_CONNECTED);
+	
+	//TODO trigger event instead
+	googlechat_get_self_user_status(ha);
+	googlechat_get_conversation_list(ha);
+	
+	if (ha->poll_buddy_status_timeout) {
+		g_source_remove(ha->poll_buddy_status_timeout);
+	}
+	ha->poll_buddy_status_timeout = g_timeout_add_seconds(120, googlechat_poll_buddy_status, ha);
+}
 
 void
 googlechat_auth_get_dynamite_token_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse *response, gpointer user_data)
 {
 	GoogleChatAccount *ha = user_data;
-	guint64 last_event_timestamp;
 	JsonObject *obj;
 	const gchar *raw_response;
 	gsize response_len;
@@ -296,26 +322,7 @@ googlechat_auth_get_dynamite_token_cb(PurpleHttpConnection *http_conn, PurpleHtt
 	g_free(ha->access_token);
 	ha->access_token = g_strdup(json_object_get_string_member(obj, "token"));
 	
-	//Restore the last_event_timestamp before it gets overridden by new events
-	last_event_timestamp = purple_account_get_int(ha->account, "last_event_timestamp_high", 0);
-	if (last_event_timestamp != 0) {
-		last_event_timestamp = (last_event_timestamp << 32) | ((guint64) purple_account_get_int(ha->account, "last_event_timestamp_low", 0) & 0xFFFFFFFF);
-		ha->last_event_timestamp = last_event_timestamp;
-	}
-	
-	// SOUND THE TRUMPETS
-	//googlechat_fetch_channel_sid(ha);
-	googlechat_register_webchannel(ha);
-	purple_connection_set_state(ha->pc, PURPLE_CONNECTION_CONNECTED);
-	
-	//TODO trigger event instead
-	googlechat_get_self_user_status(ha);
-	googlechat_get_conversation_list(ha);
-	
-	if (ha->poll_buddy_status_timeout) {
-		g_source_remove(ha->poll_buddy_status_timeout);
-	}
-	ha->poll_buddy_status_timeout = g_timeout_add_seconds(120, googlechat_poll_buddy_status, ha);
+	googlechat_auth_finished_auth(ha);
 	
 	gint expires_in = atoi(json_object_get_string_member(obj, "expiresIn"));
 	if (expires_in > 30) {
@@ -356,6 +363,100 @@ googlechat_auth_get_dynamite_token(GoogleChatAccount *ha)
 	g_string_free(postdata, TRUE);
 	
 	return FALSE;
+}
+
+static void
+googlechat_auth_refresh_xsrf_token_cb(PurpleHttpConnection *http_conn, PurpleHttpResponse *response, gpointer user_data)
+{
+	GoogleChatAccount *ha = user_data;
+	JsonObject *obj;
+	const gchar *raw_response;
+	gsize response_len;
+	const gchar *wiz_data_start, *wiz_data_end;
+	gchar *wiz_data;
+
+	if (!purple_http_response_is_successful(response)) {
+		purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+			purple_http_response_get_error(response));
+		return;
+	}
+
+	raw_response = purple_http_response_get_data(response, &response_len);
+
+	wiz_data_start = strstr(raw_response, ">window.WIZ_global_data = ");
+	if (wiz_data_start == NULL) {
+		purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+			_("Invalid response"));
+		return;
+	}
+	wiz_data_start += 25; // length of ">window.WIZ_global_data = "
+	wiz_data_end = strstr(wiz_data_start, ";</script>");
+	if (wiz_data_end == NULL || wiz_data_end > raw_response + response_len) {
+		purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+			_("Invalid response"));
+		return;
+	}
+	wiz_data = g_strndup(wiz_data_start, wiz_data_end - wiz_data_start);
+
+	obj = json_decode_object(wiz_data, -1);
+
+	if (obj) {
+		if (ha->xsrf_token) {
+			g_free(ha->xsrf_token);
+			ha->xsrf_token = NULL;
+		}
+
+		const gchar *signin_ui_type = json_object_get_string_member(obj, "qwAQke");
+		if (purple_strequal(signin_ui_type, "AccountsSignInUi")) {
+			purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+			_("Invalid response"));
+		} else {
+			gchar *xsrf_token = g_strdup(json_object_get_string_member(obj, "SMqcke"));
+			ha->xsrf_token = xsrf_token;
+		}
+	} else {
+		purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+			_("Invalid response"));
+	}
+
+	json_object_unref(obj);
+	g_free(wiz_data);
+
+	googlechat_auth_finished_auth(ha);
+}
+
+gboolean
+googlechat_auth_refresh_xsrf_token(GoogleChatAccount *ha)
+{
+	PurpleHttpRequest *request;
+	PurpleConnection *pc;
+	GString *url;
+
+	pc = ha->pc;
+	if (!PURPLE_IS_CONNECTION(pc)) {
+		return FALSE;
+	}
+
+	// from https://github.com/mautrix/googlechat/blob/master/maugclib/client.py
+	url = g_string_new("https://chat.google.com/mole/world?");
+	g_string_append_printf(url, "origin=%s&", purple_url_encode("https://mail.google.com"));
+	g_string_append_printf(url, "shell=%s&", purple_url_encode("9"));
+	g_string_append_printf(url, "hl=%s&", purple_url_encode("en"));
+	g_string_append_printf(url, "wfi=%s&", purple_url_encode("gtn-roster-iframe-id"));
+	g_string_append_printf(url, "hs=%s&", purple_url_encode("[\"h_hs\",null,null,[1,0],null,null,\"gmail.pinto-server_20230730.06_p0\",1,null,[15,38,36,35,26,30,41,18,24,11,21,14,6],null,null,\"3Mu86PSulM4.en..es5\",0,null,null,[0]]"));
+
+	request = purple_http_request_new(url->str);
+	purple_http_request_set_cookie_jar(request, ha->cookie_jar);
+	purple_http_request_set_method(request, "GET");
+	purple_http_request_header_set(request, "Referer", "https://mail.google.com/");
+	purple_http_request_header_set_printf(request, "User-Agent", GOOGLECHAT_USER_AGENT);
+
+	purple_http_request(pc, request, googlechat_auth_refresh_xsrf_token_cb, ha);
+	purple_http_request_unref(request);
+	
+	g_string_free(url, TRUE);
+
+	return TRUE;
 }
 
 

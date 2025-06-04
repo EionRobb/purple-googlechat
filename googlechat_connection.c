@@ -23,7 +23,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#ifdef _WIN32
+#include "win32/win32dep.h"
+#else
 #include <unistd.h>
+#endif
 
 #include <purple.h>
 
@@ -201,7 +205,14 @@ googlechat_process_channel_buffer(GoogleChatAccount *ha)
 static void
 googlechat_set_auth_headers(GoogleChatAccount *ha, PurpleHttpRequest *request)
 {
-	purple_http_request_header_set_printf(request, "Authorization", "Bearer %s", ha->access_token);
+	if (ha->access_token) {
+		purple_http_request_header_set_printf(request, "Authorization", "Bearer %s", ha->access_token);
+	} else {
+		purple_http_request_header_set_printf(request, "User-Agent", GOOGLECHAT_USER_AGENT);
+		if (ha->xsrf_token) {
+			purple_http_request_header_set(request, "X-Framework-XSRF-Token", ha->xsrf_token);
+		}
+	}
 	
 	const gchar *request_url = purple_http_request_get_url(request);
 	if (g_str_has_prefix(request_url, "https://chat.google.com/webchannel/") && ha->csessionid_param) {

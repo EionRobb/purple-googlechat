@@ -2219,6 +2219,18 @@ message WorldSection {
 	optional WorldSectionType world_section_type = 1;
 }
 
+message GroupLabelId {
+	enum GroupLabelType {
+		LABEL_TYPE_UNSPECIFIED = 0;
+		PINNED = 1;
+		APP_SHORTCUT = 2;
+		MUTED = 3;
+		CUSTOM_SECTION = 4;
+	}
+	optional GroupLabelType group_label_type = 1;
+	optional string label_secondary_key = 2;
+}
+
 message WorldFilter {
 	enum StarredState {
 		STARRED_STATE_UNSPECIFIED = 0;
@@ -2272,6 +2284,25 @@ message WorldFilter {
 		ROOM = 2;
 	}
 	optional GroupType group_type = 6;
+
+	enum ActivityFeedState {
+		ACTIVITY_FEED_STATE_UNSPECIFIED = 0;
+		ACTIVITY_FEED = 1;
+		NON_ACTIVITY_FEED = 2;
+	}
+	optional ActivityFeedState activity_feed_state = 10;
+
+	//repeated enum shortcut_types = 11;
+	enum MuteState {
+		MUTE_STATE_UNSPECIFIED = 0;
+		UNMUTED = 1;
+		MUTED = 2;
+	}
+	optional MuteState mute_state = 12;
+
+	repeated GroupLabelId include_group_label_id = 15;
+	repeated GroupLabelId exclude_group_label_id = 16;
+	optional bool exclude_all = 17;
 }
 
 message NameUsers {
@@ -2324,13 +2355,80 @@ message WorldItemLite {
 	}
 	optional ThreadedGroup threaded_group = 15;
 	optional string avatar_url = 16;
-	//repeated ?? space_integration_payloads = 17;
+	//repeated SpaceIntegrationPayload space_integration_payloads = 17;
 	//optional GroupIntegrationSettings group_integration_settings = 22;
 	// optional AvatarInfo avatar_info = 18;
 	optional SharedAttributeCheckerGroupType attribute_checker_group_type = 19;
 	optional GroupSupportLevel group_support_level = 23;
 	optional GroupUnsupportedReason group_unsupported_reason = 24;
-	// optional ?? group_policies = 26;
+	// optional GroupPolicies group_policies = 26;
+
+	optional bool inline_threading_enabled = 27;
+	repeated int32 active_backend_group_experiments_for_logging = 28;
+	optional bool dm_created_by_admin = 29;
+	// optional SegmentedMembershipCounts segmented_membership_counts = 30;
+	// repeated UserProfile user_profile_list = 32;
+	// optional LTRMigrationStatus ltr_migration_status = 33;
+}
+
+message TopicLabelId {
+	enum TopicLabelType {
+		LABEL_TYPE_UNSPECIFIED = 0;
+		THREAD_FOLLOWED = 1;
+	}
+	optional TopicLabelType topic_label_type = 1;
+	optional string label_secondary_key = 2;
+}
+
+message WorldTopicFilter {
+	enum TopicReadState {
+		TOPIC_READ_STATE_UNSPECIFIED = 0;
+		TOPIC_UNREAD = 1;
+	}
+	optional TopicReadState topic_read_state = 1;
+	repeated TopicLabelId include_topic_label_id = 2;
+	repeated TopicLabelId exclude_topic_label_id = 3;
+}
+
+message ListMessagesOption {
+	optional int32 reply_page_size = 1;
+}
+
+message GetGroupOption {
+	optional bool fetch_groups = 1;
+}
+
+message WorldTopicOption {
+	optional ListMessagesOption list_messages_option = 1;
+	optional GetGroupOption get_group_option = 2;
+}
+
+// ComGoogleAppsDynamiteV1SharedSortKey
+enum SortKey {
+	SORT_KEY_UNSPECIFIED = 0;
+	SORT_BY_SORT_TIME_DESC = 1;
+	SORT_BY_RELEVANCE_SCORE = 2;
+}
+
+// ComGoogleAppsDynamiteV1SharedSort
+message Sort {
+	optional SortKey sort_key = 1;
+	optional string sort_value = 2;
+}
+
+enum SectionType {
+	UNSET = 0;
+	HOME = 1;
+}
+
+message Section {
+	optional SectionType section_type = 1;
+}
+
+enum SortingOrder {
+	SORTING_ORDER_UNSPECIFIED = 0;
+	MAX_SORT_TIME_READ_TIME = 1;
+	DEFAULT_SORT = 2;
 }
 
 message WorldSectionRequest {
@@ -2340,9 +2438,16 @@ message WorldSectionRequest {
 	optional int32 num_world_items_with_snippet = 5;
 	optional int64 anchor_sort_timestamp_micros = 3;
 	//oneof Pagination {
-	optional	string pagination_token = 6;
-		// SortingOrder sorting_order = 7;
+		optional string pagination_token = 6;
+		optional SortingOrder sorting_order = 7;
 	//}
+	optional WorldTopicFilter world_topic_filter = 9;
+	optional WorldTopicOption world_topic_option = 10;
+	optional Sort sort = 11;
+	//optional ProcessingOption processing_option = 12;
+	optional bool fetch_roster_sections = 13;
+	optional SectionType section_type = 14;
+	optional Section section = 15;
 }
 
 message WorldSectionResponse {
@@ -2364,11 +2469,13 @@ message PaginatedWorldRequest {
 		FETCH_BOTS_IN_HUMAN_DM = 2;
 		FETCH_SPACE_INTEGRATION_PAYLOADS = 3;
 		FETCH_GROUPS_D3_POLICIES = 4;
+		FETCH_USER_PROFILES_FOR_GROUP_NAMING = 5;
 	}
 	repeated FetchOptions fetch_options = 4;
 	optional bool fetch_from_user_spaces = 5;
 	optional bool receive_world_update_notifications = 6;
 	optional bool fetch_snippets_for_unnamed_rooms = 7;
+	optional bool fetch_blocked_users = 8;
 }
 
 message PaginatedWorldResponse {

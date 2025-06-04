@@ -1074,6 +1074,8 @@ void
 googlechat_get_conversation_list(GoogleChatAccount *ha)
 {
 	PaginatedWorldRequest request;
+	WorldSectionRequest section_request;
+	WorldSectionRequest *section_requests;
 	paginated_world_request__init(&request);
 	
 	request.request_header = googlechat_get_request_header(ha);
@@ -1081,6 +1083,13 @@ googlechat_get_conversation_list(GoogleChatAccount *ha)
 	request.fetch_from_user_spaces = TRUE;
 	request.has_fetch_snippets_for_unnamed_rooms = TRUE;
 	request.fetch_snippets_for_unnamed_rooms = TRUE;
+
+	world_section_request__init(&section_request);
+	section_request.has_page_size = TRUE;
+	section_request.page_size = 999;
+	request.n_world_section_requests = 1;
+	section_requests = &section_request;
+	request.world_section_requests = &section_requests;
 	
 	googlechat_api_paginated_world(ha, &request, googlechat_got_conversation_list, NULL);
 	
@@ -2513,6 +2522,8 @@ googlechat_roomlist_get_list(PurpleConnection *pc)
 	{
 		//Stolen from googlechat_get_conversation_list()
 		PaginatedWorldRequest request;
+		WorldSectionRequest section_request;
+		WorldSectionRequest *section_requests;
 		paginated_world_request__init(&request);
 		
 		request.request_header = googlechat_get_request_header(ha);
@@ -2520,6 +2531,13 @@ googlechat_roomlist_get_list(PurpleConnection *pc)
 		request.fetch_from_user_spaces = TRUE;
 		request.has_fetch_snippets_for_unnamed_rooms = TRUE;
 		request.fetch_snippets_for_unnamed_rooms = TRUE;
+
+		world_section_request__init(&section_request);
+		section_request.has_page_size = TRUE;
+		section_request.page_size = 999;
+		request.n_world_section_requests = 1;
+		section_requests = &section_request;
+		request.world_section_requests = &section_requests;
 		
 		googlechat_api_paginated_world(ha, &request, googlechat_roomlist_got_list, roomlist);
 		

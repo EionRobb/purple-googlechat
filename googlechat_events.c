@@ -334,7 +334,8 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 	const gchar *conv_id;
 	const gchar *sender_id;
 	
-	if (event->type != EVENT__EVENT_TYPE__MESSAGE_POSTED) {
+	if (event->type != EVENT__EVENT_TYPE__MESSAGE_POSTED && 
+		event->type != EVENT__EVENT_TYPE__MESSAGE_UPDATED) {
 		return;
 	}
 	message_event = event->body->message_posted;
@@ -361,6 +362,7 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 	
 	
 	time_t message_timestamp = (message->create_time / 1000000) - ha->server_time_offset;
+	// TODO should this be message->last_update_time?
 	PurpleMessageFlags msg_flags = (g_strcmp0(sender_id, ha->self_gaia_id) ? PURPLE_MESSAGE_RECV : (PURPLE_MESSAGE_SEND | PURPLE_MESSAGE_REMOTE_SEND | PURPLE_MESSAGE_DELAYED));
 	if (((message->create_time / 1000000) - time(NULL) - ha->server_time_offset) > 120) {
 		msg_flags |= PURPLE_MESSAGE_DELAYED;
@@ -382,7 +384,7 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 		msg = purple_markup_escape_text(message->text_body, -1);
 		
 	} else {
-		GString *msg_out = g_string_new(NULL);
+		GString *msg_out = g_string_new(event->type == EVENT__EVENT_TYPE__MESSAGE_UPDATED ? _("Edit: ") : NULL);
 		const gchar *current_char = message->text_body;
 		gunichar c;
 		gint32 pos = 0;
@@ -407,9 +409,12 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 							if (url_metadata && url_metadata->url && url_metadata->url->url) {
 								gchar *escaped = g_markup_escape_text(url_metadata->url->url, -1);
 								g_string_append_printf(msg_out, "<A HREF=\"%s\">", escaped);
+								// TODO this is likely a tenor gif, so we should download it
+								if (annotation->length == 0 && url_metadata->has_should_not_render && url_metadata->should_not_render == FALSE) {
+									g_string_append(msg_out, escaped);
+								}
 								g_free(escaped);
 							}
-							
 						} else {
 							g_string_append(msg_out, googlechat_format_type_to_string(format_type, FALSE));
 						}

@@ -324,12 +324,15 @@ googlechat_auth_get_dynamite_token_cb(PurpleHttpConnection *http_conn, PurpleHtt
 	
 	googlechat_auth_finished_auth(ha);
 	
-	gint expires_in = atoi(json_object_get_string_member(obj, "expiresIn"));
-	if (expires_in > 30) {
-		if (ha->dynamite_token_timeout) {
-			g_source_remove(ha->dynamite_token_timeout);
+	const gchar *expiresIn = json_object_get_string_member(obj, "expiresIn");
+	if (expiresIn && *expiresIn) {
+		gint expires_in = atoi(expiresIn);
+		if (expires_in > 30) {
+			if (ha->dynamite_token_timeout) {
+				g_source_remove(ha->dynamite_token_timeout);
+			}
+			ha->dynamite_token_timeout = g_timeout_add_seconds(expires_in - 30, (GSourceFunc) googlechat_auth_get_dynamite_token, ha);
 		}
-		ha->dynamite_token_timeout = g_timeout_add_seconds(expires_in - 30, (GSourceFunc) googlechat_auth_get_dynamite_token, ha);
 	}
 }
 

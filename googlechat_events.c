@@ -582,8 +582,7 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 			g_string_append_printf(image_url_str, "attachment_token=%s&", purple_url_encode(attachment_token));
 			
 			// this url redirects to the actual url
-			url = image_url = image_url_str->str;
-			g_string_free(image_url_str, FALSE);
+			url = image_url = g_string_free(image_url_str, FALSE);
 		}
 		
 		if (annotation->drive_metadata) {
@@ -602,17 +601,14 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 				g_string_append(image_url_str, purple_url_encode(drive_id));
 				
 				// the preview
-				url = image_url = image_url_str->str;
+				url = image_url = g_string_free(image_url_str, FALSE);
 
 				GString *drive_url_str = g_string_new(NULL);
 				g_string_append(drive_url_str, "https://drive.google.com/open?id=");
 				g_string_append(drive_url_str, purple_url_encode(drive_id));
 
 				// the link
-				drive_url = drive_url_str->str;
-
-				g_string_free(image_url_str, FALSE);
-				g_string_free(drive_url_str, FALSE);
+				drive_url = g_string_free(drive_url_str, FALSE);
 			}
 		}
 		

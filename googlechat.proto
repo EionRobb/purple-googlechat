@@ -153,6 +153,34 @@ message ClientFeatureCapabilities {
 	optional CapabilityLevel spam_room_invites_level = 5;
 	optional CapabilityLevel tombstone_level = 6;
 	optional CapabilityLevel rich_text_viewing_level = 7;
+	optional CapabilityLevel threaded_spaces_level = 8;
+	optional CapabilityLevel flat_named_room_topic_ordering_by_creation_time_level = 9;
+	optional CapabilityLevel target_audience_level = 10;
+	optional CapabilityLevel group_scoped_capabilities_level = 11;
+	optional CapabilityLevel activity_feed_level = 12;
+	optional CapabilityLevel roster_as_member_support_level = 16;
+	optional CapabilityLevel tombstone_in_dms_and_ufrs_level = 17;
+	optional CapabilityLevel quoted_message_support_level = 18;
+	optional CapabilityLevel render_announcement_spaces_level = 19;
+	optional CapabilityLevel dark_launch_space_support = 20;
+	optional CapabilityLevel avoid_http_400_error_support_level = 21;
+	optional CapabilityLevel custom_hyperlink_level = 22;
+	optional CapabilityLevel snippets_for_named_rooms = 23;
+	optional CapabilityLevel can_add_continuous_direct_add_groups = 24;
+	optional CapabilityLevel drive_smart_chip_level = 25;
+	optional CapabilityLevel gsuite_integration_in_native_renderer_level = 26;
+	optional CapabilityLevel mentions_shortcut_level = 27;
+	optional CapabilityLevel starred_shortcut_level = 28;
+	optional CapabilityLevel search_snippet_and_keyword_highlight_level = 29;
+	optional CapabilityLevel app_section_level = 30;
+	optional CapabilityLevel create_thread_on_message_send_level = 31;
+	optional CapabilityLevel can_handle_batch_reaction_update = 32;
+	optional CapabilityLevel longer_group_snippets_level = 33;
+	optional CapabilityLevel muting_groups_level = 34;
+	optional CapabilityLevel muting_write_level = 35;
+	optional CapabilityLevel add_existing_members_level = 36;
+	optional CapabilityLevel request_to_join_level = 37;
+	optional CapabilityLevel threads_in_home_level = 38;
 }
 
 message RequestHeader {
@@ -1580,6 +1608,8 @@ message ClientInfo {
 	optional Platform platform = 1;
 	optional EventOrigin origin = 2;
 	optional string source_machine = 3;
+	optional ClientFeatureCapabilities client_feature_capabilities = 4;
+	optional string language_code = 5;
 }
 
 message ClientNotificationsState {

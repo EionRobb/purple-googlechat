@@ -634,7 +634,13 @@ googlechat_got_group_info(GoogleChatAccount *ha, GetGroupResponse *response, gpo
 	
 	for (i = 0; i < response->n_memberships; i++) {
 		Membership *membership = memberships[i];
-		const gchar *user_id = membership->id->member_id->user_id->id;
+		if (membership->membership_role == MEMBERSHIP_ROLE__ROLE_UNKNOWN) {
+			// Ignore memberships that are not set
+			continue;
+		}
+		const gchar *user_id = membership->id->member_id->user_id ?
+			membership->id->member_id->user_id->id :
+			membership->id->group_id->space_id->space_id;
 		PurpleChatUserFlags cbflags = PURPLE_CHAT_USER_NONE;
 		
 		if (membership->membership_role == MEMBERSHIP_ROLE__ROLE_OWNER) {

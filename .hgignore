@@ -1,5 +1,0 @@
-syntax: glob
-*.so
-*.dll
-hangouts.pb-c.*
-

@@ -417,6 +417,12 @@ googlechat_auth_refresh_xsrf_token_cb(PurpleHttpConnection *http_conn, PurpleHtt
 			gchar *xsrf_token = g_strdup(json_object_get_string_member(obj, "SMqcke"));
 			ha->xsrf_token = xsrf_token;
 		}
+
+		const gchar *sapisid_cookie = json_object_get_string_member(obj, "WZsZ1e");
+		if (sapisid_cookie && *sapisid_cookie) {
+			// set the sapisid cookie
+			purple_http_cookie_jar_set(ha->cookie_jar, "SAPISID", sapisid_cookie);
+		}
 	} else {
 		purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
 			_("Invalid response"));

@@ -18,6 +18,10 @@
 
 
 #include "googlechat_connection.h"
+#include "glib.h"
+#include "http.h"
+#include "libgooglechat.h"
+#include "purple2compat/http.h"
 
 
 #include <stdlib.h>
@@ -813,11 +817,10 @@ googlechat_search_users_text_cb(PurpleHttpConnection *connection, PurpleHttpResp
 	GoogleChatAccount *ha = user_data;
 	const gchar *response_data;
 	size_t response_size;
-	JsonArray *resultsarray;
+	JsonArray *matches;
 	JsonObject *node;
 	gint index, length;
 	gchar *search_term;
-	JsonObject *status;
 	
 	PurpleNotifySearchResults *results;
 	PurpleNotifySearchColumn *column;
@@ -832,21 +835,13 @@ googlechat_search_users_text_cb(PurpleHttpConnection *connection, PurpleHttpResp
 	node = json_decode_object(response_data, response_size);
 	
 	search_term = g_dataset_get_data(connection, "search_term");
-	resultsarray = json_object_get_array_member(node, "results");
-	length = json_array_get_length(resultsarray);
+	matches = json_object_get_array_member(node, "matches");
+	length = matches != NULL ? json_array_get_length(matches) : 0;
 	
 	if (length == 0) {
-		status = json_object_get_object_member(node, "status");
-		
-		if (!json_object_has_member(status, "personalResultsNotReady") || json_object_get_boolean_member(status, "personalResultsNotReady") == TRUE) {
-			//Not ready yet, retry
-			googlechat_search_users_text(ha, search_term);
-			
-		} else {		
-			gchar *primary_text = g_strdup_printf(_("Your search for the user \"%s\" returned no results"), search_term);
-			purple_notify_warning(ha->pc, _("No users found"), primary_text, "", purple_request_cpar_from_connection(ha->pc));
-			g_free(primary_text);
-		}
+		gchar *primary_text = g_strdup_printf(_("Your search for the user \"%s\" returned no results"), search_term);
+		purple_notify_warning(ha->pc, _("No users found"), primary_text, "", purple_request_cpar_from_connection(ha->pc));
+		g_free(primary_text);
 		
 		g_dataset_destroy(connection);
 		json_object_unref(node);
@@ -866,6 +861,8 @@ googlechat_search_users_text_cb(PurpleHttpConnection *connection, PurpleHttpResp
 	purple_notify_searchresults_column_add(results, column);
 	column = purple_notify_searchresults_column_new(_("Display Name"));
 	purple_notify_searchresults_column_add(results, column);
+	column = purple_notify_searchresults_column_new(_("Email"));
+	purple_notify_searchresults_column_add(results, column);
 	
 	purple_notify_searchresults_button_add(results, PURPLE_NOTIFY_BUTTON_ADD, googlechat_search_results_add_buddy);
 	purple_notify_searchresults_button_add(results, PURPLE_NOTIFY_BUTTON_INFO, googlechat_search_results_get_info);
@@ -873,14 +870,16 @@ googlechat_search_users_text_cb(PurpleHttpConnection *connection, PurpleHttpResp
 	
 	for(index = 0; index < length; index++)
 	{
-		JsonNode *result = json_array_get_element(resultsarray, index);
+		JsonNode *match = json_array_get_element(matches, index);
 		
-		gchar *id = googlechat_json_path_query_string(result, "$.person.personId", NULL);
-		gchar *displayname = googlechat_json_path_query_string(result, "$.person.name[*].displayName", NULL);
+		gchar *id = googlechat_json_path_query_string(match, "$.autocompletion.person.contactMethods[*].sourceIds[*].profileId", NULL);
+		gchar *displayname = googlechat_json_path_query_string(match, "$.autocompletion.person.contactMethods[*].displayInfo.name.value", NULL);
+		gchar *email = googlechat_json_path_query_string(match, "$.autocompletion.person.contactMethods[*].email.value", NULL);
 		GList *row = NULL;
 		
 		row = g_list_append(row, id);
 		row = g_list_append(row, displayname);
+		row = g_list_append(row, email);
 		
 		purple_notify_searchresults_row_add(results, row);
 	}
@@ -889,6 +888,59 @@ googlechat_search_users_text_cb(PurpleHttpConnection *connection, PurpleHttpResp
 	
 	g_dataset_destroy(connection);
 	json_object_unref(node);
+}
+
+//https://stackoverflow.com/a/79391766/895744
+//sha1([DATASYNC_ID, TIMESTAMP, SAPISID, ORIGIN].join(" "))
+static gchar *
+googlechat_calculate_sapisid_hmac(const gchar *datasync_id, const gchar *sapisid, const gchar *origin)
+{
+	GString *data = g_string_new(NULL);
+	GChecksum *checksum;
+	const gchar *hash;
+	gchar *hash_str;
+	gint timestamp = time(NULL);
+
+	if (datasync_id != NULL) {
+		gchar** datasync_parts = g_strsplit(datasync_id, "||", 2);
+
+		g_string_append(data, datasync_parts[0]); // DATASYNC_ID
+		g_string_append_c(data, ' ');
+
+		g_strfreev(datasync_parts);
+	}
+	g_string_append_printf(data, "%d ", timestamp);
+	g_string_append(data, sapisid);
+	g_string_append_c(data, ' ');
+	g_string_append(data, origin);
+	
+	checksum = g_checksum_new(G_CHECKSUM_SHA1);
+	g_checksum_update(checksum, (const guchar *) data->str, data->len);
+	hash = g_checksum_get_string(checksum);
+	hash_str = g_strdup_printf("%d_%s", timestamp, hash);
+	
+	g_string_free(data, TRUE);
+	g_checksum_free(checksum);
+
+	return hash_str;
+}
+
+static gchar *
+googlechat_get_sapisid_auth_header(GoogleChatAccount *ha)
+{
+	gchar *sapisid = purple_http_cookie_jar_get(ha->cookie_jar, "SAPISID");
+	if (sapisid == NULL || !*sapisid) {
+		return NULL; // No SAPISID cookie found
+	}
+	
+	const gchar *origin = "https://chat.google.com";
+	
+	gchar *sapisid_hash = googlechat_calculate_sapisid_hmac(NULL, sapisid, origin);
+	gchar *auth_header = g_strdup_printf("SAPISIDHASH %s SAPISID1PHASH %s SAPISID3PHASH %s", sapisid_hash, sapisid_hash, sapisid_hash);
+	g_free(sapisid);
+	g_free(sapisid_hash);
+
+	return auth_header;
 }
 
 /* 
@@ -900,31 +952,56 @@ id=%2B123456789&type=PHONE&matchType=LENIENT&requestMask.includeField.paths=pers
 
 */
 
+/*
+Rough protobuf
+message LookupRequest {
+  optional AffinityType int32 affinity_type = 1;
+  optional ClientInformation client_information = 2;
+  repeated LookupId ids = 3;
+}
+
+message ClientInformation {
+  optional int32 device = 1;
+}
+
+message LookupId {
+  optional string email = 1;
+  optional string phone = 2;
+  optional string profileId = 3;
+  optional string chatSpaceId = 4;
+}
+*/
 
 void
 googlechat_search_users_text(GoogleChatAccount *ha, const gchar *text)
 {
 	PurpleHttpRequest *request;
-	GString *url = g_string_new("https://people-pa.clients6.google.com/v2/people/autocomplete?");
+	const gchar *url = "https://peoplestack-pa.googleapis.com/v1/autocomplete/lookup?alt=json";
 	PurpleHttpConnection *connection;
+	GString *postdata = g_string_new(NULL);
+
+	g_string_append_printf(postdata, "[165, [4], [[\"%s\"]]]", text);
 	
-	g_string_append_printf(url, "query=%s&", purple_url_encode(text));
-	g_string_append(url, "client=GOOGLECHAT_WITH_DATA&");
-	g_string_append(url, "pageSize=20&");
-	g_string_append_printf(url, "key=%s&", purple_url_encode(GOOGLE_GPLUS_KEY));
-	
-	request = purple_http_request_new(NULL);
+	request = purple_http_request_new(url);
+	purple_http_request_set_method(request, "POST");
 	purple_http_request_set_cookie_jar(request, ha->cookie_jar);
-	purple_http_request_set_url(request, url->str);
+	purple_http_request_set_contents(request, postdata->str, postdata->len);
+	purple_http_request_header_set(request, "Content-Type", "application/json+protobuf");
 	
-	googlechat_set_auth_headers(ha, request);
+	gchar *sapisid_auth = googlechat_get_sapisid_auth_header(ha);
+	if (sapisid_auth) {
+		purple_http_request_header_set(request, "Authorization", sapisid_auth);
+		g_free(sapisid_auth);
+	} else {
+		googlechat_set_auth_headers(ha, request);
+	}
 
 	connection = purple_http_request(ha->pc, request, googlechat_search_users_text_cb, ha);
 	purple_http_request_unref(request);
 	
 	g_dataset_set_data_full(connection, "search_term", g_strdup(text), g_free);
 	
-	g_string_free(url, TRUE);
+	g_string_free(postdata, TRUE);
 }
 
 void

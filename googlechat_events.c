@@ -660,6 +660,118 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 		g_free(image_url);
 	}
 	
+	// Attachments, eg Cards
+	for (i = 0; i < message->n_attachments; i++) {
+		Attachment *attachment = message->attachments[i];
+		JAddOnsCardItem *card = attachment->card_add_on_data;
+		if (card == NULL) {
+			continue;
+		}
+
+		if (card->n_sections > 0) {
+			GString *msg_out = g_string_new(event->type == EVENT__EVENT_TYPE__MESSAGE_UPDATED ? _("Edit: ") : NULL);
+			guint j;
+			
+			for (j = 0; j < card->n_sections; j++) {
+				JAddOnsCardItem__CardItemSection *section = card->sections[j];
+				if (section->n_widgets > 0) {
+					guint k;
+					for (k = 0; k < section->n_widgets; k++) {
+						JAddOnsWidget *widget = section->widgets[k];
+						g_string_append(msg_out, "<hr>");
+						if (widget->text_paragraph) {
+							g_string_append(msg_out, "<p>");
+							JAddOnsFormattedText *text_paragraph = widget->text_paragraph->text;
+							if (text_paragraph->n_formatted_text_elements > 0) {
+								guint l;
+								for (l = 0; l < text_paragraph->n_formatted_text_elements; l++) {
+									JAddOnsFormattedText__FormattedTextElement *formatted_text_element = text_paragraph->formatted_text_elements[l];
+									if (formatted_text_element->styled_text) {
+										if (formatted_text_element->styled_text->n_styles > 0) {
+											guint m;
+											for (m = 0; m < formatted_text_element->styled_text->n_styles; m++) {
+												JAddOnsFormattedText__FormattedTextElement__StyledText__Style style = formatted_text_element->styled_text->styles[m];
+												if (style == JADD_ONS_FORMATTED_TEXT__FORMATTED_TEXT_ELEMENT__STYLED_TEXT__STYLE__BOLD_DEPRECATED) {
+													g_string_append(msg_out, "<b>");
+												} else if (style == JADD_ONS_FORMATTED_TEXT__FORMATTED_TEXT_ELEMENT__STYLED_TEXT__STYLE__ITALIC) {
+													g_string_append(msg_out, "<i>");
+												} else if (style == JADD_ONS_FORMATTED_TEXT__FORMATTED_TEXT_ELEMENT__STYLED_TEXT__STYLE__UNDERLINE) {
+													g_string_append(msg_out, "<u>");
+												} else if (style == JADD_ONS_FORMATTED_TEXT__FORMATTED_TEXT_ELEMENT__STYLED_TEXT__STYLE__STRIKETHROUGH) {
+													g_string_append(msg_out, "<s>");
+												} else if (style == JADD_ONS_FORMATTED_TEXT__FORMATTED_TEXT_ELEMENT__STYLED_TEXT__STYLE__BR) {
+													g_string_append(msg_out, "<br>");
+												} else if (style == JADD_ONS_FORMATTED_TEXT__FORMATTED_TEXT_ELEMENT__STYLED_TEXT__STYLE__UPPERCASE) {
+													//TODO
+												}
+											}
+										}
+										if (formatted_text_element->styled_text->font_weight == JADD_ONS_FORMATTED_TEXT__FORMATTED_TEXT_ELEMENT__STYLED_TEXT__FONT_WEIGHT__BOLD) {
+											g_string_append(msg_out, "<b>");
+										}
+										if (formatted_text_element->styled_text->has_color) {
+											gint color = formatted_text_element->styled_text->color;
+											g_string_append_printf(msg_out, "<span style='color: #%02x%02x%02x'>", 
+												color >> 16,
+												color >> 8 & 0xFF,
+												color & 0xFF);
+										}
+
+										gchar *escaped_text = g_markup_escape_text(formatted_text_element->styled_text->text, -1);
+										g_string_append(msg_out, escaped_text);
+										g_free(escaped_text);
+										
+										if (formatted_text_element->styled_text->has_color) {
+											g_string_append(msg_out, "</span>");
+										}
+										if (formatted_text_element->styled_text->font_weight == JADD_ONS_FORMATTED_TEXT__FORMATTED_TEXT_ELEMENT__STYLED_TEXT__FONT_WEIGHT__BOLD) {
+											g_string_append(msg_out, "</b>");
+										}
+										if (formatted_text_element->styled_text->n_styles > 0) {
+											gint m;
+											for (m = formatted_text_element->styled_text->n_styles - 1; m >= 0 ; m--) {
+												JAddOnsFormattedText__FormattedTextElement__StyledText__Style style = formatted_text_element->styled_text->styles[m];
+												if (style == JADD_ONS_FORMATTED_TEXT__FORMATTED_TEXT_ELEMENT__STYLED_TEXT__STYLE__BOLD_DEPRECATED) {
+													g_string_append(msg_out, "</b>");
+												} else if (style == JADD_ONS_FORMATTED_TEXT__FORMATTED_TEXT_ELEMENT__STYLED_TEXT__STYLE__ITALIC) {
+													g_string_append(msg_out, "</i>");
+												} else if (style == JADD_ONS_FORMATTED_TEXT__FORMATTED_TEXT_ELEMENT__STYLED_TEXT__STYLE__UNDERLINE) {
+													g_string_append(msg_out, "</u>");
+												} else if (style == JADD_ONS_FORMATTED_TEXT__FORMATTED_TEXT_ELEMENT__STYLED_TEXT__STYLE__STRIKETHROUGH) {
+													g_string_append(msg_out, "</s>");
+												} else if (style == JADD_ONS_FORMATTED_TEXT__FORMATTED_TEXT_ELEMENT__STYLED_TEXT__STYLE__BR) {
+													//skip
+												} else if (style == JADD_ONS_FORMATTED_TEXT__FORMATTED_TEXT_ELEMENT__STYLED_TEXT__STYLE__UPPERCASE) {
+													//TODO
+												}
+											}
+										}
+									}
+									//TODO handle formatted_text_element->hyperlink
+								}
+							}
+							g_string_append(msg_out, "</p>\n");
+						}
+					}
+				}
+			}
+			
+			if (msg_out->len > 0) {
+				if (g_hash_table_contains(ha->group_chats, conv_id)) {
+					purple_serv_got_chat_in(pc, g_str_hash(conv_id), sender_id, msg_flags, msg_out->str, message_timestamp);
+				} else {
+					if (msg_flags & PURPLE_MESSAGE_RECV) {
+						purple_serv_got_im(pc, sender_id, msg_out->str, msg_flags, message_timestamp);
+					} else {
+						PurpleMessage *pmessage = purple_message_new_outgoing(sender_id, msg_out->str, msg_flags);
+						purple_message_set_time(pmessage, message_timestamp);
+						purple_conversation_write_message(pconv, pmessage);
+					}
+				}
+			}
+			g_string_free(msg_out, TRUE);
+		}
+	}
 	
 	if (pconv != NULL) {
 		gint64 *last_event_timestamp_ptr = (gint64 *)purple_conversation_get_data(pconv, "last_event_timestamp");

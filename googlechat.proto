@@ -419,6 +419,11 @@ message JAddOnsCardItem {
 		PEEK = 1;
 		REPLACE = 2;
 	}
+	enum DividerStyle {
+		DIVIDER_STYLE_UNSPECIFIED = 0;
+		SOLID_DIVIDER = 1;
+		NO_DIVIDER = 2;
+	}
 
 	optional CardItemHeader header = 1;
 	repeated CardItemSection sections = 2;
@@ -429,6 +434,10 @@ message JAddOnsCardItem {
 	optional DisplayStyle display_style = 7;
 	optional CardItemHeader peek_card_header = 8;
 	optional JAddOnsThemeColors background_theme_colors = 9;
+	repeated int32 feature_capabilities = 10;
+	optional JAddOnsBorderStyle border_style = 11;
+	optional bool is_gsuite_card = 12;
+	optional DividerStyle section_divider_style = 13;
 }
 
 message JAddOnsPushCard {
@@ -652,6 +661,8 @@ message JAddOnsWidget {
 		optional int32 background_color = 6;
 		optional JAddOnsThemeColors background_theme_colors = 7;
 		optional string alt_text = 8;
+		optional string icon_url = 9;
+		optional MaterialIcon material_icon = 10;
 	}
 
 	message ImageButton {
@@ -673,6 +684,13 @@ message JAddOnsWidget {
 		START = 1;
 		CENTER = 2;
 		END = 3;
+	}
+
+	message MaterialIcon {
+		optional string name = 1;
+		optional bool fill = 2;
+		optional int32 weight = 3;
+		optional int32 grade = 4;
 	}
 
 
@@ -706,6 +724,10 @@ message JAddOnsFormAction {
 		SPINNER = 0;
 		NONE = 1;
 	}
+	enum Interaction {
+		INTERACTION_UNSPECIFIED = 0;
+		OPEN_DIALOG = 1;
+	}
 	
 	optional string action_method_name = 1;
 	repeated ActionParameter parameters = 4;
@@ -713,6 +735,9 @@ message JAddOnsFormAction {
 	optional string encrypted_action = 7;
 	optional LoadIndicator load_indicator = 5;
 	optional bool persist_values = 6;
+	optional Interaction interaction = 8;
+	repeated string required_widget_ids = 9;
+	optional bool all_widgets_are_required = 10;
 }
 
 message JAddOnsContextualAddOn {
@@ -787,6 +812,9 @@ message Attachment {
 	//}
 	optional UserId app_id = 5;
 	optional User app_user = 6;
+	optional JAddOnsCardItem card_add_on_data = 7;
+	optional string attachment_id = 8;
+	//optional MessageComponentSearchInfo component_search_info = 9;
 }
 
 message Reaction {
@@ -1004,7 +1032,7 @@ message Annotation {
 		//DYNProtoIncomingWebhookChangedMetadata incoming_webhook_changed_metadata = 22;
 		//DYNProtoIntegrationConfigUpdatedMetadata integration_config_updated = 23;
 		//DYNProtoConsentedAppUnfurlMetadata consented_app_unfurl_metadata = 24;
-		// optional CardCapabilityMetadata card_capability_metadata = 25;
+	optional CardCapabilityMetadata card_capability_metadata = 25;
 		// optional CustomEmojiMetadata custom_emoji_metadata = 26;
 		// optional DataLossPreventionMetadata data_loss_prevention_metadata = 27;
 		// optional RequiredMessageFeaturesMetadata required_message_features_metadata = 28;
@@ -1159,6 +1187,14 @@ message GroupReadState {
 	optional bool show_notification_card_in_stream = 20;
 	//optional NotificationsCard notifications_card = 21;
 	repeated UserId joined_users = 23;
+	optional int64 thread_summary_last_read_time_usec = 24;
+	optional bool has_unread_thread = 25;
+	//optional AbuseLabels abuse_labels = 26;
+	//repeated SpaceLabelId space_label_id = 27;
+	optional int64 default_sort = 28;
+	optional int64 last_head_message_create_time_usec = 29;
+	//optional Sorts sorts = 30;
+	//repeated GroupLabelId group_label_id = 31;
 }
 
 message GroupNotificationSettings {
@@ -1941,6 +1977,14 @@ message RoomUpdatedMetadata {
 	optional User initiator = 4;
 }
 
+message CardCapabilityMetadata {
+	enum CapabilityType {
+		UNKNOWN = 0;
+		SUPPORTS_BASE_CARDS = 1;
+	}
+	repeated CapabilityType required_capabilities = 1;
+}
+
 //ComGoogleRtcMeetingsV1DialInNumberClass
 enum DialInNumberClass {
 	NUMBER_CLASS_UNSPECIFIED = 0;
@@ -2485,7 +2529,7 @@ message WorldItemLite {
 		optional bool interop_enabled = 5;
 		//optional DasherDomainPolicies dasher_domain_policies = 6;
 		optional string roster_email = 7;
-		// optional ?? space_details = 8;
+		// optional SpaceDetails space_details = 8;
 	}
 	optional GroupLite group_lite = 7;
 	//optional GroupGuestAccessSettings group_guest_access_settings = 10;

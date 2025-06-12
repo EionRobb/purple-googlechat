@@ -547,6 +547,10 @@ googlechat_tooltip_text(PurpleBuddy *buddy, PurpleNotifyUserInfo *user_info, gbo
 				hbuddy->device_type & GOOGLECHAT_DEVICE_TYPE_MOBILE ? _("Mobile") :
 				_("Unknown"));
 		}
+
+		if (hbuddy->is_bot) {
+			purple_notify_user_info_add_pair_html(user_info, _("Bot"), _("Yes"));
+		}
 	}
 }
 

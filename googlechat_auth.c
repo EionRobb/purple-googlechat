@@ -437,6 +437,8 @@ googlechat_auth_refresh_xsrf_token_cb(PurpleHttpConnection *http_conn, PurpleHtt
 gboolean
 googlechat_auth_refresh_xsrf_token(GoogleChatAccount *ha)
 {
+	//TODO could do an api request to /api/xsrf_token (POST) which returns the xsrf token
+
 	PurpleHttpRequest *request;
 	PurpleConnection *pc;
 	GString *url;

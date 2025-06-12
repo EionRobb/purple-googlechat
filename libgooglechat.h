@@ -131,6 +131,7 @@ typedef struct {
 	gboolean in_call;
 	gint64 last_seen;
 	GoogleChatDeviceTypeFlags device_type;
+	gboolean is_bot;
 } GoogleChatBuddy;
 
 

@@ -373,6 +373,13 @@ googlechat_got_user_info(GoogleChatAccount *ha, GetMembersResponse *response, gp
 		purple_notify_user_info_add_pair_html(user_info, _("First Name"), user->first_name);
 	if (user->last_name != NULL)
 		purple_notify_user_info_add_pair_html(user_info, _("Last Name"), user->last_name);
+	if (user->user_id->type == USER_TYPE__BOT) {
+		purple_notify_user_info_add_pair_html(user_info, _("Bot"), _("Yes"));
+
+		if (user->bot_info && user->bot_info->description) {
+			purple_notify_user_info_add_pair_html(user_info, _("Description"), user->bot_info->description);
+		}
+	}
 
 	if (user->avatar_url) {
 		gchar *prefix = strncmp(user->avatar_url, "//", 2) ? "" : "https:";
@@ -387,6 +394,17 @@ googlechat_got_user_info(GoogleChatAccount *ha, GetMembersResponse *response, gp
 	}
 	if (user->gender) {
 		purple_notify_user_info_add_pair_html(user_info, _("Gender"), user->gender);
+	}
+	if (user->phone_number && user->n_phone_number > 0) {
+		purple_notify_user_info_add_pair_html(user_info, _("Phone Numbers"), NULL);
+		guint i;
+		for (i = 0; i < user->n_phone_number; i++) {
+			if (user->phone_number[i]->type && user->phone_number[i]->value) {
+				purple_notify_user_info_add_pair_html(user_info, user->phone_number[i]->type, user->phone_number[i]->value);
+			} else if (user->phone_number[i]->value) {
+				purple_notify_user_info_add_pair_html(user_info, _("Phone Number"), user->phone_number[i]->value);
+			}
+		}
 	}
 	
 	purple_notify_userinfo(ha->pc, who, user_info, NULL, NULL);

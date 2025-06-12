@@ -35,6 +35,85 @@ enum UserProfileVisibility {
 	UNKNOWN_USER = 5;
 }
 
+message CustomerId {
+	optional string customer_id = 1;
+}
+
+message OrganizationInfo {
+	message ConsumerInfo {
+	}
+	optional ConsumerInfo consumer_info = 1;
+
+	message CustomerInfo {
+		optional CustomerId customer_id = 1;
+	}
+	optional CustomerInfo customer_info = 2;
+}
+
+message BotInfo {
+	optional string user_visible_developer_identity = 1;
+	optional string description = 2;
+	enum Status {
+		UNKNOWN_STATUS = 0;
+		ENABLED = 1;
+		DISABLED_BY_DEVELOPER = 2;
+	}
+	optional Status status = 3;
+	message SupportUrls {
+		optional string tos_url = 1;
+		optional string privacy_policy_url = 2;
+		optional string support_url = 3;
+		optional string setup_url = 4;
+		optional string admin_config_url = 5;
+		optional string deletion_policy_url = 6;
+		optional string gwm_url = 7;
+	}
+	optional SupportUrls support_urls = 4;
+	optional string bot_avatar_url = 5;
+	optional string bot_name = 6;
+	enum SupportedUses {
+		UNKNOWN = 0;
+		CAN_ADD_TO_DM = 1;
+		CAN_ADD_TO_ROOM = 2;
+		CAN_ADD_TO_HUMAN_DM = 3;
+	}
+	repeated SupportedUses supported_uses = 7;
+	optional string market_place_banner_url = 8;
+	enum AppAllowlistStatus {
+		UNSPECIFIED_STATUS = 0;
+		ALLOWED = 1;
+		ALL_APPS_DISABLED_BY_ADMIN = 2;
+		APP_NOT_ALLOWLISTED_BY_ADMIN = 3;
+	}
+	optional AppAllowlistStatus app_allowlist_status = 9;
+	optional AppId app_id = 10;
+	optional bool support_home_screen = 11;
+	enum UninstallCapability {
+		UNSPECIFIED_UNINSTALL_CAPABILITY = 0;
+		ALWAYS_ALLOWED = 1;
+		NEVER_ALLOWED = 2;
+	}
+	optional UninstallCapability uninstall_capability = 12;
+	enum AppPromptConfig {
+		APP_PROMPT_CONFIG_UNSPECIFIED = 0;
+		APP_PROMPTS_DISABLED = 1;
+		STATIC_APP_PROMPTS_ENABLED = 2;
+		DYNAMIC_APP_PROMPTS_ENABLED = 3;
+	}
+	optional AppPromptConfig app_prompt_config = 13;
+	enum GwmPublishStatus {
+		UNKNOWN_GWM_STATUS = 0;
+		PUBLIC = 1;
+		PRIVATE = 2;
+	}
+	optional GwmPublishStatus gwm_publish_status = 14;
+}
+
+message PhoneNumber {
+	optional string value = 1;
+	optional string type = 2;
+}
+
 message User {
 	optional UserId user_id = 1;
 	optional string name = 2;
@@ -44,13 +123,13 @@ message User {
 	optional string last_name = 6;
 	optional bool deleted = 7;
 	optional bool is_anonymous = 8;
-	//optional DYNProtoBotInfo bot_info = 9;
+	optional BotInfo bot_info = 9;
 	optional string gender = 10;
-	//optional DYNProtoUserAccountState user_account_state = 11;
+	optional UserAccountState user_account_state = 11;
 	optional UserProfileVisibility user_profile_visibility = 15;
-	//optional DYNProtoOrganizationInfo organization_info = 12;
+	optional OrganizationInfo organization_info = 12;
 	optional UserBlockRelationship block_relationship = 13;
-	//repeated DYNProtoPhoneNumber phone_number = 14;
+	repeated PhoneNumber phone_number = 14;
 }
 
 message UserBlockRelationship {
@@ -82,7 +161,7 @@ message CustomEmoji {
 	optional string shortcode = 3;
 	optional EmojiState state = 4;
 	optional UserId creator_user_id = 5;
-	//optional CustomerId owner_customer_id = 6;
+	optional CustomerId owner_customer_id = 6;
 	optional string blob_id = 7;
 	optional int64 create_time_micros = 8;
 	optional string read_token = 9;
@@ -1099,7 +1178,7 @@ message Group {
 	optional bool interop_enabled = 18;
 	optional int64 retention_duration_seconds = 19;
 	//optional DYNProtoGroupGuestAccessSettings group_guest_access_settings = 20;
-	//optional DYNProtoOrganizationInfo organization_info = 21;
+	optional OrganizationInfo organization_info = 21;
 	
 	enum GroupType {
 		GROUP_TYPE_UNSPECIFIED = 0;
@@ -2533,7 +2612,7 @@ message WorldItemLite {
 	}
 	optional GroupLite group_lite = 7;
 	//optional GroupGuestAccessSettings group_guest_access_settings = 10;
-	//optional OrganizationInfo organization_info = 11;
+	optional OrganizationInfo organization_info = 11;
 	//repeated GsuiteIntegration gsuite_integration = 12;
 	optional Message message = 13;
 	optional bool is_message_blocked = 25;

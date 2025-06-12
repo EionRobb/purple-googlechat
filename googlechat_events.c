@@ -318,6 +318,11 @@ googlechat_format_type_to_string(FormatMetadata__FormatType format_type, gboolea
 		output[p] = 'I';  p++;
 	} else if (format_type == FORMAT_METADATA__FORMAT_TYPE__UNDERLINE) {
 		output[p] = 'U';  p++;
+	} else if (format_type == FORMAT_METADATA__FORMAT_TYPE__MONOSPACE ||
+				format_type == FORMAT_METADATA__FORMAT_TYPE__SOURCE_CODE) {
+		output[p] = 'P';
+		output[p+1] = 'R';
+		output[p+2] = 'E';  p += 3;
 	} // else //TODO
 	
 	output[p] = '>';
@@ -403,7 +408,13 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 					if (annotation->start_index == pos) {
 						if (format_type == FORMAT_METADATA__FORMAT_TYPE__HIDDEN) {
 							hidden_output++;
-							
+						
+						} else if (format_type == FORMAT_METADATA__FORMAT_TYPE__FONT_COLOR) {
+							g_string_append_printf(msg_out, "<span style='color: #%02x%02x%02x'>", 
+								annotation->format_metadata->font_color >> 16,
+								annotation->format_metadata->font_color >> 8 & 0xFF,
+								annotation->format_metadata->font_color & 0xFF);
+						
 						} else if (annotation->type == ANNOTATION_TYPE__URL) {
 							UrlMetadata *url_metadata = annotation->url_metadata;
 							if (url_metadata && url_metadata->url && url_metadata->url->url) {
@@ -425,6 +436,8 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 							hidden_output--;
 						} else if (annotation->type == ANNOTATION_TYPE__URL) {
 							g_string_append(msg_out, "</A>");
+						} else if (format_type == FORMAT_METADATA__FORMAT_TYPE__FONT_COLOR) {
+							g_string_append(msg_out, "</span>");
 						} else {
 							g_string_append(msg_out, googlechat_format_type_to_string(format_type, TRUE));
 						}
@@ -625,7 +638,7 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 		if (image_url != NULL) {
 			PurpleHttpConnection *connection;
 			
-			if (g_strcmp0(purple_core_get_ui(), "BitlBee") == 0) {
+			if (!ha->access_token || g_strcmp0(purple_core_get_ui(), "BitlBee") == 0) {
 				// Bitlbee doesn't support images, so just plop a url to the image instead
 				if (g_hash_table_contains(ha->group_chats, conv_id)) {
 					purple_serv_got_chat_in(pc, g_str_hash(conv_id), sender_id, msg_flags, url, message_timestamp);

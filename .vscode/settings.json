@@ -1,0 +1,52 @@
+{
+    "cmake.configureOnOpen": false,
+    "C_Cpp.default.compilerPath": "C:\\cygwin64\\home\\eion\\win32-dev\\mingw-4.7.2\\bin\\gcc.exe",
+    "files.associations": {
+        "windows.h": "c"
+    },
+    "C_Cpp.codeAnalysis.clangTidy.enabled": true,
+    "C_Cpp.default.cStandard": "gnu99",
+    "C_Cpp.default.intelliSenseMode": "windows-gcc-x86",
+    "C_Cpp.intelliSenseEngine": "default",
+    "C_Cpp.codeAnalysis.clangTidy.args": [
+        "-external:W0"
+    ],
+    "cSpell.words": [
+        "bitlbee",
+        "blist",
+        "CBFLAGS",
+        "chatconv",
+        "chatname",
+        "convuiops",
+        "cpar",
+        "devel",
+        "fakebuddy",
+        "gboolean",
+        "gchar",
+        "gchat",
+        "GINT",
+        "googlechat",
+        "gpointer",
+        "gssize",
+        "Gsuite",
+        "guchar",
+        "guint",
+        "gulong",
+        "hbuddy",
+        "HSID",
+        "jsonobj",
+        "libglib",
+        "libjson",
+        "libprotobuf",
+        "libpurple",
+        "OSID",
+        "Pblist",
+        "pblite",
+        "PRPL",
+        "roomlist",
+        "Ruprecht",
+        "strconcat",
+        "strfreev",
+        "strsplit"
+    ]
+}

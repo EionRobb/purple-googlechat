@@ -2929,3 +2929,39 @@ enum SharedAttributeCheckerGroupType {
 	IMMUTABLE_MEMBERSHIP_HUMAN_DM = 6;
 	POST_ROOM = 7;
 }
+
+enum BotUseCase {
+	UNKNOWN_USE_CASE = 0;
+	BOT_DM = 1;
+	MULTI_USER_SPACE = 2;
+}
+
+message SlashCommand {
+	optional string name = 1;
+	optional int64 command_id = 2;
+	optional string description = 3;
+	optional string arguments_hint = 4;
+	optional bool triggers_dialog = 5;
+}
+
+message BotSlashCommands {
+	optional User bot = 1;
+	repeated SlashCommand slash_commands = 2;
+}
+
+message AutocompleteSlashCommandsRequest {
+	optional string query = 1;
+	optional GroupId group_id = 2;
+	optional int32 max_num_results = 3;
+	optional bool restrict_to_bots_in_group = 4;
+	repeated BotUseCase bot_use_case_filters = 6;
+	optional bool include_dialogs = 7;
+	//repeated enum app_filter = 9;
+	optional RequestHeader request_header = 100;
+}
+
+message AutocompleteSlashCommandsResponse {
+	repeated BotSlashCommands bots_in_group = 1;
+	repeated BotSlashCommands bots_not_in_group = 2;
+	optional bool has_more_results = 3;
+}

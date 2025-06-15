@@ -77,6 +77,9 @@ void googlechat_archive_conversation(GoogleChatAccount *ha, const gchar *conv_id
 void googlechat_rename_conversation(GoogleChatAccount *ha, const gchar *conv_id, const gchar *alias);
 void googlechat_initiate_chat_from_node(PurpleBlistNode *node, gpointer userdata);
 
+void googlechat_video_call_from_node(PurpleBlistNode *node, gpointer userdata);
+void googlechat_video_call_conversation(GoogleChatAccount *ha, const gchar *conv_id);
+
 void googlechat_mark_conversation_seen(PurpleConversation *conv, PurpleConversationUpdateType type);
 
 void googlechat_set_status(PurpleAccount *account, PurpleStatus *status);

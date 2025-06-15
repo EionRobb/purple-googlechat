@@ -18,6 +18,7 @@
 
 #include "googlechat_conversation.h"
 
+#include "connection.h"
 #include "googlechat.pb-c.h"
 #include "googlechat_connection.h"
 #include "googlechat_events.h"
@@ -26,8 +27,11 @@
 #include <glib.h>
 
 #include <purple.h>
+#include <time.h>
 #include "glibcompat.h"
 #include "image-store.h"
+#include "libgooglechat.h"
+#include "purplecompat.h"
 
 // From googlechat_pblite
 gchar *pblite_dump_json(ProtobufCMessage *message);
@@ -2218,6 +2222,88 @@ googlechat_create_conversation(GoogleChatAccount *ha, gboolean is_one_to_one, co
 	}
 }
 
+static void
+googlechat_create_video_call_callback(GoogleChatAccount *ha, CreateVideoCallResponse *response, void *userdata)
+{
+	gchar *conv_id = userdata;
+	if (response == NULL) {
+		purple_debug_error("googlechat", "Could not create video call\n");
+		g_free(conv_id);
+		return;
+	}
+	Annotation *annotation = response->annotation;
+	CreateTopicRequest request;
+	GroupId group_id;
+	SpaceId space_id;
+	DmId dm_id;
+
+	// send the annotation as-is		
+	create_topic_request__init(&request);
+	group_id__init(&group_id);
+	
+	request.request_header = googlechat_get_request_header(ha);
+	
+	gchar *message_id = g_strdup_printf("purple%" G_GUINT32_FORMAT, (guint32) g_random_int());
+	request.local_id = message_id;
+	request.has_history_v2 = TRUE;
+	request.history_v2 = TRUE;
+	request.text_body = (gchar *) "";
+	
+	request.group_id = &group_id;
+	if (g_hash_table_lookup(ha->one_to_ones, conv_id)) {
+		dm_id__init(&dm_id);
+		dm_id.dm_id = conv_id;
+		group_id.dm_id = &dm_id;
+	} else {
+		space_id__init(&space_id);
+		space_id.space_id = conv_id;
+		group_id.space_id = &space_id;
+	}
+	
+	request.annotations = &annotation;
+	request.n_annotations = 1;
+	
+	g_hash_table_insert(ha->sent_message_ids, message_id, NULL);
+	googlechat_api_create_topic(ha, &request, NULL, NULL);
+
+	googlechat_request_header_free(request.request_header);
+	g_free(conv_id);
+}
+
+void 
+googlechat_video_call_conversation(GoogleChatAccount *ha, const gchar *conv_id)
+{
+	CreateVideoCallRequest request;
+	GroupId group_id;
+	SpaceId space_id;
+	DmId dm_id;
+	
+	if (conv_id == NULL) {
+		return;
+	}
+	
+	create_video_call_request__init(&request);
+	
+	group_id__init(&group_id);
+	request.group_id = &group_id;
+	
+	if (g_hash_table_contains(ha->one_to_ones, conv_id)) {
+		dm_id__init(&dm_id);
+		dm_id.dm_id = (gchar *) conv_id;
+		group_id.dm_id = &dm_id;
+	} else {
+		space_id__init(&space_id);
+		space_id.space_id = (gchar *) conv_id;
+		group_id.space_id = &space_id;
+	}
+	
+	request.request_header = googlechat_get_request_header(ha);
+	
+	googlechat_api_create_video_call(ha, &request, googlechat_create_video_call_callback, g_strdup(conv_id));
+	
+	googlechat_request_header_free(request.request_header);
+}
+
 void
 googlechat_archive_conversation(GoogleChatAccount *ha, const gchar *conv_id)
 {
@@ -2282,6 +2368,46 @@ googlechat_initiate_chat_from_node(PurpleBlistNode *node, gpointer userdata)
 		
 		googlechat_create_conversation(ha, FALSE, purple_buddy_get_name(buddy), NULL);
 	}
+}
+
+void
+googlechat_video_call_from_node(PurpleBlistNode *node, gpointer userdata)
+{
+	PurpleAccount *account = NULL;
+	PurpleChat *chat = NULL;
+	PurpleBuddy *buddy = NULL;
+	PurpleConnection *pc = NULL;
+	GoogleChatAccount *ha;
+	const gchar *conv_id = NULL;
+
+	if (PURPLE_IS_CHAT(node)) {
+		chat = PURPLE_CHAT(node);
+		account = purple_chat_get_account(chat);
+	} else if (PURPLE_IS_BUDDY(node)) {
+		buddy = PURPLE_BUDDY(node);
+		account = purple_buddy_get_account(buddy);
+	}
+
+	pc = purple_account_get_connection(account);
+	ha = purple_connection_get_protocol_data(pc);
+	
+	if (chat != NULL) {
+		GHashTable *components = purple_chat_get_components(chat);
+		conv_id = g_hash_table_lookup(components, "conv_id");
+		if (conv_id == NULL) {
+			conv_id = purple_chat_get_name_only(chat);
+		}
+	} else {
+		const gchar *gaia_id = purple_buddy_get_name(buddy);
+		conv_id = g_hash_table_lookup(ha->one_to_ones_rev, gaia_id);
+	}
+
+	if (conv_id == NULL) {
+		purple_notify_error(pc, _("Video Call Error"), _("Could not start video call"), _("No conversation ID found."), purple_request_cpar_from_connection(pc));
+		return;
+	}
+
+	googlechat_video_call_conversation(ha, conv_id);
 }
 
 void

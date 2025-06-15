@@ -107,5 +107,6 @@ GOOGLECHAT_DEFINE_API_REQUEST_FUNC(update_group, UpdateGroup, "update_group");
 GOOGLECHAT_DEFINE_API_REQUEST_FUNC(block_entity, BlockEntity, "block_entity");
 GOOGLECHAT_DEFINE_API_REQUEST_FUNC(list_members, ListMembers, "list_members");
 GOOGLECHAT_DEFINE_API_REQUEST_FUNC(update_reaction, UpdateReaction, "update_reaction");
+GOOGLECHAT_DEFINE_API_REQUEST_FUNC(create_video_call, CreateVideoCall, "create_video_call");
 
 #endif /*_GOOGLECHAT_CONNECTION_H_*/

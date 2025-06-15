@@ -258,6 +258,33 @@ googlechat_cmd_kick(PurpleConversation *conv, const gchar *cmd, gchar **args, gc
 	return PURPLE_CMD_RET_OK;
 }
 
+static PurpleCmdRet
+googlechat_cmd_call(PurpleConversation *conv, const gchar *cmd, gchar **args, gchar **error, gpointer data)
+{
+	PurpleConnection *pc = purple_conversation_get_connection(conv);
+	
+	if (pc == NULL) {
+		return PURPLE_CMD_RET_FAILED;
+	}
+
+	GoogleChatAccount *ha = purple_connection_get_protocol_data(pc);
+	const gchar *conv_id = purple_conversation_get_data(conv, "conv_id");
+	if (conv_id == NULL) {
+		if (PURPLE_IS_IM_CONVERSATION(conv)) {
+			conv_id = g_hash_table_lookup(ha->one_to_ones_rev, purple_conversation_get_name(conv));
+		} else {
+			conv_id = purple_conversation_get_name(conv);
+		}
+	}
+	if (conv_id == NULL) {
+		return PURPLE_CMD_RET_FAILED;
+	}
+
+	googlechat_video_call_conversation(ha, conv_id);
+
+	return PURPLE_CMD_RET_OK;
+}
+
 static GList *
 googlechat_node_menu(PurpleBlistNode *node)
 {
@@ -276,6 +303,11 @@ googlechat_node_menu(PurpleBlistNode *node)
 					NULL, NULL);
 		m = g_list_append(m, act);
 	}
+
+	act = purple_menu_action_new(_("Start _Video Call"),
+				PURPLE_CALLBACK(googlechat_video_call_from_node),
+				NULL, NULL);
+	m = g_list_append(m, act);
 	
 	return m;
 }
@@ -709,6 +741,13 @@ plugin_load(PurplePlugin *plugin, GError **error)
 						PURPLE_CMD_FLAG_PROTOCOL_ONLY | PURPLE_CMD_FLAG_ALLOW_WRONG_ARGS,
 						GOOGLECHAT_PLUGIN_ID, googlechat_cmd_kick,
 						_("kick <user>:  Kick a user from the room."), NULL);
+
+	purple_cmd_register(
+		"call", "", PURPLE_CMD_P_PLUGIN, PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_CHAT |
+		 PURPLE_CMD_FLAG_PROTOCOL_ONLY | PURPLE_CMD_FLAG_ALLOW_WRONG_ARGS,
+		GOOGLECHAT_PLUGIN_ID, googlechat_cmd_call,
+		_("call:  Create a video call link for this room"), NULL
+	);
 	
 	
 	if (purple_accounts_get_all()) {

@@ -28,7 +28,7 @@
 #include <string.h>
 #include <stdio.h>
 #ifdef _WIN32
-#include "win32/win32dep.h"
+#include "win32/win32dep.h" // IWYU pragma: keep
 #else
 #include <unistd.h>
 #endif

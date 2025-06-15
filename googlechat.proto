@@ -3078,3 +3078,12 @@ message AutocompleteSlashCommandsResponse {
 	repeated BotSlashCommands bots_not_in_group = 2;
 	optional bool has_more_results = 3;
 }
+
+message CreateVideoCallRequest {
+	optional GroupId group_id = 1;
+	optional RequestHeader request_header = 100;
+}
+
+message CreateVideoCallResponse {
+	optional Annotation annotation = 1;
+}

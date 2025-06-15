@@ -678,35 +678,49 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 
 	// Display incoming calls
 	for (i = 0; i < message->n_annotations; i++) {
+		const gchar *call_url = NULL;
 		Annotation *annotation = message->annotations[i];
+
 		if (annotation->gsuite_integration_metadata &&
 			annotation->gsuite_integration_metadata->client_type == GSUITE_INTEGRATION_CLIENT_TYPE__MEET) {
 			CallAnnotationData *call_data = annotation->gsuite_integration_metadata->call_data;
-			if (call_data == NULL || call_data->call_metadata == NULL || call_data->call_metadata->meet_metadata == NULL) {
-				continue;
+			if (call_data && 
+				call_data->call_metadata && 
+				call_data->call_metadata->meet_metadata) 
+			{
+				call_url = call_data->call_metadata->meet_metadata->meeting_url;
 			}
-			const gchar *call_url = call_data->call_metadata->meet_metadata->meeting_url;
-			if (call_url && *call_url) {
-				gchar *escaped_call_url = g_markup_escape_text(call_url, -1);
-				gchar *msg_out = g_strdup_printf("<a href='%s'>Join Call</a>", escaped_call_url);
-
-				if (g_hash_table_contains(ha->group_chats, conv_id)) {
-					purple_serv_got_chat_in(pc, g_str_hash(conv_id), sender_id, msg_flags | PURPLE_MESSAGE_NICK, msg_out, message_timestamp);
-				} else {
-					if (msg_flags & PURPLE_MESSAGE_RECV) {
-						purple_serv_got_im(pc, sender_id, msg_out, msg_flags | PURPLE_MESSAGE_NICK, message_timestamp);
-					} else {
-						PurpleMessage *img_message = purple_message_new_outgoing(sender_id, msg_out, msg_flags | PURPLE_MESSAGE_NICK);
-						purple_message_set_time(img_message, message_timestamp);
-						purple_conversation_write_message(pconv, img_message);
-					}
-				}
-
-				g_free(escaped_call_url);
-				g_free(msg_out);
+		} else if (annotation->video_call_metadata) {
+			VideoCallMetadata *video_call_metadata = annotation->video_call_metadata;
+			if (video_call_metadata && 
+				video_call_metadata->meeting_space && 
+				video_call_metadata->meeting_space->meeting_url)
+			{
+				call_url = video_call_metadata->meeting_space->meeting_url;
 			}
-
 		}
+
+		if (call_url && *call_url) {
+			gchar *escaped_call_url = g_markup_escape_text(call_url, -1);
+			gchar *msg_out = g_strdup_printf("<a href=\"%s\">Join Call</a>", escaped_call_url);
+			PurpleMessageFlags msg_flags_with_notify = msg_flags | PURPLE_MESSAGE_NICK | PURPLE_MESSAGE_NOTIFY;
+
+			if (g_hash_table_contains(ha->group_chats, conv_id)) {
+				purple_serv_got_chat_in(pc, g_str_hash(conv_id), sender_id, msg_flags_with_notify, msg_out, message_timestamp);
+			} else {
+				if (msg_flags & PURPLE_MESSAGE_RECV) {
+					purple_serv_got_im(pc, sender_id, msg_out, msg_flags_with_notify, message_timestamp);
+				} else {
+					PurpleMessage *img_message = purple_message_new_outgoing(sender_id, msg_out, msg_flags_with_notify);
+					purple_message_set_time(img_message, message_timestamp);
+					purple_conversation_write_message(pconv, img_message);
+				}
+			}
+
+			g_free(escaped_call_url);
+			g_free(msg_out);
+		}
+
 	}
 	
 	// Attachments, eg Cards

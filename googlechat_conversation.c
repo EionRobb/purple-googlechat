@@ -240,8 +240,14 @@ googlechat_got_users_information_member(GoogleChatAccount *ha, Member *member)
 		PurpleBuddy *buddy = purple_blist_find_buddy(ha->account, gaia_id);
 		
 		if (buddy == NULL) {
-			//TODO add to buddy list?
-			return;
+			if (user->is_anonymous) {
+				return;
+			}
+			googlechat_add_person_to_blist(ha, gaia_id, user->name);
+		} else {
+			if (user->is_anonymous) {
+				purple_blist_node_set_transient(PURPLE_BLIST_NODE(buddy), TRUE);
+			}
 		}
 		
 		// Give a best-guess for the buddy's alias
@@ -610,19 +616,20 @@ googlechat_got_group_users(GoogleChatAccount *ha, GetMembersResponse *response, 
 	gchar *conv_id = user_data;
 	
 	if (response != NULL) {
-		guint i;
 		PurpleChatConversation *chatconv = purple_conversations_find_chat_with_account(conv_id, ha->account);
 		
-		for (i = 0; i < response->n_members; i++) {
-			Member *member = response->members[i];
-			User *user = member ? member->user : NULL;
-			const gchar *user_id = user && user->user_id ? user->user_id->id : NULL;
-			
-			if (user_id && user && user->name && !purple_strequal(ha->self_gaia_id, user_id)) {
-				googlechat_alias_group_user_hack(chatconv, user_id, user->name);
+		if (chatconv != NULL) {
+			guint i;
+			for (i = 0; i < response->n_members; i++) {
+				Member *member = response->members[i];
+				User *user = member ? member->user : NULL;
+				const gchar *user_id = user && user->user_id ? user->user_id->id : NULL;
+				
+				if (user_id && user && user->name && !purple_strequal(ha->self_gaia_id, user_id)) {
+					googlechat_alias_group_user_hack(chatconv, user_id, user->name);
+				}
 			}
 		}
-		
 	}
 	
 	g_free(conv_id);

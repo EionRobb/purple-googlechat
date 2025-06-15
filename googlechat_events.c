@@ -21,6 +21,7 @@
 #include <string.h>
 #include <glib.h>
 
+#include "conversation.h"
 #include "core.h"
 #include "debug.h"
 #include "glibcompat.h"
@@ -41,6 +42,7 @@ void googlechat_received_typing_notification(PurpleConnection *pc, Event *event)
 void googlechat_received_message_event(PurpleConnection *pc, Event *event);
 void googlechat_received_read_receipt(PurpleConnection *pc, Event *event);
 void googlechat_received_group_viewed(PurpleConnection *pc, Event *event);
+void googlechat_received_membership_changed(PurpleConnection *pc, Event *event);
 
 //purple_signal_emit(purple_connection_get_protocol(ha->pc), "googlechat-received-event", ha->pc, events_response.event);
 
@@ -53,6 +55,7 @@ googlechat_register_events(gpointer plugin)
 	purple_signal_connect(plugin, "googlechat-received-event", plugin, PURPLE_CALLBACK(googlechat_received_other_notification), NULL);
 	purple_signal_connect(plugin, "googlechat-received-event", plugin, PURPLE_CALLBACK(googlechat_received_read_receipt), NULL);
 	purple_signal_connect(plugin, "googlechat-received-event", plugin, PURPLE_CALLBACK(googlechat_received_group_viewed), NULL);
+	purple_signal_connect(plugin, "googlechat-received-event", plugin, PURPLE_CALLBACK(googlechat_received_membership_changed), NULL);
 }
 
 void
@@ -1018,4 +1021,95 @@ googlechat_received_typing_notification(PurpleConnection *pc, Event *event)
 	}
 	
 	purple_serv_got_typing(pc, user_id, 7, typing_state);
+}
+
+static PurpleChatUserFlags
+googlechat_membership_role_to_chat_user_flags(MembershipRole role)
+{
+	switch (role) {
+		case MEMBERSHIP_ROLE__ROLE_MEMBER:
+			return PURPLE_CHAT_USER_VOICE;
+		case MEMBERSHIP_ROLE__ROLE_OWNER:
+			return PURPLE_CHAT_USER_FOUNDER;
+		case MEMBERSHIP_ROLE__ROLE_UNKNOWN:
+		case MEMBERSHIP_ROLE__ROLE_NONE:
+		default:
+			return PURPLE_CHAT_USER_NONE;
+	}
+}
+
+void
+googlechat_received_membership_changed(PurpleConnection *pc, Event *event)
+{
+	GoogleChatAccount *ha;
+	MembershipChangedEvent *membership_changed;
+	Membership *membership;
+	GroupId *group_id;
+	const gchar *user_id;
+	const gchar *conv_id;
+	gboolean is_dm;
+	
+	if (event->type != EVENT__EVENT_TYPE__MEMBERSHIP_CHANGED) {
+		return;
+	}
+	
+	ha = purple_connection_get_protocol_data(pc);
+
+	membership_changed = event->body->membership_changed;
+	membership = membership_changed->new_membership;
+
+	user_id = membership->id->member_id->user_id->id;
+	group_id = membership->id->group_id;
+	is_dm = !!group_id->dm_id;
+	if (is_dm) {
+		conv_id = group_id->dm_id->dm_id;
+	} else {
+		conv_id = group_id->space_id->space_id;
+	}
+
+	if (ha->self_gaia_id && g_strcmp0(user_id, ha->self_gaia_id) == 0) {
+		if (membership->membership_state == MEMBERSHIP_STATE__MEMBER_JOINED) {
+			if (is_dm) {
+				// We joined a DM
+			} else {
+				// We joined a group
+				PurpleChatConversation *chatconv = purple_conversations_find_chat_with_account(conv_id, ha->account);
+				if (chatconv == NULL) {
+					chatconv = purple_serv_got_joined_chat(ha->pc, g_str_hash(conv_id), conv_id);
+					purple_conversation_set_data(PURPLE_CONVERSATION(chatconv), "conv_id", g_strdup(conv_id));
+					g_hash_table_replace(ha->group_chats, g_strdup(conv_id), NULL);
+					
+					googlechat_lookup_group_info(ha, conv_id);
+				}
+			}
+		}
+
+	} else {
+		// It's not us
+		if (is_dm) {
+			// It's a DM
+			g_hash_table_replace(ha->one_to_ones, g_strdup(conv_id), g_strdup(user_id));
+			g_hash_table_replace(ha->one_to_ones_rev, g_strdup(user_id), g_strdup(conv_id));
+			
+		} else {
+			// It's a group conversation
+			PurpleChatConversation *chatconv = purple_conversations_find_chat_with_account(conv_id, ha->account);
+			if (chatconv != NULL) {
+				PurpleChatUser *cb = purple_chat_conversation_find_user(chatconv, user_id);
+				if (membership->membership_state == MEMBERSHIP_STATE__MEMBER_JOINED) {
+					PurpleChatUserFlags cbflags = googlechat_membership_role_to_chat_user_flags(membership->membership_role);
+
+					if (cb == NULL) {
+						purple_chat_conversation_add_user(chatconv, user_id, NULL, cbflags, TRUE);
+					} else {
+						purple_chat_user_set_flags(cb, cbflags);
+					}
+				} else if (membership->membership_state == MEMBERSHIP_STATE__MEMBER_NOT_A_MEMBER) {
+					if (cb != NULL) {
+						purple_chat_conversation_remove_user(chatconv, user_id, NULL);
+					}
+				}
+			}
+		}
+	}
 }

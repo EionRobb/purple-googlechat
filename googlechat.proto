@@ -274,6 +274,14 @@ message RequestHeader {
 		INTERNAL_TESTING = 5;
 		WEB_DESKTOP = 6;
 		WEB_GMAIL = 7;
+		WEB_COMPANION = 9;
+		WEB_CRX = 10;
+		WEB_PWA = 11;
+		WEB_DYNTO = 12;
+		WEB_DYNTO_PWA = 13;
+		WEB_GMAIL_DARK_LAUNCH = 14;
+		STREAM_IN_MEET = 15;
+		WEB_ADMIN_CONSOLE = 16;
 	}
 	optional ClientType client_type = 2;
 	optional int64 client_version = 3;
@@ -287,18 +295,56 @@ enum InviteCategory {
 	SPAM_INVITE = 2;
 }
 
+enum MemberType {
+	MEMBER_TYPE_UNSPECIFIED = 0;
+	HUMAN_USER = 1;
+	ROSTER_MEMBER = 2;
+}
+
+message SegmentedMembershipCount {
+	optional int32 membership_count = 1;
+	optional MemberType member_type = 2;
+	optional MembershipState membership_state = 3;
+}
+
+message SegmentedMembershipCounts {
+	repeated SegmentedMembershipCount value = 1;
+}
+
+enum RosterState {
+	ROSTER_STATE_UNKNOWN = 0;
+	ROSTER_ACTIVE = 1;
+	ROSTER_DELETED = 2;
+}
+
+message Roster {
+	optional RosterId id = 1;
+	optional string name = 2;
+	optional string avatar_url = 3;
+	optional int32 membership_count = 4;
+	optional string roster_gaia_key = 5;
+	optional RosterState roster_state = 6;
+	optional SegmentedMembershipCounts segmented_membership_counts = 7;
+	optional bool is_membership_visible_to_caller = 8;
+}
+
+message RosterId {
+	optional string id = 1;
+}
+
 message Member {
 	//oneof Profile {
-	optional	User user = 1;
-		//Roster roster = 2;
+	optional User user = 1;
+	optional Roster roster = 2;
 	//}
 }
 
 message MemberId {
 	//oneof Id {
-	optional	UserId user_id = 1;
-		//RosterId roster_id = 2;
+	optional UserId user_id = 1;
+	optional RosterId roster_id = 2;
 	//}
+	optional string email = 3;
 }
 
 message MembershipId {
@@ -313,6 +359,7 @@ message Membership {
 	optional MembershipState membership_state = 3;
 	optional InviteCategory invite_category = 4;
 	optional MembershipRole membership_role = 5;
+	//optional AbuseLabels abuse_labels = 6;
 }
 
 message MemberProfile {
@@ -1102,9 +1149,9 @@ message Annotation {
 	optional	UrlMetadata url_metadata = 7;
 	optional	UploadMetadata upload_metadata = 10;
 	optional	MembershipChangedMetadata membership_changed = 11;
-		//DYNProtoVideoCallMetadata video_call_metadata = 12;
+	optional	VideoCallMetadata video_call_metadata = 12;
 	optional	RoomUpdatedMetadata room_updated = 14;
-		//DYNProtoGsuiteIntegrationMetadata gsuite_integration_metadata = 16;
+	optional GsuiteIntegrationMetadata gsuite_integration_metadata = 16;
 		//DYNProtoGroupRetentionSettingsUpdatedMetaData group_retention_settings_updated = 17;
 		//DYNProtoBabelPlaceholderMetadata babel_placeholder_metadata = 18
 		//DYNProtoReadReceiptsSettingsUpdatedMetadata read_receipts_settings_metadata = 21;
@@ -1214,7 +1261,7 @@ message Group {
 	// optional bool inline_threading_enabled = 44;
 	// optional bool dm_created_by_admin = 45;
 	// repeated int32 active_backend_group_experiments_for_logging = 46;
-	// optional SegmentedMembershipCounts segmented_membership_counts = 47;
+	optional SegmentedMembershipCounts segmented_membership_counts = 47;
 	// optional SpacePermissions space_permissions = 48;
 	// optional LTRMigrationStatus ltr_migration_status = 49;
 }
@@ -1598,6 +1645,14 @@ message MembershipChangedEvent {
 	optional Membership new_membership = 1;
 	optional MembershipState prior_membership_state = 2;
 	optional MembershipRole prior_membership_role = 3;
+
+	enum EventReason {
+		REASON_UNSPECIFIED = 0;
+		GROUP_DELETED = 1;
+		GROUP_UNDELETED = 2;
+		TARGET_AUDIENCE_UPDATED = 3;
+	}
+	optional EventReason reason = 4;
 }
 
 message ReadReceiptChangedEvent {
@@ -2056,6 +2111,56 @@ message RoomUpdatedMetadata {
 	optional User initiator = 4;
 }
 
+enum MeetingType {
+	MEETING_TYPE_UNSPECIFIED = 0;
+	HUDDLE = 1;
+	CALL = 2;
+}
+
+message MeetMetadata {
+	optional string meeting_code = 1;
+	optional string meeting_url = 2;
+	optional MeetingType meeting_type = 3;
+	optional string conference_name = 4;
+}
+
+message CallMetadata {
+	optional MeetMetadata meet_metadata = 1;
+}
+
+message CallAnnotationData {
+	optional CallMetadata call_metadata = 1;
+	enum CallStatus {
+		CALL_STATUS_UNSPECIFIED = 0;
+		CALL_STARTED = 1;
+		CALL_MISSED = 2;
+		CALL_ENDED = 3;
+	}
+	optional CallStatus call_status = 2;
+	//optional Timestamp call_ended_timestamp = 3;
+	//optional Timestamp participant_list_revision_timestamp = 4;
+	//optional CalendarEventAnnotationData calendar_event_annotation_data = 5;
+}
+
+enum GsuiteIntegrationClientType {
+	UNKNOWN_CLIENT_TYPE = 0;
+	MEET = 1;
+	TASKS = 2;
+	CALENDAR_EVENT = 3;
+	ASSISTANT = 4;
+	ACTIVITY_FEED_SERVICE = 5;
+}
+
+message GsuiteIntegrationMetadata {
+	optional GsuiteIntegrationClientType client_type = 1;
+	//optional TasksAnnotationData tasks_data = 3;
+	//optional CalendarEventAnnotationData calendar_event_data = 4;
+	//repeated string indexable_texts = 5;
+	optional CallAnnotationData call_data = 6;
+	//optional AssistantAnnotationData assistant_data = 7;
+	//optional ActivityFeedAnnotationData activity_feed_data = 8;
+}
+
 message CardCapabilityMetadata {
 	enum CapabilityType {
 		UNKNOWN = 0;
@@ -2237,6 +2342,13 @@ message VideoCallMetadata {
 	optional bool should_not_render = 3;
 }
 
+enum InitiatorType {
+	INITIATOR_TYPE_UNSPECIFIED = 0;
+	INITIATOR_TYPE_END_USER = 1;
+	INITIATOR_TYPE_ADMIN = 2;
+	INITIATOR_TYPE_APP = 3;
+}
+
 message MembershipChangedMetadata {
 	enum Type {
 		TYPE_UNSPECIFIED = 0;
@@ -2267,6 +2379,7 @@ message MembershipChangedMetadata {
 	repeated MemberId affected_members = 3;
 	optional User initiator_profile = 4;
 	repeated Member affected_member_profiles = 5;
+	optional InitiatorType initiator_type = 7;
 }
 
 message UserMentionMetadata {
@@ -2636,7 +2749,7 @@ message WorldItemLite {
 	optional bool inline_threading_enabled = 27;
 	repeated int32 active_backend_group_experiments_for_logging = 28;
 	optional bool dm_created_by_admin = 29;
-	// optional SegmentedMembershipCounts segmented_membership_counts = 30;
+	optional SegmentedMembershipCounts segmented_membership_counts = 30;
 	// repeated UserProfile user_profile_list = 32;
 	// optional LTRMigrationStatus ltr_migration_status = 33;
 }

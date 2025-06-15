@@ -26,8 +26,6 @@
 #include <purple.h>
 
 #include "googlechat_auth.h"
-#include "googlechat_pblite.h"
-#include "googlechat_json.h"
 #include "googlechat_events.h"
 #include "googlechat_connection.h"
 #include "googlechat_conversation.h"
@@ -1039,7 +1037,7 @@ init_plugin(PurplePlugin *plugin)
 		prpl_info->struct_size = sizeof(PurplePluginProtocolInfo);
 	#endif
 	#if PURPLE_MINOR_VERSION >= 8
-		//prpl_info->add_buddy_with_invite = skypeweb_add_buddy_with_invite;
+		//prpl_info->add_buddy_with_invite = googlechat_add_buddy_with_invite;
 	#endif
 	
 	info->actions = googlechat_actions;

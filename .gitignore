@@ -4,3 +4,5 @@ googlechat.pb-c.*
 *.proto.desc
 *.a
 *.chls
+.cache
+*.exe

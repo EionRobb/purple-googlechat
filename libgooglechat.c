@@ -796,7 +796,7 @@ googlechat_protocol_init(PurpleProtocol *prpl_info)
 	info->id = GOOGLECHAT_PLUGIN_ID;
 	info->name = "Google Chat";
 
-	prpl_info->options = OPT_PROTO_NO_PASSWORD | OPT_PROTO_CHAT_TOPIC | OPT_PROTO_MAIL_CHECK;
+	prpl_info->options = OPT_PROTO_NO_PASSWORD | OPT_PROTO_CHAT_TOPIC;
 	prpl_info->account_options = googlechat_add_account_options(prpl_info->account_options);
 	
 	purple_signal_register(plugin, "googlechat-received-event",
@@ -1028,7 +1028,7 @@ init_plugin(PurplePlugin *plugin)
 		plugin->info = info = g_new0(PurplePluginInfo, 1);
 	}
 	
-	prpl_info->options = OPT_PROTO_NO_PASSWORD | OPT_PROTO_IM_IMAGE | OPT_PROTO_CHAT_TOPIC | OPT_PROTO_MAIL_CHECK;
+	prpl_info->options = OPT_PROTO_NO_PASSWORD | OPT_PROTO_IM_IMAGE | OPT_PROTO_CHAT_TOPIC;
 	prpl_info->protocol_options = googlechat_add_account_options(prpl_info->protocol_options);
 	
 	purple_signal_register(plugin, "googlechat-received-event",

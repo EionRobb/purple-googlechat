@@ -130,6 +130,10 @@ message User {
 	optional OrganizationInfo organization_info = 12;
 	optional UserBlockRelationship block_relationship = 13;
 	repeated PhoneNumber phone_number = 14;
+	//optional enum user_account_type = 17;
+	//optional UserActivityMetadata user_activity_metadata = 18;
+	//optional enum profile_state = 19;
+
 }
 
 message UserBlockRelationship {
@@ -282,6 +286,9 @@ message RequestHeader {
 		WEB_GMAIL_DARK_LAUNCH = 14;
 		STREAM_IN_MEET = 15;
 		WEB_ADMIN_CONSOLE = 16;
+		FRAMELESS_CHAT = 17;
+		FRAMELESS_CHAT_PWA = 18;
+		EMBEDDED_STREAM_DARK_LAUNCH = 19;
 	}
 	optional ClientType client_type = 2;
 	optional int64 client_version = 3;
@@ -570,6 +577,27 @@ message JAddOnsPushCard {
 	optional JAddOnsCardItem card = 1;
 }
 
+
+message ChatActions {
+	// optional GsuiteTasksActions gsuite_tasks_actions = 2;
+	message GsuiteCallActions {
+		optional string meeting_url = 1;
+	}
+	optional GsuiteCallActions gsuite_call_actions = 3;
+	// optional GsuiteFallbackActions gsuite_fallback_actions = 4;
+}
+
+message HostAppAction {
+	// optional GmailActions gmail_action = 1;
+	// optional CalendarActions calendar_action = 2;
+	// optional DriveActions drive_action = 3;
+	// optional SheetsActions sheets_action = 4;
+	// optional EditorActions editor_action = 5;
+	optional ChatActions chat_action = 6;
+	// optional WorkflowActions workflow_action = 7;
+	// optional DuetAiAction duet_ai_action = 8;
+}
+
 message JAddOnsOnClick {
 	//oneof DataCase {
 	optional	string link = 1;
@@ -577,7 +605,12 @@ message JAddOnsOnClick {
 	optional	JAddOnsOpenLink open_link = 5;
 	optional	JAddOnsFormAction open_link_action = 7;
 	optional	JAddOnsPushCard push_card = 8;
-	//optional	ComGoogleAppsExtensionsV1HostAppAction host_app_action = 9;
+	optional	HostAppAction host_app_action = 9;
+	// optional DialogCard dialog_card = 12;
+	// optional OpenGwm open_gwm = 13;
+	// optional OptOutSuggestion opt_out_suggestion = 14;
+	// optional OverflowMenu overflow_menu = 15;
+	// repeated LoggingInfo logging_info = 16;
 	//}
 }
 
@@ -1086,6 +1119,11 @@ message UrlMetadata {
 	repeated int32 enabled_experiments = 19;
 }
 
+message Dimension {
+	optional int32 width = 1;
+	optional int32 height = 2;
+}
+
 message UploadMetadata {
 	//oneof Payload {
 		optional string attachment_token = 1;
@@ -1093,7 +1131,7 @@ message UploadMetadata {
 	// }
 	optional string content_name = 3;
 	optional string content_type = 4;
-	//optional Dimension original_dimension = 5;
+	optional Dimension original_dimension = 5;
 	optional string local_id = 6;
 	// optional VideoReference video_reference = 7;
 	// optional VirusScanResult virus_scan_result = 8;
@@ -1701,7 +1739,9 @@ message MessageReactionsSummaryEvent {
 
 message GroupReadStateUpdatedEvent {
 	optional GroupId group_id = 1;
-	//optional int64 timestamp of some kind = 2;
+	optional int64 last_head_message_create_time = 2;
+	optional int64 most_recent_read_time = 3;
+	optional int64 mark_as_unread_time = 4;
 }
 
 enum ReactionOption {
@@ -1854,10 +1894,58 @@ message StreamEventsResponse {
 	optional ClockSyncResponse clock_sync_response = 3;
 }
 
+// TODO find out the real name of this enum
+enum BackendMetadataDimension {
+	BACKEND_METADATA_DIMENSION_UNKNOWN = 0; // Not it's real name, is just "UNKNOWN"
+	TYPE_UNKNOWN = 1;
+	TYPE_DM = 2;
+	TYPE_SPACE = 3;
+	TYPE_USER = 4;
+	GROUP_SIZE_UNKNOWN = 5;
+	PAYLOAD_SIZE_UNKNOWN = 9;
+	PAYLOAD_SIZE_LT_1K = 10;
+	PAYLOAD_SIZE_1K_3K = 11;
+	PAYLOAD_SIZE_3K_64K = 12;
+	PAYLOAD_SIZE_GT_64K = 13;
+	GROUP_SIZE_SMALL = 14;
+	GROUP_SIZE_MEDIUM = 15;
+	GROUP_SIZE_LARGE = 16;
+	TYPE_PRESENCE = 17;
+	TYPE_STATUS = 18;
+}
+
 message BackendMetadata {
 	optional int64 dispatch_time_millis = 1;
 	optional int32 dispatch_sub_identifier = 2;
 	optional bytes dispatch_random_filler = 3;
+	optional int64 dispatch_timestamp_micros = 4;
+	repeated BackendMetadataDimension dimensions = 5;
+	optional bool user_targeted_event_dual_dispatch = 6;
+	optional int32 payload_hash = 7;
+}
+
+message Timestamp {
+	optional int64 seconds = 1;
+	optional int32 nanos = 2;
+
+}
+
+message Interval {
+	optional Timestamp start = 1;
+	optional Timestamp end = 2;
+}
+
+message LatencyData {
+	enum Server {
+		UNKNOWN = 0;
+		FRONTEND = 1;
+		INTEGRATION = 2;
+		BACKEND = 3;
+		DISPATCHER = 4;
+		SESSION = 5;
+	}
+	optional Server server = 1;
+	optional Interval interval = 2;
 }
 
 message Event {
@@ -2026,6 +2114,7 @@ message Event {
 
 	optional BackendMetadata backend_metadata = 9;
 	optional WorldItemLite world_item_lite = 10;
+	repeated LatencyData latency_data = 11;
 }
 
 
@@ -2694,6 +2783,11 @@ message NameUsers {
 	optional string group_name = 3;
 }
 
+message SpaceOriginType {
+	// optional enum space_origin = 1;
+	// optional enum updated_space_origin = 2;
+}
+
 message WorldItemLite {
 	optional GroupId group_id = 1;
 	optional ReadRevision group_revision = 2;
@@ -2752,6 +2846,14 @@ message WorldItemLite {
 	optional SegmentedMembershipCounts segmented_membership_counts = 30;
 	// repeated UserProfile user_profile_list = 32;
 	// optional LTRMigrationStatus ltr_migration_status = 33;
+	repeated GroupLabelId group_label_ids = 36;
+	message GroupNameDetails {
+		optional string room_name = 1;
+		optional DmMembers dm_members = 2;
+		optional NameUsers name_users = 3;
+	}
+	optional GroupNameDetails group_name_details = 37;
+	optional SpaceOriginType space_origin_type = 38;
 }
 
 message TopicLabelId {

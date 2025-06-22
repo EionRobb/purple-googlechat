@@ -2585,14 +2585,14 @@ googlechat_set_status(PurpleAccount *account, PurpleStatus *status)
 	googlechat_request_header_free(dnd_request.request_header);
 	
 	const gchar *message = purple_status_get_attr_string(status, "message");
+	SetCustomStatusRequest custom_status_request;
+	CustomStatus custom_status;
+	Emoji emoji;
+	
+	set_custom_status_request__init(&custom_status_request);
+	custom_status_request.request_header = googlechat_get_request_header(ha);
+	
 	if (message && *message) {
-		SetCustomStatusRequest custom_status_request;
-		CustomStatus custom_status;
-		Emoji emoji;
-		
-		set_custom_status_request__init(&custom_status_request);
-		custom_status_request.request_header = googlechat_get_request_header(ha);
-		
 		custom_status_request.has_custom_status_remaining_duration_usec = TRUE;
 		custom_status_request.custom_status_remaining_duration_usec = 172800000000;
 		
@@ -2603,11 +2603,14 @@ googlechat_set_status(PurpleAccount *account, PurpleStatus *status)
 		emoji__init(&emoji);
 		emoji.unicode = "";
 		custom_status.emoji = &emoji;
-		
-		googlechat_api_set_custom_status(ha, &custom_status_request, NULL, NULL);
-		
-		googlechat_request_header_free(custom_status_request.request_header);
+	} else {
+		custom_status_request.has_custom_status_remaining_duration_usec = TRUE;
+		custom_status_request.custom_status_remaining_duration_usec = 0;
 	}
+	
+	googlechat_api_set_custom_status(ha, &custom_status_request, NULL, NULL);
+	
+	googlechat_request_header_free(custom_status_request.request_header);
 }
 
 

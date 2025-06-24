@@ -2539,6 +2539,8 @@ enum MembershipRole {
 	ROLE_INVITEE = 2;
 	ROLE_MEMBER = 3;
 	ROLE_OWNER = 4;
+	ROLE_APP_OWNER = 5;
+	ROLE_MANAGER = 6;
 }
 
 

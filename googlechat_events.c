@@ -190,6 +190,9 @@ googlechat_received_presence_notification(PurpleConnection *pc, Event *event)
 	gboolean available = FALSE;
 	gchar *message = NULL;
 	UserStatus *user_status = user_status_updated_event->user_status;
+	if (user_status == NULL || user_status->user_id == NULL || user_status->user_id->id == NULL) {
+		return;
+	}
 	const gchar *user_id = user_status->user_id->id;
 	PurpleBuddy *buddy = purple_blist_find_buddy(ha->account, user_id);
 	
@@ -358,6 +361,10 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 		return;
 	}
 	
+	if (message->creator == NULL || message->creator->user_id == NULL || message->creator->user_id->id == NULL) {
+		purple_debug_error("googlechat", "Received message with no creator/user_id\n");
+		return;
+	}
 	//TODO safety checks
 	sender_id = message->creator->user_id->id;
 	GroupId *group_id = message->id->parent_id->topic_id->group_id;
@@ -537,6 +544,7 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 	g_free(msg);
 
 	// Process join/part's
+	gboolean has_membership_changed = FALSE;
 	for (i = 0; i < message->n_annotations; i++) {
 		Annotation *annotation = message->annotations[i];
 		
@@ -547,12 +555,31 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 			
 			if (membership_change->type == MEMBERSHIP_CHANGED_METADATA__TYPE__LEFT ||
 				membership_change->type == MEMBERSHIP_CHANGED_METADATA__TYPE__REMOVED ||
-				membership_change->type == MEMBERSHIP_CHANGED_METADATA__TYPE__BOT_REMOVED) {
-				//TODO
+				membership_change->type == MEMBERSHIP_CHANGED_METADATA__TYPE__BOT_REMOVED ||
+				membership_change->type == MEMBERSHIP_CHANGED_METADATA__TYPE__KICKED_DUE_TO_OTR_CONFLICT) {
 				const gchar *reason = NULL;
+				switch(membership_change->type) {
+					case MEMBERSHIP_CHANGED_METADATA__TYPE__LEFT:
+						reason = _("Left the conversation");
+						break;
+					case MEMBERSHIP_CHANGED_METADATA__TYPE__REMOVED:
+						reason = _("Removed from the conversation");
+						break;
+					case MEMBERSHIP_CHANGED_METADATA__TYPE__BOT_REMOVED:
+						reason = _("Bot removed from the conversation");
+						break;
+					case MEMBERSHIP_CHANGED_METADATA__TYPE__KICKED_DUE_TO_OTR_CONFLICT:
+						reason = _("Kicked due to OTR conflict");
+						break;
+					default:
+						break;
+				}
 				
 				for (j = 0; j < membership_change->n_affected_members; j++) {
 					MemberId *member_id = membership_change->affected_members[j];
+					if (member_id == NULL || member_id->user_id == NULL || member_id->user_id->id == NULL) {
+						continue;
+					}
 					
 					purple_chat_conversation_remove_user(chatconv, member_id->user_id->id, reason);
 					
@@ -563,15 +590,23 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 					}
 				}
 			} else {
-				PurpleChatUserFlags cbflags = PURPLE_CHAT_USER_NONE; //TODO
+				PurpleChatUserFlags cbflags = PURPLE_CHAT_USER_NONE; //TODO membership_change->affected_memberships[j]->target_membership_role;
 				
 				for (j = 0; j < membership_change->n_affected_members; j++) {
 					MemberId *member_id = membership_change->affected_members[j];
+					if (member_id == NULL || member_id->user_id == NULL || member_id->user_id->id == NULL) {
+						continue;
+					}
 					
 					purple_chat_conversation_add_user(chatconv, member_id->user_id->id, NULL, cbflags, TRUE);
+					has_membership_changed = TRUE;
 				}
 			}
 		}
+	}
+	// If we had a membership change, update the conversation info
+	if (has_membership_changed) {
+		googlechat_lookup_group_info(ha, conv_id);
 	}
 	
 	// Add images
@@ -1015,6 +1050,11 @@ googlechat_received_typing_notification(PurpleConnection *pc, Event *event)
 	
 	ha = purple_connection_get_protocol_data(pc);
 	
+	if (typing_notification == NULL ||
+		typing_notification->user_id == NULL ||
+		typing_notification->user_id->id == NULL) {
+		return;
+	}
 	user_id = typing_notification->user_id->id;
 	if (ha->self_gaia_id && g_strcmp0(user_id, ha->self_gaia_id) == 0)
 		return;
@@ -1070,21 +1110,6 @@ googlechat_received_typing_notification(PurpleConnection *pc, Event *event)
 	purple_serv_got_typing(pc, user_id, 7, typing_state);
 }
 
-static PurpleChatUserFlags
-googlechat_membership_role_to_chat_user_flags(MembershipRole role)
-{
-	switch (role) {
-		case MEMBERSHIP_ROLE__ROLE_MEMBER:
-			return PURPLE_CHAT_USER_VOICE;
-		case MEMBERSHIP_ROLE__ROLE_OWNER:
-			return PURPLE_CHAT_USER_FOUNDER;
-		case MEMBERSHIP_ROLE__ROLE_UNKNOWN:
-		case MEMBERSHIP_ROLE__ROLE_NONE:
-		default:
-			return PURPLE_CHAT_USER_NONE;
-	}
-}
-
 void
 googlechat_received_membership_changed(PurpleConnection *pc, Event *event)
 {
@@ -1104,6 +1129,11 @@ googlechat_received_membership_changed(PurpleConnection *pc, Event *event)
 
 	membership_changed = event->body->membership_changed;
 	membership = membership_changed->new_membership;
+
+	if (!membership || !membership->id || !membership->id->member_id || 
+		!membership->id->member_id->user_id || !membership->id->member_id->user_id->id) {
+		return;
+	}
 
 	user_id = membership->id->member_id->user_id->id;
 	group_id = membership->id->group_id;
@@ -1148,6 +1178,9 @@ googlechat_received_membership_changed(PurpleConnection *pc, Event *event)
 
 					if (cb == NULL) {
 						purple_chat_conversation_add_user(chatconv, user_id, NULL, cbflags, TRUE);
+		
+						// Grab the name of the new user
+						googlechat_lookup_group_info(ha, conv_id);
 					} else {
 						purple_chat_user_set_flags(cb, cbflags);
 					}

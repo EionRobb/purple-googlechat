@@ -75,6 +75,8 @@ googlechat_got_self_user_status(GoogleChatAccount *ha, GetSelfUserStatusResponse
 	UserStatus *self_status = response->user_status;
 	
 	g_return_if_fail(self_status);
+	g_return_if_fail(self_status->user_id);
+	g_return_if_fail(self_status->user_id->id);
 	
 	g_free(ha->self_gaia_id);
 	ha->self_gaia_id = g_strdup(self_status->user_id->id);
@@ -115,6 +117,9 @@ googlechat_got_users_presence(GoogleChatAccount *ha, GetUserPresenceResponse *re
 	for (i = 0; i < response->n_user_presences; i++) {
 		DYNProtoUserPresence *user_presence = response->user_presences[i];
 		UserStatus *user_status = user_presence->user_status;
+		if (user_presence == NULL || user_presence->user_id == NULL || user_presence->user_id->id == NULL) {
+			continue;
+		}
 		
 		const gchar *user_id = user_presence->user_id->id;
 		const gchar *status_id = NULL;
@@ -639,6 +644,25 @@ googlechat_got_group_users(GoogleChatAccount *ha, GetMembersResponse *response, 
 	g_free(conv_id);
 }
 
+PurpleChatUserFlags
+googlechat_membership_role_to_chat_user_flags(MembershipRole role)
+{
+	switch (role) {
+		case MEMBERSHIP_ROLE__ROLE_MEMBER:
+			return PURPLE_CHAT_USER_VOICE;
+		case MEMBERSHIP_ROLE__ROLE_OWNER:
+			return PURPLE_CHAT_USER_FOUNDER;
+		case MEMBERSHIP_ROLE__ROLE_MANAGER:
+			return PURPLE_CHAT_USER_OP;
+		case MEMBERSHIP_ROLE__ROLE_APP_OWNER:
+			return PURPLE_CHAT_USER_HALFOP;
+		case MEMBERSHIP_ROLE__ROLE_UNKNOWN:
+		case MEMBERSHIP_ROLE__ROLE_NONE:
+		default:
+			return PURPLE_CHAT_USER_NONE;
+	}
+}
+
 static void
 googlechat_got_group_info(GoogleChatAccount *ha, GetGroupResponse *response, gpointer user_data)
 {
@@ -663,18 +687,11 @@ googlechat_got_group_info(GoogleChatAccount *ha, GetGroupResponse *response, gpo
 	
 	for (i = 0; i < response->n_memberships; i++) {
 		Membership *membership = memberships[i];
-		if (membership->membership_role == MEMBERSHIP_ROLE__ROLE_UNKNOWN) {
-			// Ignore memberships that are not set
+		if (!membership || !membership->id || !membership->id->member_id || !membership->id->member_id->user_id) {
 			continue;
 		}
-		const gchar *user_id = membership->id->member_id->user_id ?
-			membership->id->member_id->user_id->id :
-			membership->id->group_id->space_id->space_id;
-		PurpleChatUserFlags cbflags = PURPLE_CHAT_USER_NONE;
-		
-		if (membership->membership_role == MEMBERSHIP_ROLE__ROLE_OWNER) {
-			cbflags = PURPLE_CHAT_USER_OP;
-		}
+		const gchar *user_id = membership->id->member_id->user_id->id;
+		PurpleChatUserFlags cbflags = googlechat_membership_role_to_chat_user_flags(membership->membership_role);
 		
 		PurpleChatUser *chat_user = purple_chat_conversation_find_user(chatconv, user_id);
 		if (chat_user) {

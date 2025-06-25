@@ -44,7 +44,18 @@ typedef struct {
 
 typedef struct {
 	bitlbee_account_t *acc;
+	guint32 unused;
+	gpointer proto_data;
 } bitlbee_im_connection;
+
+typedef struct {
+	gpointer unused1;
+	gpointer unused2;
+	guint unused3;
+	gpointer unused4;
+	gpointer unused5;
+	int flags;
+} bitlbee_purple_data;
 
 static gpointer bitlbee_module;
 static bitlbee_im_connection *(*bitlbee_purple_ic_by_pa)(PurpleAccount *);
@@ -63,6 +74,25 @@ static gchar *last_dlopen_error = NULL;
 #	include <dlfcn.h>
 #endif
 
+static gboolean
+load_bitlbee_funcs()
+{
+	if (bitlbee_password_funcs_loaded == FALSE) {
+		bitlbee_module = dlopen(NULL, RTLD_LAZY);
+		if (bitlbee_module == NULL) {
+			purple_debug_error("googlechat", "Couldn't acquire address of bitlbee handle: %s\n", dlerror());
+			g_return_val_if_fail(bitlbee_module, FALSE);
+		}
+		
+		bitlbee_purple_ic_by_pa = (gpointer) dlsym(bitlbee_module, "purple_ic_by_pa");
+		bitlbee_set_setstr = (gpointer) dlsym(bitlbee_module, "set_setstr");
+		
+		bitlbee_password_funcs_loaded = TRUE;
+	}
+
+	return bitlbee_password_funcs_loaded;
+}
+
 static void
 save_bitlbee_password(PurpleAccount *account, const gchar *password)
 {
@@ -75,22 +105,26 @@ save_bitlbee_password(PurpleAccount *account, const gchar *password)
 		return;
 	}
 	
-	if (bitlbee_password_funcs_loaded == FALSE) {
-		bitlbee_module = dlopen(NULL, RTLD_LAZY);
-		if (bitlbee_module == NULL) {
-			purple_debug_error("googlechat", "Couldn't acquire address of bitlbee handle: %s\n", dlerror());
-			g_return_if_fail(bitlbee_module);
+	if (load_bitlbee_funcs()) {
+		imconn = bitlbee_purple_ic_by_pa(account);
+		if (imconn && imconn->acc) {
+			acc = imconn->acc;
+			bitlbee_set_setstr(&acc->set, "password", password ? password : "");
 		}
-		
-		bitlbee_purple_ic_by_pa = (gpointer) dlsym(bitlbee_module, "purple_ic_by_pa");
-		bitlbee_set_setstr = (gpointer) dlsym(bitlbee_module, "set_setstr");
-		
-		bitlbee_password_funcs_loaded = TRUE;
 	}
-	
-	imconn = bitlbee_purple_ic_by_pa(account);
-	acc = imconn->acc;
-	bitlbee_set_setstr(&acc->set, "password", password ? password : "");
+}
+
+void
+bitlbee_set_setnick_flag(PurpleAccount *account)
+{
+	if (load_bitlbee_funcs()) {
+		bitlbee_im_connection *imconn = bitlbee_purple_ic_by_pa(account);
+		if (imconn && imconn->proto_data) {
+			bitlbee_purple_data *data = imconn->proto_data;
+			
+			data->flags |= 1;
+		}
+	}
 }
 
 static void

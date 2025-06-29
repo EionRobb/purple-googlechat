@@ -61,6 +61,7 @@ static gpointer bitlbee_module;
 static bitlbee_im_connection *(*bitlbee_purple_ic_by_pa)(PurpleAccount *);
 static int (*bitlbee_set_setstr)(gpointer *, const char *, const char *);
 static gboolean bitlbee_password_funcs_loaded = FALSE;
+//static void (*bitlbee_imcb_buddy_nick_change)(gpointer *ic, const char *handle, const char *nick);
 
 #ifdef _WIN32
 #	include <windows.h>
@@ -87,7 +88,9 @@ load_bitlbee_funcs()
 		bitlbee_purple_ic_by_pa = (gpointer) dlsym(bitlbee_module, "purple_ic_by_pa");
 		bitlbee_set_setstr = (gpointer) dlsym(bitlbee_module, "set_setstr");
 		
-		bitlbee_password_funcs_loaded = TRUE;
+		if (bitlbee_purple_ic_by_pa && bitlbee_set_setstr) {
+			bitlbee_password_funcs_loaded = TRUE;
+		}
 	}
 
 	return bitlbee_password_funcs_loaded;
@@ -118,11 +121,12 @@ void
 bitlbee_set_setnick_flag(PurpleAccount *account)
 {
 	if (load_bitlbee_funcs()) {
+		// TODO figure out how to use bitlbee_imcb_buddy_nick_change instead of this
 		bitlbee_im_connection *imconn = bitlbee_purple_ic_by_pa(account);
 		if (imconn && imconn->proto_data) {
 			bitlbee_purple_data *data = imconn->proto_data;
 			
-			data->flags |= 1;
+			data->flags |= 1; // PURPLE_OPT_SHOULD_SET_NICK
 		}
 	}
 }

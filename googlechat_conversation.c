@@ -29,6 +29,7 @@
 #include <purple.h>
 #include <time.h>
 #include "glibcompat.h"
+#include "http.h"
 #include "image-store.h"
 #include "libgooglechat.h"
 #include "purplecompat.h"
@@ -1199,7 +1200,7 @@ googlechat_got_buddy_list(PurpleHttpConnection *http_conn, PurpleHttpResponse *r
 					"starred"
 				 ],
 			},
-			name": [{
+			"name": [{
 				"displayName": "{USERS NAME}",
 			}],
 			"photo": [{
@@ -1672,6 +1673,9 @@ googlechat_conversation_send_image_part1_cb(PurpleHttpConnection *connection, Pu
 	gchar *conv_id;
 	PurpleImage *image;
 	const gchar *upload_url;
+	guint chunk_granularity;
+	gconstpointer image_data;
+	gsize image_data_size;
 	PurpleHttpRequest *request;
 	PurpleHttpConnection *new_connection;
 	PurpleConnection *pc = purple_http_conn_get_purple_connection(connection);
@@ -1691,22 +1695,52 @@ googlechat_conversation_send_image_part1_cb(PurpleHttpConnection *connection, Pu
 	//x-goog-upload-control-url: same as upload-url ?
 	//x-goog-upload-chunk-granularity: 1048576 //TODO
 	upload_url = purple_http_response_get_header(response, "x-goog-upload-url");
-	
-	request = purple_http_request_new(upload_url);
-	purple_http_request_set_keepalive_pool(request, ha->api_keepalive_pool);
-	purple_http_request_header_set(request, "x-goog-upload-command", "upload, finalize");
-	purple_http_request_header_set(request, "x-goog-upload-protocol", "resumable");
-	purple_http_request_header_set(request, "x-goog-upload-offset", "0"); //TODO
-	purple_http_request_set_method(request, "PUT");
-	purple_http_request_set_contents(request, purple_image_get_data(image), purple_image_get_data_size(image));
+	chunk_granularity = atoi(purple_http_response_get_header(response, "x-goog-upload-chunk-granularity"));
+	image_data = purple_image_get_data(image);
+	image_data_size = purple_image_get_data_size(image);
 
-	purple_http_request_header_set_printf(request, "Authorization", "Bearer %s", ha->access_token);
-	new_connection = purple_http_request(ha->pc, request, googlechat_conversation_send_image_part2_cb, ha);
-	purple_http_request_unref(request);
+	// TODO implement chunking more safely
+	//if (chunk_granularity == 0) {
+		chunk_granularity = image_data_size;
+	//}
+
+	// Send image data in chunks
+	gsize offset = 0;
+	gsize remaining = image_data_size;
 	
-	g_dataset_set_data_full(new_connection, "conv_id", g_strdup(conv_id), g_free);
-	
-	g_dataset_destroy(connection);
+	while (remaining > 0) {
+		gsize chunk_size = MIN(remaining, chunk_granularity);
+		gboolean is_final_chunk = (remaining == chunk_size);
+		
+		request = purple_http_request_new(upload_url);
+		purple_http_request_set_cookie_jar(request, ha->cookie_jar);
+		purple_http_request_set_keepalive_pool(request, ha->api_keepalive_pool);
+		
+		if (is_final_chunk) {
+			purple_http_request_header_set(request, "x-goog-upload-command", "upload, finalize");
+		} else {
+			purple_http_request_header_set(request, "x-goog-upload-command", "upload");
+		}
+		
+		purple_http_request_header_set(request, "x-goog-upload-protocol", "resumable");
+		purple_http_request_header_set_printf(request, "x-goog-upload-offset", "%" G_GSIZE_FORMAT, offset);
+		purple_http_request_set_method(request, "PUT");
+		purple_http_request_set_contents(request, (const gchar*)image_data + offset, chunk_size);
+
+		googlechat_set_auth_headers(ha, request);
+		
+		if (is_final_chunk) {
+			new_connection = purple_http_request(ha->pc, request, googlechat_conversation_send_image_part2_cb, ha);
+			g_dataset_set_data_full(new_connection, "conv_id", g_strdup(conv_id), g_free);
+		} else {
+			purple_http_request(ha->pc, request, NULL, NULL);
+		}
+		
+		purple_http_request_unref(request);
+		
+		offset += chunk_size;
+		remaining -= chunk_size;
+	}
 }
 
 static void
@@ -1726,6 +1760,7 @@ googlechat_conversation_send_image(GoogleChatAccount *ha, const gchar *conv_id, 
 	
 	url = g_strdup_printf("https://chat.google.com/uploads?group_id=%s", purple_url_encode(conv_id));
 	request = purple_http_request_new(url);
+	purple_http_request_set_cookie_jar(request, ha->cookie_jar);
 	purple_http_request_set_method(request, "POST");
 	purple_http_request_header_set(request, "x-goog-upload-protocol", "resumable");
 	purple_http_request_header_set(request, "x-goog-upload-command", "start");
@@ -1734,7 +1769,7 @@ googlechat_conversation_send_image(GoogleChatAccount *ha, const gchar *conv_id, 
 	purple_http_request_header_set(request, "x-goog-upload-file-name", filename);
 	purple_http_request_set_keepalive_pool(request, ha->api_keepalive_pool);
 	
-	purple_http_request_header_set_printf(request, "Authorization", "Bearer %s", ha->access_token);
+	googlechat_set_auth_headers(ha, request);
 	connection = purple_http_request(ha->pc, request, googlechat_conversation_send_image_part1_cb, ha);
 	purple_http_request_unref(request);
 	
@@ -1915,7 +1950,7 @@ const gchar *message, PurpleMessageFlags flags)
 }
 
 guint
-googlechat_send_typing(PurpleConnection *pc, const gchar *who, PurpleIMTypingState state)
+googlechat_send_typing(PurpleConnection *pc, const char *who, PurpleIMTypingState state)
 {
 	GoogleChatAccount *ha;
 	PurpleConversation *conv;

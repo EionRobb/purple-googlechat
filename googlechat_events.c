@@ -25,6 +25,7 @@
 #include "core.h"
 #include "debug.h"
 #include "glibcompat.h"
+#include "googlechat_connection.h"
 #include "image.h"
 #include "image-store.h"
 #include "mediamanager.h"
@@ -676,7 +677,7 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 		if (image_url != NULL) {
 			PurpleHttpConnection *connection;
 			
-			if (!ha->access_token || g_strcmp0(purple_core_get_ui(), "BitlBee") == 0) {
+			if (g_strcmp0(purple_core_get_ui(), "BitlBee") == 0) {
 				// Bitlbee doesn't support images, so just plop a url to the image instead
 				if (g_hash_table_contains(ha->group_chats, conv_id)) {
 					purple_serv_got_chat_in(pc, g_str_hash(conv_id), sender_id, msg_flags, url, message_timestamp);
@@ -692,7 +693,8 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 			} else {
 				PurpleHttpRequest *request = purple_http_request_new(image_url);
 				
-				purple_http_request_header_set_printf(request, "Authorization", "Bearer %s", ha->access_token);
+				purple_http_request_set_cookie_jar(request, ha->cookie_jar);
+				googlechat_set_auth_headers(ha, request);
 				purple_http_request_set_max_len(request, -1);
 				
 				connection = purple_http_request(ha->pc, request, googlechat_got_http_image_for_conv, ha);

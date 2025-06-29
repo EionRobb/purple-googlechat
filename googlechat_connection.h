@@ -39,6 +39,7 @@ void googlechat_process_data_chunks(GoogleChatAccount *ha, const gchar *data, gs
 
 void googlechat_process_channel(int fd);
 
+void googlechat_set_auth_headers(GoogleChatAccount *ha, PurpleHttpRequest *request);
 void googlechat_longpoll_request(GoogleChatAccount *ha);
 void googlechat_fetch_channel_sid(GoogleChatAccount *ha);
 void googlechat_register_webchannel(GoogleChatAccount *ha);

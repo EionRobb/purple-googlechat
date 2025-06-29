@@ -206,7 +206,7 @@ googlechat_process_channel_buffer(GoogleChatAccount *ha)
 	}
 }
 
-static void
+void
 googlechat_set_auth_headers(GoogleChatAccount *ha, PurpleHttpRequest *request)
 {
 	if (ha->access_token) {

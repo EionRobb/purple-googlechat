@@ -488,6 +488,10 @@ googlechat_login(PurpleAccount *account)
 #endif
 	
 	ha->active_client_timeout = g_timeout_add_seconds(GOOGLECHAT_ACTIVE_CLIENT_TIMEOUT, ((GSourceFunc) googlechat_set_active_client), pc);
+
+	if (g_strcmp0(purple_core_get_ui(), "BitlBee") == 0) {
+		bitlbee_set_setnick_flag(account);
+	}
 }
 
 static void

@@ -27,5 +27,6 @@ gboolean googlechat_oauth_refresh_token(GoogleChatAccount *ha);
 void googlechat_cache_ssl_certs(GoogleChatAccount *ha);
 void googlechat_auth_finished_auth(GoogleChatAccount *ha);
 gboolean googlechat_auth_refresh_xsrf_token(GoogleChatAccount *ha);
+void bitlbee_set_setnick_flag(PurpleAccount *account);
 
 #endif /*_GOOGLECHAT_AUTH_H_*/

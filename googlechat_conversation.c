@@ -1867,7 +1867,11 @@ googlechat_conversation_send_message(GoogleChatAccount *ha, const gchar *conv_id
 	message_info.has_accept_format_annotations = TRUE;
 	message_info.accept_format_annotations = TRUE; //false = treat message as markdown
 	
-	purple_debug_info("googlechat", "%s\n", pblite_dump_json((ProtobufCMessage *)&request)); //leaky
+	if (purple_debug_is_verbose()) {
+		gchar *pblite_dump = pblite_dump_json((ProtobufCMessage *)&request);
+		purple_debug_info("googlechat", "%s\n", pblite_dump);
+		g_free(pblite_dump);
+	}
 	
 	//TODO listen to response
 	googlechat_api_create_topic(ha, &request, NULL, NULL);
@@ -2133,9 +2137,11 @@ googlechat_created_dm(GoogleChatAccount *ha, CreateDmResponse *response, gpointe
 	gchar *message = user_data;
 	const gchar *conv_id;
 	
-	gchar *dump = pblite_dump_json((ProtobufCMessage *) response);
-	purple_debug_info("googlechat", "%s\n", dump);
-	g_free(dump);
+	if (purple_debug_is_verbose()) {
+		gchar *dump = pblite_dump_json((ProtobufCMessage *) response);
+		purple_debug_info("googlechat", "%s\n", dump);
+		g_free(dump);
+	}
 	
 	if (dm == NULL) {
 		purple_debug_error("googlechat", "Could not create DM\n");
@@ -2172,9 +2178,11 @@ googlechat_created_group(GoogleChatAccount *ha, CreateGroupResponse *response, g
 	gchar *message = user_data;
 	const gchar *conv_id;
 	
-	gchar *dump = pblite_dump_json((ProtobufCMessage *) response);
-	purple_debug_info("googlechat", "%s\n", dump);
-	g_free(dump);
+	if (purple_debug_is_verbose()) {
+		gchar *dump = pblite_dump_json((ProtobufCMessage *) response);
+		purple_debug_info("googlechat", "%s\n", dump);
+		g_free(dump);
+	}
 	
 	if (group == NULL) {
 		purple_debug_error("googlechat", "Could not create Group\n");

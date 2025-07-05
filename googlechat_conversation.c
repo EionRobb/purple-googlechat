@@ -2582,7 +2582,7 @@ googlechat_mark_conversation_seen(PurpleConversation *conv, PurpleConversationUp
 	}
 	
 	request.has_last_read_time = TRUE;
-	request.last_read_time = g_get_real_time();
+	request.last_read_time = g_get_real_time() - (ha->server_time_offset * 1000000);
 	
 	googlechat_api_mark_group_readstate(ha, &request, NULL, NULL);
 	

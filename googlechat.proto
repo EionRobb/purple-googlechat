@@ -3191,3 +3191,28 @@ message CreateVideoCallRequest {
 message CreateVideoCallResponse {
 	optional Annotation annotation = 1;
 }
+
+message SubmitFormActionRequest {
+	enum FormActionEvent {
+		UNSPECIFIED = 0;
+		SUBMIT_FORM = 1;
+		CANCEL_FORM = 2;
+		INVOKE_DIALOG_BY_FORM_SUBMIT = 3;
+	}
+	optional FormActionEvent dialog_event = 1;
+	optional MessageId message_id = 2;
+	optional UserId bot_id = 3;
+	optional JAddOnsFormAction action = 4;
+	//repeated FormInput form_inputs = 5;
+	optional GroupId group_id = 6;
+	//optional AppCommandMetadata app_command_metadata = 7;
+	optional TopicId topic_id = 8;
+	optional RequestHeader request_header = 9;
+}
+
+message SubmitFormActionResponse {
+	//optional BotResponse bot_response = 1;
+	//optional ActionStatus action_status = 2;
+	optional JAddOnsCardItem card_item = 3;
+	optional string setup_url = 4;
+}

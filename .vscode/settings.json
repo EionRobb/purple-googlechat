@@ -24,6 +24,7 @@
         "gboolean",
         "gchar",
         "gchat",
+        "gconstpointer",
         "GINT",
         "googlechat",
         "gpointer",

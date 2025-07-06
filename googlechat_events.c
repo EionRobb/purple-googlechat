@@ -1242,5 +1242,6 @@ googlechat_received_membership_changed(PurpleConnection *pc, Event *event)
 				}
 			}
 		}
+		googlechat_get_slash_commands_for_conversation(ha, conv_id);
 	}
 }

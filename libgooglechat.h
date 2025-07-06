@@ -113,6 +113,8 @@ typedef struct {
 	GHashTable *group_chats;     // A store of known conv_id's
 	GHashTable *sent_message_ids;// A store of message id's that we generated from this instance
 	
+	GHashTable *slash_commands; // bot_id:command_name -> GoogleChatSlashCommand
+	
 	guint refresh_token_timeout;
 	guint dynamite_token_timeout;
 } GoogleChatAccount;
@@ -135,6 +137,16 @@ typedef struct {
 } GoogleChatBuddy;
 
 
+typedef struct {
+	gchar *bot_user_id;
+	gchar *name;
+	guint64 command_id;
+	gchar *description;
+	//TODO record which conversations this command is available in
+} GoogleChatSlashCommand;
+
+
 gboolean googlechat_is_valid_id(const gchar *id);
+const gchar *googlechat_get_convid_of_conv(PurpleConversation *conv);
 
 #endif /*_LIBGOOGLECHAT_H_*/

@@ -215,11 +215,7 @@ googlechat_chat_set_topic(PurpleConnection *pc, int id, const char *topic)
 	
 	ha = purple_connection_get_protocol_data(pc);
 	chatconv = purple_conversations_find_chat(pc, id);
-	conv_id = purple_conversation_get_data(PURPLE_CONVERSATION(chatconv), "conv_id");
-	if (conv_id == NULL) {
-		// Fix for a race condition around the chat data and serv_got_joined_chat()
-		conv_id = purple_conversation_get_name(PURPLE_CONVERSATION(chatconv));
-	}
+	conv_id = googlechat_get_convid_of_conv(PURPLE_CONVERSATION(chatconv));
 	
 	return googlechat_rename_conversation(ha, conv_id, topic);
 }
@@ -268,19 +264,91 @@ googlechat_cmd_call(PurpleConversation *conv, const gchar *cmd, gchar **args, gc
 	}
 
 	GoogleChatAccount *ha = purple_connection_get_protocol_data(pc);
-	const gchar *conv_id = purple_conversation_get_data(conv, "conv_id");
-	if (conv_id == NULL) {
-		if (PURPLE_IS_IM_CONVERSATION(conv)) {
-			conv_id = g_hash_table_lookup(ha->one_to_ones_rev, purple_conversation_get_name(conv));
-		} else {
-			conv_id = purple_conversation_get_name(conv);
-		}
-	}
+	const gchar *conv_id = googlechat_get_convid_of_conv(conv);
 	if (conv_id == NULL) {
 		return PURPLE_CMD_RET_FAILED;
 	}
 
 	googlechat_video_call_conversation(ha, conv_id);
+
+	return PURPLE_CMD_RET_OK;
+}
+
+const gchar *
+googlechat_get_convid_of_conv(PurpleConversation *conv)
+{
+	PurpleConnection *pc = purple_conversation_get_connection(conv);
+	if (pc == NULL) {
+		return NULL;
+	}
+	GoogleChatAccount *ha = purple_connection_get_protocol_data(pc);
+	if (ha == NULL) {
+		return NULL;
+	}
+
+	const gchar *conv_id = purple_conversation_get_data(conv, "conv_id");
+	if (conv_id != NULL) {
+		return conv_id;
+	}
+
+	if (PURPLE_IS_IM_CONVERSATION(conv)) {
+		return g_hash_table_lookup(ha->one_to_ones_rev, purple_conversation_get_name(conv));
+	} else {
+		return purple_conversation_get_name(conv);
+	}
+	return NULL;
+}
+
+static PurpleCmdRet
+googlechat_cmd_slashcommands(PurpleConversation *conv, const gchar *cmd, gchar **args, gchar **error, gpointer data)
+{
+	PurpleConnection *pc = purple_conversation_get_connection(conv);
+	GoogleChatAccount *ha;
+
+	if (pc == NULL) {
+		return PURPLE_CMD_RET_FAILED;
+	}
+
+	ha = purple_connection_get_protocol_data(pc);
+	if (ha == NULL) {
+		return PURPLE_CMD_RET_FAILED;
+	}
+
+	// Loop over all the slash commands in ha->slash_commands and output them
+	GList *commands = g_hash_table_get_values(ha->slash_commands);
+	if (commands == NULL) {
+		return PURPLE_CMD_RET_FAILED;
+	}
+	if (args == NULL || args[0] == NULL) {
+		// output a list of command names
+		GString *cmds = g_string_new(_("Available commands:"));
+		GList *l;
+		for (l = commands; l != NULL; l = l->next) {
+			GoogleChatSlashCommand *cmd_data = (GoogleChatSlashCommand *)l->data;
+			if (cmd_data && cmd_data->name) {
+				//TODO only output commands that are available in this conversation
+				g_string_append_printf(cmds, " %s", cmd_data->name);
+			}
+		}
+		purple_conversation_write(conv, NULL, cmds->str, PURPLE_MESSAGE_SYSTEM, time(NULL));
+	} else {
+		// output the command description
+		cmd = args[0];
+		GList *l;
+		for (l = commands; l != NULL; l = l->next) {
+			GoogleChatSlashCommand *cmd_data = (GoogleChatSlashCommand *)l->data;
+			if (cmd_data && cmd_data->name && g_strcmp0(cmd_data->name, cmd) == 0) {
+				if (cmd_data->description) {
+					purple_conversation_write(conv, NULL, cmd_data->description, PURPLE_MESSAGE_SYSTEM, time(NULL));
+				} else {
+					purple_conversation_write(conv, NULL, _("No description available for this command."), PURPLE_MESSAGE_SYSTEM, time(NULL));
+				}
+				break;
+			}
+		}
+	}
+	
+	g_strfreev(args);
 
 	return PURPLE_CMD_RET_OK;
 }
@@ -366,6 +434,18 @@ googlechat_deleting_chat_buddy(PurpleConvChatBuddy *cb)
 #endif
 
 static void
+googlechat_free_slash_command(gpointer data)
+{
+	GoogleChatSlashCommand *cmd = (GoogleChatSlashCommand *)data;
+	if (cmd) {
+		g_free(cmd->bot_user_id);
+		g_free(cmd->name);
+		g_free(cmd->description);
+		g_free(cmd);
+	}
+}
+
+static void
 googlechat_login(PurpleAccount *account)
 {
 	PurpleConnection *pc;
@@ -397,6 +477,8 @@ googlechat_login(PurpleAccount *account)
 	ha->one_to_ones = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
 	ha->one_to_ones_rev = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
 	ha->group_chats = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+	
+	ha->slash_commands = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, googlechat_free_slash_command);
 	
 	self_gaia_id = purple_account_get_string(account, "self_gaia_id", NULL);
 	if (self_gaia_id != NULL) {
@@ -532,6 +614,7 @@ googlechat_close(PurpleConnection *pc)
 	g_hash_table_unref(ha->one_to_ones_rev);
 	g_hash_table_remove_all(ha->group_chats);
 	g_hash_table_unref(ha->group_chats);
+	g_hash_table_unref(ha->slash_commands);
 	
 	g_free(ha);
 }
@@ -672,6 +755,13 @@ plugin_load(PurplePlugin *plugin, GError **error)
 		 PURPLE_CMD_FLAG_PROTOCOL_ONLY | PURPLE_CMD_FLAG_ALLOW_WRONG_ARGS,
 		GOOGLECHAT_PLUGIN_ID, googlechat_cmd_call,
 		_("call:  Create a video call link for this room"), NULL
+	);
+
+	purple_cmd_register(
+		"slashcommands", "", PURPLE_CMD_P_PLUGIN, PURPLE_CMD_FLAG_PROTOCOL_ONLY |
+		PURPLE_CMD_FLAG_CHAT | PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_ALLOW_WRONG_ARGS,
+		GOOGLECHAT_PLUGIN_ID, googlechat_cmd_slashcommands,
+		_("slashcommands:  List available slash commands"), NULL
 	);
 		
 	return TRUE;

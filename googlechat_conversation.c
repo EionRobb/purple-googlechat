@@ -971,6 +971,7 @@ googlechat_add_conversation_to_blist(GoogleChatAccount *ha, Group *group, GHashT
 		}
 	}
 	
+	googlechat_get_slash_commands_for_conversation(ha, conv_id);
 	
 	// for (i = 0; i < conversation->n_participant_data; i++) {
 		// ConversationParticipantData *participant_data = conversation->participant_data[i];
@@ -1098,6 +1099,7 @@ googlechat_got_conversation_list(GoogleChatAccount *ha, PaginatedWorldResponse *
 		if (world_item_lite->read_state->last_read_time > ha->last_event_timestamp) {
 			googlechat_get_conversation_events(ha, conv_id, ha->last_event_timestamp);
 		}
+		googlechat_get_slash_commands_for_conversation(ha, conv_id);
 	}
 	
 	//Add missing people from the buddy list
@@ -1577,6 +1579,15 @@ googlechat_free_annotations(Annotation **annotations)
 			g_free(annotations[i]->url_metadata->url->url);
 			g_free(annotations[i]->url_metadata->url);
 			g_free(annotations[i]->url_metadata);
+
+		} else if (annotations[i]->slash_command_metadata) {
+			g_free(annotations[i]->slash_command_metadata->command_name);
+			g_free(annotations[i]->slash_command_metadata->arguments_hint);
+			if (annotations[i]->slash_command_metadata->id) {
+				g_free(annotations[i]->slash_command_metadata->id->id);
+				g_free(annotations[i]->slash_command_metadata->id);
+			}
+			g_free(annotations[i]->slash_command_metadata);
 		}
 		
 		g_free(annotations[i]);
@@ -1832,6 +1843,51 @@ googlechat_conversation_send_message(GoogleChatAccount *ha, const gchar *conv_id
 	
 	gchar *message_dup = googlechat_html_to_text(message, &annotations, &n_annotations);
 	
+	if (message_dup[0] == '/') {
+		// This is a slash command
+		Annotation *ann = g_new0(Annotation, 1);
+		annotation__init(ann);
+		ann->has_type = TRUE;
+		ann->type = ANNOTATION_TYPE__SLASH_COMMAND;
+		ann->has_start_index = TRUE;
+		ann->start_index = 0;
+		ann->has_length = TRUE;
+		ann->length = strlen(message);
+		const gchar *space = g_strstr_len(message, ann->length, " ");
+		if (space) {
+			ann->length = space - message;
+		}
+
+		gchar *command_name = g_strndup(message, ann->length);
+		GoogleChatSlashCommand *cmd = g_hash_table_lookup(ha->slash_commands, command_name);
+		
+		SlashCommandMetadata *slash_command_metadata = g_new0(SlashCommandMetadata, 1);
+		slash_command_metadata__init(slash_command_metadata);
+		slash_command_metadata->command_name = command_name;
+		slash_command_metadata->arguments_hint = g_strdup(space ? space + 1 : "");
+		slash_command_metadata->has_type = TRUE;
+		slash_command_metadata->type = SLASH_COMMAND_METADATA__TYPE__INVOKE;
+		if (cmd != NULL) {
+			slash_command_metadata->has_command_id = TRUE;
+			slash_command_metadata->command_id = cmd->command_id;
+
+			UserId *bot_id = g_new0(UserId, 1);
+			user_id__init(bot_id);
+			bot_id->id = g_strdup(cmd->bot_user_id);
+			bot_id->has_type = TRUE;
+			bot_id->type = USER_TYPE__BOT;
+
+			slash_command_metadata->id = bot_id;
+		}
+		ann->slash_command_metadata = slash_command_metadata;
+
+		// realloc annotations to hold the new annotation
+		annotations = g_renew(Annotation *, annotations, n_annotations + 2);
+		annotations[n_annotations] = ann;
+		annotations[n_annotations + 1] = NULL;
+		n_annotations++;
+	}
+
 	create_topic_request__init(&request);
 	
 	request.request_header = googlechat_get_request_header(ha);
@@ -1938,12 +1994,9 @@ const gchar *message, PurpleMessageFlags flags)
 	
 	ha = purple_connection_get_protocol_data(pc);
 	chatconv = purple_conversations_find_chat(pc, id);
-	conv_id = purple_conversation_get_data(PURPLE_CONVERSATION(chatconv), "conv_id");
-	if (!conv_id) {
-		// Fix for a race condition around the chat data and serv_got_joined_chat()
-		conv_id = purple_conversation_get_name(PURPLE_CONVERSATION(chatconv));
-		g_return_val_if_fail(conv_id, -1);
-	}
+	conv_id = googlechat_get_convid_of_conv(PURPLE_CONVERSATION(chatconv));
+	
+	g_return_val_if_fail(conv_id, -1);
 	g_return_val_if_fail(g_hash_table_contains(ha->group_chats, conv_id), -1);
 	
 	ret = googlechat_conversation_send_message(ha, conv_id, message);
@@ -1989,14 +2042,7 @@ googlechat_conv_send_typing(PurpleConversation *conv, PurpleIMTypingState state,
 		ha = purple_connection_get_protocol_data(pc);
 	}
 	
-	conv_id = purple_conversation_get_data(conv, "conv_id");
-	if (conv_id == NULL) {
-		if (PURPLE_IS_IM_CONVERSATION(conv)) {
-			conv_id = g_hash_table_lookup(ha->one_to_ones_rev, purple_conversation_get_name(conv));
-		} else {
-			conv_id = purple_conversation_get_name(conv);
-		}
-	}
+	conv_id = googlechat_get_convid_of_conv(conv);
 	g_return_val_if_fail(conv_id, -1); //TODO create new conversation for this new person
 	
 	set_typing_state_request__init(&request);
@@ -2105,11 +2151,7 @@ googlechat_chat_leave(PurpleConnection *pc, int id)
 	PurpleChatConversation *chatconv;
 	
 	chatconv = purple_conversations_find_chat(pc, id);
-	conv_id = purple_conversation_get_data(PURPLE_CONVERSATION(chatconv), "conv_id");
-	if (conv_id == NULL) {
-		// Fix for a race condition around the chat data and serv_got_joined_chat()
-		conv_id = purple_conversation_get_name(PURPLE_CONVERSATION(chatconv));
-	}
+	conv_id = googlechat_get_convid_of_conv(PURPLE_CONVERSATION(chatconv));
 	
 	return googlechat_chat_leave_by_conv_id(pc, conv_id, NULL);
 }
@@ -2121,11 +2163,7 @@ googlechat_chat_kick(PurpleConnection *pc, int id, const gchar *who)
 	PurpleChatConversation *chatconv;
 	
 	chatconv = purple_conversations_find_chat(pc, id);
-	conv_id = purple_conversation_get_data(PURPLE_CONVERSATION(chatconv), "conv_id");
-	if (conv_id == NULL) {
-		// Fix for a race condition around the chat data and serv_got_joined_chat()
-		conv_id = purple_conversation_get_name(PURPLE_CONVERSATION(chatconv));
-	}
+	conv_id = googlechat_get_convid_of_conv(PURPLE_CONVERSATION(chatconv));
 	
 	return googlechat_chat_leave_by_conv_id(pc, conv_id, who);
 }
@@ -2487,10 +2525,7 @@ googlechat_chat_invite(PurpleConnection *pc, int id, const char *message, const 
 	
 	ha = purple_connection_get_protocol_data(pc);
 	chatconv = purple_conversations_find_chat(pc, id);
-	conv_id = purple_conversation_get_data(PURPLE_CONVERSATION(chatconv), "conv_id");
-	if (conv_id == NULL) {
-		conv_id = purple_conversation_get_name(PURPLE_CONVERSATION(chatconv));
-	}
+	conv_id = googlechat_get_convid_of_conv(PURPLE_CONVERSATION(chatconv));
 	
 	create_membership_request__init(&request);
 	
@@ -2556,15 +2591,7 @@ googlechat_mark_conversation_seen(PurpleConversation *conv, PurpleConversationUp
 		return;
 	}
 	
-	conv_id = purple_conversation_get_data(conv, "conv_id");
-	if (conv_id == NULL) {
-		if (PURPLE_IS_IM_CONVERSATION(conv)) {
-			conv_id = g_hash_table_lookup(ha->one_to_ones_rev, purple_conversation_get_name(conv));
-		} else {
-			conv_id = purple_conversation_get_name(conv);
-		}
-	}
-	
+	conv_id = googlechat_get_convid_of_conv(conv);
 	if (conv_id == NULL)
 		return;
 	
@@ -2792,3 +2819,74 @@ googlechat_rename_conversation(GoogleChatAccount *ha, const gchar *conv_id, cons
 	googlechat_request_header_free(request.request_header);
 }
 
+static void
+googlechat_get_slash_commands_callback(GoogleChatAccount *ha, AutocompleteSlashCommandsResponse *response, gpointer user_data)
+{
+	guint i, j;
+	if (response == NULL || (response->bots_in_group == NULL && response->bots_not_in_group == NULL)) {
+		return;
+	}
+	
+	for(i = 0; i < response->n_bots_in_group; i++) {
+		BotSlashCommands *slash_commands = response->bots_in_group[i];
+		User *bot = slash_commands->bot;
+		if (bot == NULL || slash_commands->slash_commands == NULL) {
+			continue;
+		}
+		
+		for(j = 0; j < slash_commands->n_slash_commands; j++) {
+			SlashCommand *slash_command = slash_commands->slash_commands[j];
+			if (slash_command == NULL) {
+				continue;
+			}
+			
+			GoogleChatSlashCommand *cmd = g_hash_table_lookup(ha->slash_commands, slash_command->name);
+			if (cmd == NULL) {
+				cmd = g_new0(GoogleChatSlashCommand, 1);
+				cmd->bot_user_id = g_strdup(bot->user_id->id);
+				cmd->name = g_strdup(slash_command->name);
+				cmd->command_id = slash_command->command_id;
+				cmd->description = g_strdup(slash_command->description);
+				
+				g_hash_table_replace(ha->slash_commands, cmd->name, cmd);
+			}
+			//TODO save the conv_id into the cmd struct
+		}
+	}
+}
+
+void
+googlechat_get_slash_commands_for_conversation(GoogleChatAccount *ha, const gchar *conv_id)
+{
+	AutocompleteSlashCommandsRequest request;
+	GroupId group_id;
+	SpaceId space_id;
+	DmId dm_id;
+	
+	autocomplete_slash_commands_request__init(&request);
+	request.request_header = googlechat_get_request_header(ha);
+
+	request.has_max_num_results = TRUE;
+	request.max_num_results = 100; //TODO make this configurable?
+	request.restrict_to_bots_in_group = TRUE;
+	request.has_restrict_to_bots_in_group = TRUE;
+	request.has_include_dialogs = TRUE;
+	request.include_dialogs = TRUE; //TODO support dialogs
+	
+	group_id__init(&group_id);
+	request.group_id = &group_id;
+	
+	if (g_hash_table_contains(ha->one_to_ones, conv_id)) {
+		dm_id__init(&dm_id);
+		dm_id.dm_id = (gchar *) conv_id;
+		group_id.dm_id = &dm_id;
+	} else {
+		space_id__init(&space_id);
+		space_id.space_id = (gchar *) conv_id;
+		group_id.space_id = &space_id;
+	}
+	
+	googlechat_api_autocomplete_slash_commands(ha, &request, googlechat_get_slash_commands_callback, NULL);
+	
+	googlechat_request_header_free(request.request_header);
+}

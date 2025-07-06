@@ -28,5 +28,6 @@ void googlechat_cache_ssl_certs(GoogleChatAccount *ha);
 void googlechat_auth_finished_auth(GoogleChatAccount *ha);
 gboolean googlechat_auth_refresh_xsrf_token(GoogleChatAccount *ha);
 void bitlbee_set_setnick_flag(PurpleAccount *account);
+void pidgin_register_googlechat_protocol();
 
 #endif /*_GOOGLECHAT_AUTH_H_*/

@@ -2907,3 +2907,77 @@ googlechat_get_slash_commands_for_conversation(GoogleChatAccount *ha, const gcha
 	
 	googlechat_request_header_free(request.request_header);
 }
+
+static void
+googlechat_submit_form_action_callback(GoogleChatAccount *ha, SubmitFormActionResponse *response, gpointer user_data)
+{
+	if (response == NULL) {
+		purple_debug_error("googlechat", "Submit Form Action failed\n");
+		return;
+	}
+
+	purple_notify_uri(ha->pc, response->setup_url);
+}
+
+gboolean
+googlechat_submit_form_action(GoogleChatAccount *ha, const gchar *topic_id, const gchar *message_id, const gchar *conv_id, const gchar *bot_id, const gchar *action_method_name)
+{
+	SubmitFormActionRequest request;
+	GroupId group_id;
+	SpaceId space_id;
+	DmId dm_id;
+	MessageId message_id_obj;
+	JAddOnsFormAction form_action;
+	MessageParentId message_parent_id;
+	TopicId topic_id_obj;
+
+	if (topic_id == NULL && message_id != NULL) {
+		topic_id = message_id;
+	} else if (message_id == NULL && topic_id != NULL) {
+		message_id = topic_id;
+	}
+
+	if (topic_id == NULL || message_id == NULL || conv_id == NULL || action_method_name == NULL) {
+		purple_debug_error("googlechat", "Submit Form Action failed: missing parameters\n");
+		return FALSE;
+	}
+	
+	submit_form_action_request__init(&request);
+	request.request_header = googlechat_get_request_header(ha);
+	
+	group_id__init(&group_id);
+	
+	if (g_hash_table_contains(ha->one_to_ones, conv_id)) {
+		dm_id__init(&dm_id);
+		dm_id.dm_id = (gchar *) conv_id;
+		group_id.dm_id = &dm_id;
+	} else {
+		space_id__init(&space_id);
+		space_id.space_id = (gchar *) conv_id;
+		group_id.space_id = &space_id;
+	}
+
+	topic_id__init(&topic_id_obj);
+	topic_id_obj.topic_id = (gchar *) topic_id;
+	topic_id_obj.group_id = &group_id;
+
+	message_parent_id__init(&message_parent_id);
+	message_parent_id.topic_id = &topic_id_obj;
+
+	message_id__init(&message_id_obj);
+	message_id_obj.message_id = (gchar *) message_id;
+	request.message_id = &message_id_obj;
+
+	jadd_ons_form_action__init(&form_action);
+	form_action.action_method_name = (gchar *) action_method_name;
+	request.action = &form_action;
+
+	request.has_dialog_event = TRUE;
+	request.dialog_event = SUBMIT_FORM_ACTION_REQUEST__FORM_ACTION_EVENT__INVOKE_DIALOG_BY_FORM_SUBMIT;
+	
+	googlechat_api_submit_form_action(ha, &request, googlechat_submit_form_action_callback, NULL);
+	
+	googlechat_request_header_free(request.request_header);
+
+	return TRUE;
+}

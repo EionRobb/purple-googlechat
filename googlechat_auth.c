@@ -57,11 +57,15 @@ typedef struct {
 	int flags;
 } bitlbee_purple_data;
 
-static gpointer bitlbee_module;
-static bitlbee_im_connection *(*bitlbee_purple_ic_by_pa)(PurpleAccount *);
-static int (*bitlbee_set_setstr)(gpointer *, const char *, const char *);
+static gpointer bitlbee_module = NULL;
+static bitlbee_im_connection *(*bitlbee_purple_ic_by_pa)(PurpleAccount *) = NULL;
+static int (*bitlbee_set_setstr)(gpointer *, const char *, const char *) = NULL;
 static gboolean bitlbee_password_funcs_loaded = FALSE;
 //static void (*bitlbee_imcb_buddy_nick_change)(gpointer *ic, const char *handle, const char *nick);
+
+static gpointer pidgin_handle = NULL;
+static gboolean (*pidgin_register_protocol)(const char *name, gpointer activate, gpointer context_menu) = NULL;
+static const char *(*pidgin_link_get_url)(gpointer link) = NULL;
 
 #ifdef _WIN32
 #	include <windows.h>
@@ -129,6 +133,49 @@ bitlbee_set_setnick_flag(PurpleAccount *account)
 			data->flags |= 1; // PURPLE_OPT_SHOULD_SET_NICK
 		}
 	}
+}
+
+// Called when the user clicks on a link in the chat window
+static gboolean
+googlechat_activate_protocol(gpointer imhtml, gpointer link)
+{
+	if (link != NULL && pidgin_link_get_url != NULL) {
+		const gchar *uri = pidgin_link_get_url(link);
+		purple_got_protocol_handler_uri(uri);
+		return TRUE;
+	}
+	return FALSE;
+}
+
+void
+pidgin_register_googlechat_protocol()
+{
+	pidgin_handle = dlopen(
+#ifdef _WIN32
+		"pidgin.dll",
+#else
+		"pidgin",
+#endif
+		RTLD_LAZY);
+
+	if (pidgin_handle == NULL) {
+		purple_debug_error("googlechat", "Couldn't acquire address of Pidgin handle: %s\n", dlerror());
+		return;
+	}
+
+	pidgin_register_protocol = (gpointer) dlsym(pidgin_handle, "gtk_imhtml_class_register_protocol");
+	if (pidgin_register_protocol == NULL) {
+		purple_debug_error("googlechat", "Couldn't acquire address of gtk_imhtml_class_register_protocol: %s\n", dlerror());
+		return;
+	}
+	pidgin_link_get_url = (gpointer) dlsym(pidgin_handle, "gtk_imhtml_link_get_url");
+	if (pidgin_link_get_url == NULL) {
+		purple_debug_error("googlechat", "Couldn't acquire address of gtk_imhtml_link_get_url: %s\n", dlerror());
+		return;
+	}
+
+	pidgin_register_protocol("googlechat://", googlechat_activate_protocol, NULL);
+	purple_debug_info("googlechat", "Registered googlechat:// protocol handler\n");
 }
 
 static void

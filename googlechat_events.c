@@ -325,7 +325,7 @@ googlechat_get_url_from_onclick(JAddOnsOnClick *on_click)
 		//output as a googlechat: uri that can be handled by the plugin
 		//by sending a SubmitFormActionRequest with request->action->action_method_name
 		//and then opening the browser to SubmitFormActionResponse->setup_url
-		return g_strdup_printf("#unhandled_action---%s", purple_url_encode(action_method_name));
+		return g_strdup_printf("googlechat://submit_form_action?action_method_name=%s", purple_url_encode(action_method_name));
 	}
 	
 	return NULL;
@@ -903,7 +903,7 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 									JAddOnsWidget__TextButton *text_button = button->text_button;
 									GString *escaped_text = googlechat_formattedtext_append_to_string(text_button->text, NULL);
 									gchar *escaped_url = googlechat_get_url_from_onclick(text_button->on_click);
-									g_string_append_printf(msg_out, "<a href='%s'>%s</a>", escaped_url, escaped_text->str);
+									g_string_append_printf(msg_out, " <a href='%s'>%s</a> ", escaped_url, escaped_text->str);
 									g_string_free(escaped_text, TRUE);
 									g_free(escaped_url);
 								}

@@ -573,6 +573,8 @@ googlechat_login(PurpleAccount *account)
 
 	if (g_strcmp0(purple_core_get_ui(), "BitlBee") == 0) {
 		bitlbee_set_setnick_flag(account);
+	} else if (g_strcmp0(purple_core_get_ui(), "gtk-gaim") == 0) {
+		pidgin_register_googlechat_protocol();
 	}
 }
 
@@ -734,6 +736,73 @@ googlechat_offline_message(const PurpleBuddy *buddy)
 	return TRUE;
 }
 
+static gboolean
+googlechat_uri_handler(const char *proto, const char *cmd, GHashTable *params)
+{
+	const gchar *account_str;
+	PurpleAccount *account = NULL;
+	PurpleConnection *pc;
+	GoogleChatAccount *ha;
+	
+	if (!g_str_equal(proto, "googlechat") && !g_str_equal(proto, "com.google.chat"))
+		return FALSE;
+
+	account_str = g_hash_table_lookup(params, "account");
+	if (account_str && *account_str) {
+		account = purple_accounts_find(account_str, GOOGLECHAT_PLUGIN_ID);
+		if (account && !purple_account_is_connected(account)) {
+			account = NULL;
+		}
+	}
+	if (account == NULL) {
+		// Find the first connected GoogleChat account
+		GList *l, *accounts;
+		l = accounts = purple_accounts_get_all_active();
+		while (l != NULL) {
+			account = (PurpleAccount *) l->data;
+			if (purple_account_get_protocol_id(account) && g_str_equal(purple_account_get_protocol_id(account), GOOGLECHAT_PLUGIN_ID)) {
+				if (purple_account_is_connected(account)) {
+					break;
+				}
+			}
+			account = NULL;
+			l = l->next;
+		}
+		g_list_free(accounts);
+	}
+	if (account == NULL) {
+		return FALSE; // No connected account found
+	}
+
+	pc = purple_account_get_connection(account);
+	if (pc == NULL) {
+		return FALSE; // No connection available
+	}
+	ha = purple_connection_get_protocol_data(pc);
+	if (ha == NULL) {
+		return FALSE; // No protocol data available
+	}
+
+	if (cmd && *cmd) {
+		// Remove leading slashes
+		while(cmd[0] == '/') {
+			cmd++;
+		}
+		if (g_str_equal(cmd, "submit_form_action")) {
+			const gchar *topic_id = g_hash_table_lookup(params, "topic_id");
+			const gchar *message_id = g_hash_table_lookup(params, "message_id");
+			const gchar *conv_id = g_hash_table_lookup(params, "conv_id");
+			const gchar *bot_id = g_hash_table_lookup(params, "bot_id");
+			const gchar *action_method_name = g_hash_table_lookup(params, "action_method_name");
+
+			purple_debug_info("googlechat", "Received form action: %s, topic_id=%s, message_id=%s, conv_id=%s, bot_id=%s, action_method_name=%s\n", cmd, topic_id, message_id, conv_id, bot_id, action_method_name);
+			return googlechat_submit_form_action(ha, topic_id, message_id, conv_id, bot_id, action_method_name);
+
+		}
+	}
+
+	return FALSE;
+}
 
 /*****************************************************************************/
 
@@ -763,7 +832,9 @@ plugin_load(PurplePlugin *plugin, GError **error)
 		GOOGLECHAT_PLUGIN_ID, googlechat_cmd_slashcommands,
 		_("slashcommands:  List available slash commands"), NULL
 	);
-		
+
+	purple_signal_connect(purple_get_core(), "uri-handler", plugin, PURPLE_CALLBACK(googlechat_uri_handler), NULL);
+
 	return TRUE;
 }
 

@@ -110,5 +110,6 @@ GOOGLECHAT_DEFINE_API_REQUEST_FUNC(list_members, ListMembers, "list_members");
 GOOGLECHAT_DEFINE_API_REQUEST_FUNC(update_reaction, UpdateReaction, "update_reaction");
 GOOGLECHAT_DEFINE_API_REQUEST_FUNC(create_video_call, CreateVideoCall, "create_video_call");
 GOOGLECHAT_DEFINE_API_REQUEST_FUNC(autocomplete_slash_commands, AutocompleteSlashCommands, "autocomplete_slash_commands");
+GOOGLECHAT_DEFINE_API_REQUEST_FUNC(submit_form_action, SubmitFormAction, "submit_form_action");
 
 #endif /*_GOOGLECHAT_CONNECTION_H_*/

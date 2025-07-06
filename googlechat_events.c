@@ -638,6 +638,14 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 			imconv = purple_conversations_find_im_with_account(sender_id, ha->account);
 		}
 		pconv = PURPLE_CONVERSATION(imconv);
+
+		if (!g_hash_table_contains(ha->one_to_ones, conv_id)) {
+			g_hash_table_replace(ha->one_to_ones, g_strdup(conv_id), g_strdup(sender_id));
+			g_hash_table_replace(ha->one_to_ones_rev, g_strdup(sender_id), g_strdup(conv_id));
+		}
+		if (!purple_find_buddy(ha->account, sender_id)) {
+			googlechat_get_user_information(ha, sender_id);
+		}
 	}
 	
 	if (purple_conversation_has_focus(pconv)) {

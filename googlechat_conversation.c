@@ -261,11 +261,16 @@ googlechat_got_users_information_member(GoogleChatAccount *ha, Member *member)
 		}
 		
 		// Give a best-guess for the buddy's alias
-		if (user->name)
+		if (user->name) {
 			purple_blist_server_alias_buddy(buddy, user->name);
-		else if (user->email)
+		} else if (user->email) {
 			purple_blist_server_alias_buddy(buddy, user->email);
-		//TODO first+last name
+		} else {
+			gchar *full_name = g_strdup_printf("%s %s", 
+				user->first_name ? user->first_name : "",
+				user->last_name ? user->last_name : "");
+			purple_blist_server_alias_buddy(buddy, full_name);
+		}
 		
 		const gchar *balias = purple_buddy_get_local_buddy_alias(buddy);
 		const gchar *salias = purple_buddy_get_server_alias(buddy);
@@ -360,6 +365,18 @@ void
 googlechat_get_users_information(GoogleChatAccount *ha, GList *user_ids)
 {
 	googlechat_get_users_information_internal(ha, user_ids, googlechat_got_users_information, NULL);
+}
+
+void
+googlechat_get_user_information(GoogleChatAccount *ha, const gchar *user_id)
+{
+	GList tmp_usr_list;
+
+	g_return_if_fail(user_id && *user_id);
+
+	tmp_usr_list.next = tmp_usr_list.prev = NULL;
+	tmp_usr_list.data = (gpointer) user_id;
+	googlechat_get_users_information(ha, &tmp_usr_list);
 }
 
 static void

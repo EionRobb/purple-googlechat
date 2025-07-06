@@ -65,6 +65,7 @@ guint googlechat_conv_send_typing(PurpleConversation *conv, PurpleIMTypingState 
 
 void googlechat_get_users_presence(GoogleChatAccount *ha, GList *user_ids);
 void googlechat_get_users_information(GoogleChatAccount *ha, GList *user_ids);
+void googlechat_get_user_information(GoogleChatAccount *ha, const gchar *user_id);
 void googlechat_get_info(PurpleConnection *pc, const gchar *who);
 gboolean googlechat_poll_buddy_status(gpointer ha_pointer);
 

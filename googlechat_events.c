@@ -478,6 +478,9 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 		conv_id = group_id->space_id->space_id;
 	}
 	
+	if (event->type == EVENT__EVENT_TYPE__MESSAGE_UPDATED && message->last_update_time > message->last_edit_time) {
+		return; // Ignore updates that are not edits
+	}
 	
 	time_t message_timestamp = (message->create_time / 1000000) - ha->server_time_offset;
 	// TODO should this be message->last_update_time?

@@ -6,7 +6,7 @@ WIN32_DEV_TOP ?= $(PIDGIN_TREE_TOP)/../win32-dev
 PROTOBUF_C_DIR ?= $(WIN32_DEV_TOP)/protobuf-c-Release-2.6
 
 WIN32_CC ?= $(WIN32_DEV_TOP)/mingw-4.7.2/bin/gcc
-MAKENSIS ?= makensis
+WIXL ?= wixl
 
 PROTOC_C ?= protoc-c
 PKG_CONFIG ?= pkg-config
@@ -24,7 +24,6 @@ ifeq ($(OS),Windows_NT)
   PLUGIN_TARGET = libgooglechat.dll
   PLUGIN_DEST = "$(PROGFILES32)/Pidgin/plugins"
   PLUGIN_ICONS_DEST = "$(PROGFILES32)/Pidgin/pixmaps/pidgin/protocols"
-  MAKENSIS = "$(PROGFILES32)/NSIS/makensis.exe"
 else
 
   UNAME_S := $(shell uname -s)
@@ -147,5 +146,5 @@ build-locales: $(LOCALES)
 	install -m $(FILE_PERM) -p po/$(*F).mo $(LOCALE_DEST)/$(*F)/LC_MESSAGES/purple-googlechat.mo
 
 
-installer: purple-googlechat.nsi libgooglechat.dll
-	$(MAKENSIS) purple-googlechat.nsi
+installer: purple-googlechat.wxs libgooglechat.dll
+	$(WIXL) -I . -v purple-googlechat.wxs -o purple-googlechat.msi --arch x86

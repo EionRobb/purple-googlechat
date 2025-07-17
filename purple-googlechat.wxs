@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product Id="*" 
+           Name="Purple Google Chat Plugin" 
+           Language="1033" 
+           Version="1.0.0.0" 
+           Manufacturer="Eion Robb" 
+           UpgradeCode="374463c0-42d1-423d-b11b-9166368877e6">
+    
+    <Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
+    
+    <MajorUpgrade DowngradeErrorMessage="A newer version is already installed." />
+
+    <Media Id="1" Cabinet="purple-googlechat.cab" EmbedCab="yes" />
+    
+    <Feature Id="ProductFeature" Title="Purple Google Chat Plugin" Level="1">
+      <ComponentRef Id="PluginComponent" />
+      <ComponentRef Id="JsonGlibComponent" />
+      <ComponentRef Id="ProtobufCComponent" />
+      <ComponentRef Id="Icon16Component" />
+      <ComponentRef Id="Icon22Component" />
+      <ComponentRef Id="Icon48Component" />
+    </Feature>
+    
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFilesFolder">
+        <Directory Id="PIDGINDIR" Name="Pidgin">
+          <Directory Id="PLUGINSDIR" Name="plugins" />
+          <Directory Id="PIXMAPSDIR" Name="pixmaps">
+            <Directory Id="PIDGINPIXMAPSDIR" Name="pidgin">
+              <Directory Id="PROTOCOLSDIR" Name="protocols">
+                <Directory Id="PROTOCOLS16DIR" Name="16" />
+                <Directory Id="PROTOCOLS22DIR" Name="22" />
+                <Directory Id="PROTOCOLS48DIR" Name="48" />
+              </Directory>
+            </Directory>
+          </Directory>
+        </Directory>
+      </Directory>
+    </Directory>
+
+    <DirectoryRef Id="PLUGINSDIR">
+      <Component Id="PluginComponent" Guid="*">
+        <File Id="PluginDLL" Source="libgooglechat.dll" KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+    
+    <DirectoryRef Id="PIDGINDIR">
+      <Component Id="JsonGlibComponent" Guid="*">
+        <File Id="JsonGlibDLL" Source="libjson-glib-1.0.dll" KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+    
+    <DirectoryRef Id="PIDGINDIR">
+      <Component Id="ProtobufCComponent" Guid="*">
+        <File Id="ProtobufCDLL" Source="libprotobuf-c-1.dll" KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+    
+    <DirectoryRef Id="PROTOCOLS16DIR">
+      <Component Id="Icon16Component" Guid="*">
+        <File Id="Icon16" Source="googlechat16.png" Name="googlechat.png" KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+    
+    <DirectoryRef Id="PROTOCOLS22DIR">
+      <Component Id="Icon22Component" Guid="*">
+        <File Id="Icon22" Source="googlechat22.png" Name="googlechat.png" KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+    
+    <DirectoryRef Id="PROTOCOLS48DIR">
+      <Component Id="Icon48Component" Guid="*">
+        <File Id="Icon48" Source="googlechat48.png" Name="googlechat.png" KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+    
+  </Product>
+</Wix>

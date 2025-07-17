@@ -20,7 +20,7 @@ jobs:
       - name: Set up MinGW
         run: |
           sudo apt update
-          sudo apt install -y gcc-mingw-w64-i686-win32
+          sudo apt install -y gcc-mingw-w64-i686-win32 wixl
 
       - name: Load Pidgin from cache
         id: pidgin-cache
@@ -80,19 +80,25 @@ jobs:
           export PIDGIN_TREE_TOP=pidgin
           export PROTOBUF_C_DIR=${WIN32_DEV_TOP}/protobuf-c-1.5.0
           make libgooglechat.dll
+      
+      - name: installer
+        run: |
+          make installer
 
       - name: archive
         if: ${{ !env.ACT }}
         uses: actions/upload-artifact@v4
         with: 
             name: plugin 
-            path: libgooglechat.dll
+            path: |
+              libgooglechat.dll
+              purple-googlechat.msi
 
       - name: release
         if: github.event_name == 'push' && github.ref == 'refs/heads/master' && !env.ACT
         uses: ncipollo/release-action@v1
         with:
-          artifacts: libgooglechat.dll
+          artifacts: "libgooglechat.dll,purple-googlechat.msi"
           tag: nightly-${{ github.sha }}
           name: Nightly ${{ github.sha }}
           allowUpdates: true
@@ -102,4 +108,6 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/master' && !env.ACT
         uses: actions/attest-build-provenance@v1
         with:
-          subject-path: libgooglechat.dll
+          subject-path: |
+            libgooglechat.dll
+            purple-googlechat.msi

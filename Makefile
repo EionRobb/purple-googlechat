@@ -11,8 +11,18 @@ WIXL ?= wixl
 PROTOC_C ?= protoc-c
 PKG_CONFIG ?= pkg-config
 
+# Handle protoc-c deprecation since version 1.5.1
+ifeq ($(shell which protoc-gen-c 2>/dev/null && echo "true"),true)
+  PROTOC_CMD = protoc --c_out=.
+  PROTOC_DESC_CMD = protoc -o googlechat.proto.desc
+else
+  # Fallback to traditional protoc-c command
+  PROTOC_CMD = $(PROTOC_C) --c_out=.
+  PROTOC_DESC_CMD = $(PROTOC_C) -o googlechat.proto.desc
+endif
+
 CFLAGS	?= -O2 -g -pipe
-LDFLAGS ?= 
+LDFLAGS ?=
 
 # Do some nasty OS and purple version detection
 ifeq ($(OS),Windows_NT)
@@ -96,8 +106,8 @@ PURPLE_C_FILES := libgooglechat.c $(C_FILES)
 all: $(PLUGIN_TARGET)
 
 googlechat.pb-c.c: googlechat.proto
-	$(PROTOC_C) --c_out=. googlechat.proto
-	$(PROTOC_C) -o googlechat.proto.desc googlechat.proto
+	$(PROTOC_CMD) googlechat.proto
+	$(PROTOC_DESC_CMD) googlechat.proto
 
 libgooglechat.so: $(PURPLE_C_FILES) $(PURPLE_COMPAT_FILES)
 	$(CC) -fPIC $(CFLAGS) -shared -o $@ $^ $(LDFLAGS) $(PROTOBUF_OPTS) `$(PKG_CONFIG) purple glib-2.0 json-glib-1.0 zlib --libs --cflags` $(INCLUDES) -Ipurple2compat -g -ggdb

@@ -12,7 +12,7 @@ PROTOC_C ?= protoc-c
 PKG_CONFIG ?= pkg-config
 
 # Handle protoc-c deprecation since version 1.5.1
-ifeq ($(shell which protoc-gen-c &>/dev/null && echo "true"),true)
+ifeq ($(shell command -v protoc-gen-c >/dev/null 2>&1 && echo "true"),true)
   PROTOC_CMD = protoc --c_out=.
   PROTOC_DESC_CMD = protoc -o googlechat.proto.desc
 else

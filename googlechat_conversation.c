@@ -104,10 +104,6 @@ googlechat_get_self_user_status(GoogleChatAccount *ha)
 	googlechat_api_get_self_user_status(ha, &request, googlechat_got_self_user_status, NULL);
 	
 	googlechat_request_header_free(request.request_header);
-	
-	if (ha->last_event_timestamp != 0) {
-		googlechat_get_all_events(ha, ha->last_event_timestamp);
-	}
 }
 
 static void
@@ -545,9 +541,9 @@ googlechat_get_all_events(GoogleChatAccount *ha, guint64 since_timestamp)
 	request.request_header = googlechat_get_request_header(ha);
 	
 	request.has_page_size = TRUE;
-	request.page_size = 500;
+	request.page_size = 2000;
 	request.has_cutoff_size = TRUE;
-	request.cutoff_size = 500;
+	request.cutoff_size = 2000;
 	
 	catch_up_range__init(&range);
 	range.has_from_revision_timestamp = TRUE;
@@ -1113,7 +1109,7 @@ googlechat_got_conversation_list(GoogleChatAccount *ha, PaginatedWorldResponse *
 			}
 		}
 		
-		if (world_item_lite->read_state->last_read_time > ha->last_event_timestamp) {
+		if (world_item_lite->read_state->last_head_message_create_time_usec > ha->last_event_timestamp) {
 			googlechat_get_conversation_events(ha, conv_id, ha->last_event_timestamp);
 		}
 		googlechat_get_slash_commands_for_conversation(ha, conv_id);

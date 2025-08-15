@@ -379,6 +379,10 @@ googlechat_auth_finished_auth(GoogleChatAccount *ha)
 		g_source_remove(ha->poll_buddy_status_timeout);
 	}
 	ha->poll_buddy_status_timeout = g_timeout_add_seconds(120, googlechat_poll_buddy_status, ha);
+	
+	if (last_event_timestamp != 0) {
+		googlechat_get_all_events(ha, last_event_timestamp);
+	}
 }
 
 void

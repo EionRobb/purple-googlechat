@@ -156,9 +156,11 @@ googlechat_json_path_query(JsonNode *root, const gchar *expr, GError **error)
 	
 	node = json_path_query(expr, root, error);
 
-	if (error != NULL)
+	if ((error != NULL && *error != NULL) || node == NULL)
 	{
-		json_node_free(node);
+		if (node != NULL) {
+			json_node_free(node);
+		}
 		return NULL;
 	}
 

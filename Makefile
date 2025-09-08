@@ -101,7 +101,7 @@ PURPLE_C_FILES := libgooglechat.c $(C_FILES)
 
 
 
-.PHONY:	all install FAILNOPURPLE clean
+.PHONY:	all install FAILNOPURPLE clean version.o installer install-icons build-locales %-locale-install
 
 all: $(PLUGIN_TARGET)
 
@@ -115,10 +115,13 @@ libgooglechat.so: $(PURPLE_C_FILES) $(PURPLE_COMPAT_FILES)
 libgooglechat3.so: $(PURPLE_C_FILES)
 	$(CC) -fPIC $(CFLAGS) -shared -o $@ $^ $(LDFLAGS) $(PROTOBUF_OPTS) `$(PKG_CONFIG) purple-3 glib-2.0 json-glib-1.0 zlib --libs --cflags` $(INCLUDES) -g -ggdb
 
-libgooglechat.dll: $(PURPLE_C_FILES) $(PURPLE_COMPAT_FILES)
+version.o:
+	i686-w64-mingw32-windres -D VERSION_TAG=`date +"%-Y,%-m,%-d,%-H%-M"` version.rc -O coff -o version.o
+
+libgooglechat.dll: $(PURPLE_C_FILES) $(PURPLE_COMPAT_FILES) version.o
 	$(WIN32_CC) -shared -o $@ $^ $(WIN32_PIDGIN2_CFLAGS) $(WIN32_PIDGIN2_LDFLAGS) -Ipurple2compat
 
-libgooglechat3.dll: $(PURPLE_C_FILES)
+libgooglechat3.dll: $(PURPLE_C_FILES) version.o
 	$(WIN32_CC) -shared -o $@ $^ $(WIN32_PIDGIN3_CFLAGS) $(WIN32_PIDGIN3_LDFLAGS)
 
 install: $(PLUGIN_TARGET) install-icons

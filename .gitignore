@@ -7,3 +7,4 @@ googlechat.pb-c.*
 .cache
 *.exe
 *.msi
+*.o

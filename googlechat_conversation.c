@@ -169,6 +169,8 @@ googlechat_get_users_presence(GoogleChatAccount *ha, GList *user_ids)
 	guint n_user_id;
 	GList *cur;
 	guint i;
+
+	g_return_if_fail(user_ids != NULL);
 	
 	get_user_presence_request__init(&request);
 	request.request_header = googlechat_get_request_header(ha);
@@ -319,6 +321,8 @@ googlechat_get_users_information_internal(GoogleChatAccount *ha, GList *user_ids
 	MemberId **member_ids;
 	GList *cur;
 	guint i;
+
+	g_return_if_fail(user_ids != NULL);
 	
 	get_members_request__init(&request);
 	request.request_header = googlechat_get_request_header(ha);
@@ -1976,14 +1980,15 @@ const gchar *who, const gchar *message, PurpleMessageFlags flags)
 	if (conv_id == NULL) {
 		if (G_UNLIKELY(!googlechat_is_valid_id(who))) {
 			googlechat_search_users_text(ha, who);
-			return -1;
+			purple_conv_present_error(who, purple_connection_get_account(pc), _("Cannot send message directly to an email address.  Attempting to search for this user...\nIf the search fails, you may need to start the conversation on another device first."));
+			return 0;
 		}
 		
 		//We don't have any known conversations for this person
 		googlechat_create_conversation(ha, TRUE, who, message);
 		return 0;
 		
-		//TODO wait for the create dm response and use that
+		//We will wait for the 'create dm response' and use that
 	}
 	
 	return googlechat_conversation_send_message(ha, conv_id, message);
@@ -2027,7 +2032,7 @@ googlechat_send_typing(PurpleConnection *pc, const char *who, PurpleIMTypingStat
 	
 	ha = purple_connection_get_protocol_data(pc);
 	conv = PURPLE_CONVERSATION(purple_conversations_find_im_with_account(who, purple_connection_get_account(pc)));
-	g_return_val_if_fail(conv, -1);
+	g_return_val_if_fail(conv, 9999);
 	
 	return googlechat_conv_send_typing(conv, state, ha);
 }

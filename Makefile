@@ -101,7 +101,7 @@ PURPLE_C_FILES := libgooglechat.c $(C_FILES)
 
 
 
-.PHONY:	all install FAILNOPURPLE clean version.o installer install-icons build-locales %-locale-install
+.PHONY:	all install FAILNOPURPLE clean installer install-icons build-locales %-locale-install
 
 all: $(PLUGIN_TARGET)
 

@@ -1090,12 +1090,39 @@ static PurplePluginInfo info =
 	NULL
 };
 
+// Add forwards-compatibility for newer libpurple's when compiling on older ones
+typedef struct 
+{
+	PurplePluginProtocolInfo parent;
+
+	GHashTable *(* 	get_account_text_table)(PurpleAccount *account);
+	#if !PURPLE_VERSION_CHECK(2, 6, 0)
+		gboolean (*initiate_media)(PurpleAccount *account, const char *who, PurpleMediaSessionType type);
+		PurpleMediaCaps (*get_media_caps)(PurpleAccount *account, const char *who);
+	#endif
+	#if !PURPLE_VERSION_CHECK(2, 7, 0)
+		PurpleMood *(*get_moods)(PurpleAccount *account);
+		void (*set_public_alias)(PurpleConnection *gc, const char *alias, PurpleSetPublicAliasSuccessCallback success_cb, PurpleSetPublicAliasFailureCallback failure_cb);
+		void (*get_public_alias)(PurpleConnection *gc, PurpleGetPublicAliasSuccessCallback success_cb, PurpleGetPublicAliasFailureCallback failure_cb);
+	#endif
+	#if !PURPLE_VERSION_CHECK(2, 8, 0)
+		void (*add_buddy_with_invite)(PurpleConnection *pc, PurpleBuddy *buddy, PurpleGroup *group, const char *message);
+		void (*add_buddies_with_invite)(PurpleConnection *pc, GList *buddies, GList *groups, const char *message);
+	#endif
+	#if !PURPLE_VERSION_CHECK(2, 14, 0)
+		char *(*get_cb_alias)(PurpleConnection *gc, int id, const char *who);
+		gboolean (*chat_can_receive_file)(PurpleConnection *, int id);
+		void (*chat_send_file)(PurpleConnection *, int id, const char *filename);
+	#endif
+} PurplePluginProtocolInfoExt;
+
 static void
 init_plugin(PurplePlugin *plugin)
 {
 	PurplePluginInfo *info;
-	PurplePluginProtocolInfo *prpl_info = g_new0(PurplePluginProtocolInfo, 1);
-	
+	PurplePluginProtocolInfoExt *prpl_info_ext = g_new0(PurplePluginProtocolInfoExt, 1);
+	PurplePluginProtocolInfo *prpl_info = (PurplePluginProtocolInfo *) prpl_info_ext;
+
 #ifdef ENABLE_NLS
 	bindtextdomain(GETTEXT_PACKAGE, LOCALEDIR);
 	bind_textdomain_codeset(GETTEXT_PACKAGE, "UTF-8");
@@ -1151,10 +1178,17 @@ init_plugin(PurplePlugin *plugin)
 	
 	info->extra_info = prpl_info;
 	#if PURPLE_MINOR_VERSION >= 5
-		prpl_info->struct_size = sizeof(PurplePluginProtocolInfo);
+		prpl_info->struct_size = sizeof(PurplePluginProtocolInfoExt);
 	#endif
 	#if PURPLE_MINOR_VERSION >= 8
 		//prpl_info->add_buddy_with_invite = googlechat_add_buddy_with_invite;
+	#else
+		//prpl_info_ext->add_buddy_with_invite = googlechat_add_buddy_with_invite;
+	#endif
+	#if PURPLE_VERSION_CHECK(2, 14, 0)
+		prpl_info->get_cb_alias = googlechat_get_cb_alias;
+	#else
+		prpl_info_ext->get_cb_alias = googlechat_get_cb_alias;
 	#endif
 	
 	info->actions = googlechat_actions;

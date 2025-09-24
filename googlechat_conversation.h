@@ -95,5 +95,6 @@ void googlechat_lookup_group_info(GoogleChatAccount *ha, const gchar *conv_id);
 void googlechat_get_slash_commands_for_conversation(GoogleChatAccount *ha, const gchar *conv_id);
 gboolean googlechat_submit_form_action(GoogleChatAccount *ha, const gchar *topic_id, const gchar *message_id, const gchar *conv_id, const gchar *bot_id, const gchar *action_method_name);
 
+gchar *googlechat_get_cb_alias(PurpleConnection *pc, int id, const char *who);
 
 #endif /*_GOOGLECHAT_CONVERSATION_H_*/

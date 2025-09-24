@@ -637,6 +637,23 @@ googlechat_alias_group_user_hack(PurpleChatConversation *chat, const char *who, 
 	}
 }
 
+gchar *
+googlechat_get_cb_alias(PurpleConnection *pc, int id, const char *who)
+{
+	PurpleChatUser *cb;
+	PurpleChatConversation *chat = purple_conversations_find_chat(pc, id);
+
+	if (chat == NULL) {
+		return NULL;
+	}
+	cb = purple_chat_conversation_find_user(chat, who);
+	if (cb == NULL) {
+		return NULL;
+	}
+	
+	return g_strdup(cb->alias);
+}
+
 static void
 googlechat_got_group_users(GoogleChatAccount *ha, GetMembersResponse *response, gpointer user_data)
 {

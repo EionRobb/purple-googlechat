@@ -40,8 +40,8 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
           artifacts: libgooglechat.so
-          tag: nightly-${{ github.sha }}
-          name: Nightly ${{ github.sha }}
+          tag: daily-$(date +%Y-%m-%d)
+          name: Daily $(date +%Y-%m-%d)
           allowUpdates: true
           makeLatest: true
 

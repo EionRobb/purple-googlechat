@@ -35,13 +35,17 @@ jobs:
             name: plugin 
             path: libgooglechat.so
 
+      - name: Set date
+        id: date
+        run: echo "DATE=$(date +%Y-%m-%d)" >> $GITHUB_OUTPUT
+
       - name: release
         if: github.event_name == 'push' && github.ref == 'refs/heads/master' && !env.ACT
         uses: ncipollo/release-action@v1
         with:
           artifacts: libgooglechat.so
-          tag: daily-$(date +%Y-%m-%d)
-          name: Daily $(date +%Y-%m-%d)
+          tag: daily-${{ steps.date.outputs.DATE }}
+          name: Daily ${{ steps.date.outputs.DATE }}
           allowUpdates: true
           makeLatest: true
 

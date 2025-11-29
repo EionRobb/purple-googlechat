@@ -1760,6 +1760,7 @@ googlechat_conversation_send_image_part1_cb(PurpleHttpConnection *connection, Pu
 		request = purple_http_request_new(upload_url);
 		purple_http_request_set_cookie_jar(request, ha->cookie_jar);
 		purple_http_request_set_keepalive_pool(request, ha->api_keepalive_pool);
+		purple_http_request_set_max_len(request, GOOGLECHAT_MAX_HTTP_RESPONSE_SIZE);
 		
 		if (is_final_chunk) {
 			purple_http_request_header_set(request, "x-goog-upload-command", "upload, finalize");
@@ -1813,6 +1814,7 @@ googlechat_conversation_send_image(GoogleChatAccount *ha, const gchar *conv_id, 
 	purple_http_request_header_set_printf(request, "x-goog-upload-content-type", "image/%s", purple_image_get_extension(image));
 	purple_http_request_header_set(request, "x-goog-upload-file-name", filename);
 	purple_http_request_set_keepalive_pool(request, ha->api_keepalive_pool);
+	purple_http_request_set_max_len(request, GOOGLECHAT_MAX_HTTP_RESPONSE_SIZE);
 	
 	googlechat_set_auth_headers(ha, request);
 	connection = purple_http_request(ha->pc, request, googlechat_conversation_send_image_part1_cb, ha);

@@ -265,6 +265,7 @@ googlechat_oauth_refresh_token(GoogleChatAccount *ha)
 	purple_http_request_set_method(request, "POST");
 	purple_http_request_header_set(request, "Content-Type", "application/x-www-form-urlencoded");
 	purple_http_request_set_contents(request, postdata->str, postdata->len);
+	purple_http_request_set_max_len(request, GOOGLECHAT_MAX_HTTP_RESPONSE_SIZE);
 
 	purple_http_request(pc, request, googlechat_oauth_refresh_token_cb, ha);
 	purple_http_request_unref(request);
@@ -344,6 +345,7 @@ googlechat_oauth_with_code(GoogleChatAccount *ha, const gchar *auth_code)
 	purple_http_request_set_method(request, "POST");
 	purple_http_request_header_set(request, "Content-Type", "application/x-www-form-urlencoded");
 	purple_http_request_set_contents(request, postdata->str, postdata->len);
+	purple_http_request_set_max_len(request, GOOGLECHAT_MAX_HTTP_RESPONSE_SIZE);
 
 	purple_http_request(pc, request, googlechat_oauth_with_code_cb, ha);
 	purple_http_request_unref(request);
@@ -444,6 +446,7 @@ googlechat_auth_get_dynamite_token(GoogleChatAccount *ha)
 	g_string_append(postdata, "passcode_present=YES&");
 	g_string_append(postdata, "response_type=token&");
 	g_string_append_printf(postdata, "scope=%s&", purple_url_encode("https://www.googleapis.com/auth/dynamite https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/mobiledevicemanagement https://www.googleapis.com/auth/notifications https://www.googleapis.com/auth/supportcontent https://www.googleapis.com/auth/chat.integration https://www.googleapis.com/auth/peopleapi.readonly"));
+	purple_http_request_set_max_len(request, GOOGLECHAT_MAX_HTTP_RESPONSE_SIZE);
 	
 	purple_http_request_set_method(request, "POST");
 	purple_http_request_header_set(request, "Content-Type", "application/x-www-form-urlencoded");
@@ -550,6 +553,7 @@ googlechat_auth_refresh_xsrf_token(GoogleChatAccount *ha)
 	purple_http_request_set_method(request, "GET");
 	purple_http_request_header_set(request, "Referer", "https://mail.google.com/");
 	purple_http_request_header_set_printf(request, "User-Agent", GOOGLECHAT_USER_AGENT);
+	purple_http_request_set_max_len(request, GOOGLECHAT_MAX_HTTP_RESPONSE_SIZE);
 
 	purple_http_request(pc, request, googlechat_auth_refresh_xsrf_token_cb, ha);
 	purple_http_request_unref(request);

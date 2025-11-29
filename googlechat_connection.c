@@ -251,6 +251,7 @@ googlechat_send_stream_event(GoogleChatAccount *ha, StreamEventsRequest *events_
 	purple_http_request_set_method(request, "POST");
 	purple_http_request_header_set(request, "Content-Type", "application/x-www-form-urlencoded");
 	purple_http_request_set_keepalive_pool(request, ha->channel_keepalive_pool);
+	purple_http_request_set_max_len(request, GOOGLECHAT_MAX_HTTP_RESPONSE_SIZE);
 	
 	postdata = g_string_new(NULL);
 	g_string_append(postdata, "count=1&");
@@ -461,6 +462,7 @@ googlechat_longpoll_request(GoogleChatAccount *ha)
 	purple_http_request_set_timeout(request, -1);  // to infinity and beyond!
 	purple_http_request_set_response_writer(request, googlechat_longpoll_request_content, ha);
 	purple_http_request_set_keepalive_pool(request, ha->channel_keepalive_pool);
+	purple_http_request_set_max_len(request, GOOGLECHAT_MAX_HTTP_RESPONSE_SIZE);
 	
 	googlechat_set_auth_headers(ha, request);
 	
@@ -499,6 +501,7 @@ googlechat_fetch_channel_sid(GoogleChatAccount *ha)
 	purple_http_request_set_timeout(request, -1);  // to infinity and beyond!
 	purple_http_request_set_keepalive_pool(request, ha->channel_keepalive_pool);
 	purple_http_request_set_response_writer(request, googlechat_longpoll_request_content, ha);
+	purple_http_request_set_max_len(request, GOOGLECHAT_MAX_HTTP_RESPONSE_SIZE);
 	
 	googlechat_set_auth_headers(ha, request);
 	
@@ -536,6 +539,7 @@ googlechat_register_webchannel(GoogleChatAccount *ha)
 	purple_http_request_set_method(request, "POST");
 	purple_http_request_header_set(request, "Content-Type", "application/x-protobuf");
 	purple_http_request_set_keepalive_pool(request, ha->channel_keepalive_pool);
+	purple_http_request_set_max_len(request, GOOGLECHAT_MAX_HTTP_RESPONSE_SIZE);
 	
 	googlechat_set_auth_headers(ha, request);
 	
@@ -987,6 +991,7 @@ googlechat_search_users_text(GoogleChatAccount *ha, const gchar *text)
 	purple_http_request_set_cookie_jar(request, ha->cookie_jar);
 	purple_http_request_set_contents(request, postdata->str, postdata->len);
 	purple_http_request_header_set(request, "Content-Type", "application/json+protobuf");
+	purple_http_request_set_max_len(request, GOOGLECHAT_MAX_HTTP_RESPONSE_SIZE);
 	
 	gchar *sapisid_auth = googlechat_get_sapisid_auth_header(ha);
 	if (sapisid_auth) {

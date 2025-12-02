@@ -33,6 +33,7 @@
         "guchar",
         "guint",
         "gulong",
+        "gunichar",
         "hbuddy",
         "HSID",
         "jsonobj",

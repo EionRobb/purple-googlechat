@@ -34,6 +34,8 @@
 #include "googlechat.pb-c.h"
 #include "util.h"
 
+//cspell:words JADD formattedtext onclick
+
 // From googlechat_pblite
 gchar *pblite_dump_json(ProtobufCMessage *message);
 
@@ -278,9 +280,14 @@ googlechat_got_http_image_for_conv(PurpleHttpConnection *connection, PurpleHttpR
 	image_id = purple_image_store_add(image);
 	escaped_image_url = g_markup_escape_text(purple_http_request_get_url(purple_http_conn_get_request(connection)), -1);
 	if (drive_url) {
-		msg = g_strdup_printf("<a href='%s'>View in Drive <img id='%u' src='%s' /></a>", drive_url, image_id, escaped_image_url);
+		msg = g_strdup_printf("<a href='%s'>%s\n<img id='%u' src='%s' /></a>", drive_url, _("View in Drive"), image_id, escaped_image_url);
 	} else {
-		msg = g_strdup_printf("<a href='%s'>View full image <img id='%u' src='%s' /></a>", url, image_id, escaped_image_url);
+		const gchar *url_suffix = "";
+		if (strstr(url, "FIFE_URL")) {
+			// Display original image size for FIFE URLs
+			url_suffix = "&width=0";
+		}
+		msg = g_strdup_printf("<a href='%s%s'>%s\n<img id='%u' src='%s' /></a>", url, url_suffix, _("View full image"), image_id, escaped_image_url);
 	}
 	msg_flags |= PURPLE_MESSAGE_IMAGES;
 		

@@ -47,6 +47,7 @@ void googlechat_received_message_event(PurpleConnection *pc, Event *event);
 void googlechat_received_read_receipt(PurpleConnection *pc, Event *event);
 void googlechat_received_group_viewed(PurpleConnection *pc, Event *event);
 void googlechat_received_membership_changed(PurpleConnection *pc, Event *event);
+void googlechat_received_reaction_event(PurpleConnection *pc, Event *event);
 
 //purple_signal_emit(purple_connection_get_protocol(ha->pc), "googlechat-received-event", ha->pc, events_response.event);
 
@@ -60,6 +61,7 @@ googlechat_register_events(gpointer plugin)
 	purple_signal_connect(plugin, "googlechat-received-event", plugin, PURPLE_CALLBACK(googlechat_received_read_receipt), NULL);
 	purple_signal_connect(plugin, "googlechat-received-event", plugin, PURPLE_CALLBACK(googlechat_received_group_viewed), NULL);
 	purple_signal_connect(plugin, "googlechat-received-event", plugin, PURPLE_CALLBACK(googlechat_received_membership_changed), NULL);
+	purple_signal_connect(plugin, "googlechat-received-event", plugin, PURPLE_CALLBACK(googlechat_received_reaction_event), NULL);
 }
 
 void
@@ -1262,4 +1264,45 @@ googlechat_received_membership_changed(PurpleConnection *pc, Event *event)
 		}
 		googlechat_get_slash_commands_for_conversation(ha, conv_id);
 	}
+}
+
+void
+googlechat_received_reaction_event(PurpleConnection *pc, Event *event)
+{
+	const gchar *sender_id;
+	const gchar *conv_id;
+	//GoogleChatAccount *ha;
+	MessageReactionsSummaryEvent *reactions_summary;
+	MessageReactionEvent *reaction;
+	MessageId *message_id;
+	guint i;
+	
+	if (event->type != EVENT__EVENT_TYPE__MESSAGE_REACTED) {
+		return;
+	}
+	
+	//ha = purple_connection_get_protocol_data(pc);
+
+	// TODO reactions summary - what is the event type?
+	reactions_summary = event->body->message_reactions_summary;
+	if (reactions_summary != NULL && reactions_summary->n_reaction_summary > 0) {
+		message_id = reactions_summary->message_id;
+		for (i = 0; i < reactions_summary->n_reaction_summary; i++) {
+			ReactionSummary *summary = reactions_summary->reaction_summary[i];
+			sender_id = summary->reactors[0]->id;
+			// TODO find conversation from message_id
+		}
+	}
+
+	reaction = event->body->message_reaction;
+	if (reaction != NULL) {
+		message_id = reaction->message_id;
+		sender_id = reaction->reactor->id;
+		// TODO find conversation from message_id
+	}
+
+	// TODO find conversation from message_id
+	(void)conv_id;
+	(void)message_id;
+	(void)sender_id;
 }

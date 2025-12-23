@@ -52,6 +52,8 @@
         "Ruprecht",
         "strconcat",
         "strfreev",
-        "strsplit"
+        "strsplit",
+        "usec",
+        "WEBCHANNEL"
     ]
 }

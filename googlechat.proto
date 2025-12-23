@@ -1711,6 +1711,15 @@ message MembershipChangedEvent {
 	optional EventReason reason = 4;
 }
 
+message MessageDeletedEvent {
+	optional MessageId message_id = 1;
+	optional int64 group_sort_time = 2;
+	optional int64 topic_sort_time = 3;
+	optional string local_id = 4;
+	optional Message tombstone_message = 5;
+	optional bool delete_inline_replies = 6;
+}
+
 message ReadReceiptChangedEvent {
 	optional GroupId group_id = 1;
 	optional ReadReceiptSet read_receipt_set = 2;
@@ -1719,6 +1728,31 @@ message ReadReceiptChangedEvent {
 message GroupViewedEvent {
 	optional GroupId group_id = 1;
 	optional int64 view_time = 2;
+}
+
+message MemberOwnershipUpdate {
+	optional UserId user_id = 1;
+	optional OrganizationInfo new_organization_info = 2;
+	enum OwnershipUpdateActionType {
+		OWNERSHIP_UPDATE_ACTION_TYPE_UNSPECIFIED = 0;
+		UPDATE_CUSTOMER = 1;
+		EVICT_USER = 2;
+	}
+	optional OwnershipUpdateActionType action_type = 3;
+}
+
+message GroupUpdatedEvent {
+	optional Group group = 1;
+	optional Group prev_group = 2;
+	optional MemberOwnershipUpdate member_ownership_update = 3;
+	enum GroupUpdateType {
+		GROUP_UPDATE_TYPE_UNKNOWN = 0;
+		GROUP_CREATED = 1;
+		GROUP_UPDATED = 2;
+		GROUP_DELETED = 3;
+		GROUP_UNDELETED = 4;
+	}
+	optional GroupUpdateType group_update_type = 4;
 }
 
 message WebPushNotificationEvent {
@@ -1753,6 +1787,14 @@ message MessageReactionsSummaryEvent {
 	optional MessageId message_id = 1;
 	repeated ReactionSummary reaction_summary = 2;
 	optional int64 update_timestamp_micros = 3;
+}
+
+message MessageReactionEvent {
+	optional MessageId message_id = 1;
+	optional Emoji emoji = 2;
+	optional UserId reactor = 3;
+	optional int64 update_timestamp = 4;
+	optional ReactionOption option = 5;
 }
 
 message GroupReadStateUpdatedEvent {
@@ -2061,7 +2103,7 @@ message Event {
 		//oneof Type {
 		optional	GroupViewedEvent group_viewed = 3;
 			//TopicViewedEvent topic_viewed = 4;
-			//GroupUpdatedEvent group_updated = 5;
+		optional GroupUpdatedEvent group_updated = 5;
 		optional	MessageEvent message_posted = 6;
 			//TopicMuteChangedEvent topic_mute_changed = 7;
 			//UserSettingsChangedEvent user_settings_changed = 8;
@@ -2073,10 +2115,10 @@ message Event {
 			//GroupHideChangedEvent group_hide_changed = 15;
 			//DriveAclFixProcessedEvent drive_acl_fix_processed = 16;
 			//GroupNotificationSettingsUpdatedEvent group_notification_settings_updated = 17;
-			//MessageDeletedEvent message_deleted = 18;
+		optional MessageDeletedEvent message_deleted = 18;
 			//RetentionSettingsUpdatedEvent retention_settings_updated = 19;
 		optional TopicCreatedEvent topic_created = 21;
-			//MessageReactionEvent message_reaction = 22;
+		optional MessageReactionEvent message_reaction = 22;
 		optional	UserStatusUpdatedEvent user_status_updated_event = 23;
 			//WorkingHoursSettingsUpdatedEvent working_hours_settings_updated_event = 24;
 			//MessageSmartRepliesEvent message_smart_replies_event = 25;

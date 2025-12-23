@@ -1269,40 +1269,84 @@ googlechat_received_membership_changed(PurpleConnection *pc, Event *event)
 void
 googlechat_received_reaction_event(PurpleConnection *pc, Event *event)
 {
-	const gchar *sender_id;
+	const gchar *reactor_id;
 	const gchar *conv_id;
-	//GoogleChatAccount *ha;
-	MessageReactionsSummaryEvent *reactions_summary;
+	GoogleChatAccount *ha;
 	MessageReactionEvent *reaction;
 	MessageId *message_id;
-	guint i;
+	Emoji *emoji;
+	gint64 message_timestamp;
 	
 	if (event->type != EVENT__EVENT_TYPE__MESSAGE_REACTED) {
 		return;
 	}
 	
-	//ha = purple_connection_get_protocol_data(pc);
+	ha = purple_connection_get_protocol_data(pc);
 
 	// TODO reactions summary - what is the event type?
-	reactions_summary = event->body->message_reactions_summary;
+	/*
+	MessageReactionsSummaryEvent *reactions_summary = event->body->message_reactions_summary;
 	if (reactions_summary != NULL && reactions_summary->n_reaction_summary > 0) {
+		guint i;
 		message_id = reactions_summary->message_id;
 		for (i = 0; i < reactions_summary->n_reaction_summary; i++) {
 			ReactionSummary *summary = reactions_summary->reaction_summary[i];
-			sender_id = summary->reactors[0]->id;
-			// TODO find conversation from message_id
+			reactor_id = summary->reactors[0]->id;
+			emoji = summary->emoji;
+			message_timestamp = 0;
 		}
-	}
+	}*/
 
 	reaction = event->body->message_reaction;
 	if (reaction != NULL) {
 		message_id = reaction->message_id;
-		sender_id = reaction->reactor->id;
-		// TODO find conversation from message_id
+		reactor_id = reaction->reactor->id;
+		emoji = reaction->emoji;
+		message_timestamp = reaction->update_timestamp;
 	}
 
-	// TODO find conversation from message_id
-	(void)conv_id;
-	(void)message_id;
-	(void)sender_id;
+	GroupId *group_id = message_id->parent_id->topic_id->group_id;
+	gboolean is_dm = !!group_id->dm_id;
+	if (is_dm) {
+		conv_id = group_id->dm_id->dm_id;
+	} else {
+		conv_id = group_id->space_id->space_id;
+	}
+
+	PurpleMessageFlags msg_flags = PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG;
+	GString *msg_out = g_string_new(NULL);
+	const gchar *buddy_name = NULL;
+	PurpleBuddy *buddy = purple_blist_find_buddy(ha->account, reactor_id);
+	if (buddy) {
+		buddy_name = purple_buddy_get_alias(buddy);
+	} else if (g_strcmp0(reactor_id, ha->self_gaia_id)) {
+		buddy_name = reactor_id;
+	} else {
+		buddy_name = _("You");
+	}
+	const gchar *reacted_type = reaction->option == REACTION_OPTION__ADD ? _("reacted") : _("unreacted");
+	g_string_append_printf(msg_out, _("%s %s to %s with %s"), buddy_name, reacted_type, message_id->message_id, emoji->unicode);
+
+	if (msg_out->len > 0) {
+		if (g_hash_table_contains(ha->group_chats, conv_id)) {
+			purple_serv_got_chat_in(pc, g_str_hash(conv_id), reactor_id, msg_flags, msg_out->str, message_timestamp);
+		} else {
+			if (g_strcmp0(reactor_id, ha->self_gaia_id)) {
+				purple_serv_got_im(pc, reactor_id, msg_out->str, msg_flags, message_timestamp);
+			} else {
+				const gchar *sender_id = g_hash_table_lookup(ha->one_to_ones, conv_id);
+				if (sender_id) {
+					PurpleIMConversation *imconv = purple_conversations_find_im_with_account(sender_id, ha->account);
+					if (imconv != NULL)
+					{
+						PurpleMessage *pmessage = purple_message_new_outgoing(sender_id, msg_out->str, msg_flags);
+						purple_message_set_time(pmessage, message_timestamp);
+						purple_conversation_write_message(PURPLE_CONVERSATION(imconv), pmessage);
+					}
+				}
+			}
+		}
+	}
+
+	g_string_free(msg_out, TRUE);
 }

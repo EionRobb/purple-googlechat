@@ -1275,7 +1275,7 @@ googlechat_received_reaction_event(PurpleConnection *pc, Event *event)
 	MessageReactionEvent *reaction;
 	MessageId *message_id;
 	Emoji *emoji;
-	gint64 message_timestamp;
+	time_t message_timestamp;
 	
 	if (event->type != EVENT__EVENT_TYPE__MESSAGE_REACTED) {
 		return;
@@ -1302,7 +1302,7 @@ googlechat_received_reaction_event(PurpleConnection *pc, Event *event)
 		message_id = reaction->message_id;
 		reactor_id = reaction->reactor->id;
 		emoji = reaction->emoji;
-		message_timestamp = reaction->update_timestamp;
+		message_timestamp = (reaction->update_timestamp / 1000000) - ha->server_time_offset;
 	}
 
 	GroupId *group_id = message_id->parent_id->topic_id->group_id;

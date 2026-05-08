@@ -941,6 +941,21 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 			g_string_free(msg_out, TRUE);
 		}
 	}
+
+	// Group renames
+	for (i = 0; i < message->n_attachments; i++) {
+		Attachment *attachment = message->attachments[i];
+		RoomUpdatedMetadata *room_updated = attachment->room_updated;
+		if (room_updated && room_updated->rename_metadata && room_updated->rename_metadata->new_name) {
+			// Find the chat in the buddy list
+			PurpleChat *chat = purple_blist_find_chat(ha->account, conv_id);
+			// rename it
+			if (chat != NULL) {
+				purple_chat_set_alias(chat, room_updated->rename_metadata->new_name);
+			}
+		}
+	}
+
 	
 	if (pconv != NULL) {
 		gint64 *last_event_timestamp_ptr = (gint64 *)purple_conversation_get_data(pconv, "last_event_timestamp");

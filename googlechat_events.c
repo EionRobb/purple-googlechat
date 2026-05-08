@@ -943,9 +943,9 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 	}
 
 	// Group renames
-	for (i = 0; i < message->n_attachments; i++) {
-		Attachment *attachment = message->attachments[i];
-		RoomUpdatedMetadata *room_updated = attachment->room_updated;
+	for (i = 0; i < message->n_annotations; i++) {
+		Annotation *annotation = message->annotations[i];
+		RoomUpdatedMetadata *room_updated = annotation->room_updated;
 		if (room_updated && room_updated->rename_metadata && room_updated->rename_metadata->new_name) {
 			// Find the chat in the buddy list
 			PurpleChat *chat = purple_blist_find_chat(ha->account, conv_id);

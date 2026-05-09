@@ -274,6 +274,24 @@ googlechat_cmd_call(PurpleConversation *conv, const gchar *cmd, gchar **args, gc
 	return PURPLE_CMD_RET_OK;
 }
 
+static PurpleCmdRet
+googlechat_cmd_rename(PurpleConversation *conv, const gchar *cmd, gchar **args, gchar **error, gpointer data)
+{
+	PurpleConnection *pc = purple_conversation_get_connection(conv);
+	if (pc == NULL) {
+		return PURPLE_CMD_RET_FAILED;
+	}
+
+	GoogleChatAccount *ha = purple_connection_get_protocol_data(pc);
+	const gchar *conv_id = googlechat_get_convid_of_conv(conv);
+	if (conv_id == NULL) {
+		return PURPLE_CMD_RET_FAILED;
+	}
+
+	googlechat_rename_conversation(ha, conv_id, args[0]);
+	return PURPLE_CMD_RET_OK;
+}
+
 const gchar *
 googlechat_get_convid_of_conv(PurpleConversation *conv)
 {
@@ -824,6 +842,13 @@ plugin_load(PurplePlugin *plugin, GError **error)
 		 PURPLE_CMD_FLAG_PROTOCOL_ONLY | PURPLE_CMD_FLAG_ALLOW_WRONG_ARGS,
 		GOOGLECHAT_PLUGIN_ID, googlechat_cmd_call,
 		_("call:  Create a video call link for this room"), NULL
+	);
+
+	purple_cmd_register(
+		"rename", "", PURPLE_CMD_P_PLUGIN,
+		PURPLE_CMD_FLAG_CHAT | PURPLE_CMD_FLAG_PROTOCOL_ONLY | PURPLE_CMD_FLAG_ALLOW_WRONG_ARGS,
+		GOOGLECHAT_PLUGIN_ID, googlechat_cmd_rename,
+		_("rename <name>:  Rename the current chat"), NULL
 	);
 
 	purple_cmd_register(

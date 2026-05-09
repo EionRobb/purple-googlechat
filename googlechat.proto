@@ -186,6 +186,28 @@ message CustomEmojiMetadata {
 	optional CustomEmoji custom_emoji = 1;
 }
 
+message RequiredMessageFeaturesMetadata {
+	enum RequiredFeature {
+		UNSPECIFIED = 0;
+		MESSAGE_QUOTING = 1;
+		TOMBSTONES_IN_DMS_AND_UFRS = 2;
+		CUSTOM_HYPERLINK = 3;
+		DRIVE_SMART_CHIP = 4;
+		LEGACY_TOPIC_START = 5;
+		GROUP_SMART_CHIP = 6;
+		EMAIL_SMART_CHIP = 7;
+	}
+	repeated RequiredFeature required_features = 1;
+}
+
+message GroupMetadata {
+	optional GroupId group_id = 1;
+	optional MessageId message_id = 2;
+	optional AvatarInfo avatar_info = 3;
+	optional string monogram_avatar_token = 4;
+	optional string monogram_avatar_fife_url = 5;
+}
+
 message CreateCustomEmojiRequest {
 	optional string shortcode = 2;
 	//optional CustomEmojiUploadResult custom_emoji_upload_result = 3;
@@ -997,6 +1019,59 @@ message Reaction {
 	optional int64 create_timestamp = 4;
 }
 
+message BotResponse {
+	enum ResponseType {
+		UNKNOWN_RESPONSE_TYPE = 0;
+		ERROR = 1;
+		SETUP_REQUIRED = 2;
+		BOT_DISABLED_BY_ADMIN = 3;
+		BOT_DISABLED_BY_DEVELOPER = 4;
+		PRIVATE = 5;
+		APP_SUGGESTION = 6;
+		SENSITIVE_ACTION_NOT_ALLOWED_BY_ADMIN = 7;
+		CONTEXTUAL_APP_RECOMMENDATION = 8;
+	}
+	optional ResponseType response_type = 1;
+	optional UserId bot_id = 2;
+	enum RequiredAction {
+		UNKNOWN_SETUP_TYPE = 0;
+		CONFIGURATION = 1;
+		AUTHENTICATION = 2;
+	}
+	optional RequiredAction required_action = 3;
+	optional string setup_url = 4;
+	optional User bot_user = 5;
+	//optional DialogResponse dialog_action = 6;
+}
+
+message QuotedMessageMetadata {
+	optional MessageId message_id = 1;
+	optional int64 last_update_time_when_quoted_micros = 2;
+	enum MessageState {
+		UNSPECIFIED = 0;
+		ACTIVE = 1;
+		DELETED = 2;
+		OTR_EDITED = 3;
+	}
+	optional MessageState message_state = 3;
+	optional UserId creator_id = 4;
+	optional User creator_profile = 5;
+	optional string text_body = 6;
+	repeated Annotation annotations = 7;
+	optional AppId app_id = 8;
+	//optional AppProfile app_profile = 9;
+	enum BotAttachmentState {
+		UNKNOWN = 0;
+		HAS_BOT_ATTACHMENT = 1;
+		NO_BOT_ATTACHMENT = 2;
+	}
+	optional BotAttachmentState bot_attachment_state = 10;
+	optional RetentionSettings retention_settings = 11;
+	optional User updater_profile = 12;
+	optional int64 create_time_micros = 13;
+	optional int64 last_edit_time_micros = 14;
+}
+
 message MessageParentId {
 	//oneof Parent {
 	optional	TopicId topic_id = 4;
@@ -1024,7 +1099,7 @@ message Message {
 	optional int64 last_edit_time = 17;
 	optional string text_body = 10;
 	repeated Annotation annotations = 11;
-	//repeated DYNProtoBotResponse bot_responses = 19;
+	repeated BotResponse bot_responses = 19;
 	optional string local_id = 14;
 	repeated Attachment attachments = 15;
 	//optional DYNProtoAppProfile app_profile = 16;
@@ -1032,7 +1107,7 @@ message Message {
 	repeated Reaction reactions = 21;
 	//repeated DYNProtoCommunalLabelTag communal_labels = 27;
 	//repeated DYNProtoPersonalLabelTag personal_labels = 26;
-	//optional ?? message_integration_payload = 23;
+	//optional MessageIntegrationPayload message_integration_payload = 23;
 	enum MessagePermission {
 		PERMISSION_UNSPECIFIED = 0;
 		NO_ONE = 1;
@@ -1062,16 +1137,29 @@ message Message {
 	optional bool is_inline_reply = 34;
 	// repeated PrivateMessage private_messages = 35;
 	// optional PrivateMessageContent private_message_content = 36;
-	// optional QuotedMessageMetadata quoted_message_metadata = 37;
-	// optional ENUM quoted_by_state = 38;
+	optional QuotedMessageMetadata quoted_message_metadata = 37;
+	enum QuotedByState {
+		UNSPECIFIED = 0;
+		HAS_BEEN_QUOTED = 1;
+		HAS_NOT_BEEN_QUOTED = 2;
+	}
+	optional QuotedByState quoted_by_state = 38;
 	optional User updater = 39;
-	// optional ENUM rich_text_formatting_type = 40;
+	enum RichTextFormattingType {
+		NONE = 0;
+		MARKDOWN = 1;
+		FORMAT_ANNOTATIONS = 2;
+		FORMAT_ANNOTATIONS_IGNORED = 3;
+		FORMAT_ANNOTATIONS_IGNORED_WITH_MARKDOWN = 4;
+	}
+	optional RichTextFormattingType rich_text_formatting_type = 40;
 	// optional MessageSearchInfo message_search_info = 41;
 	// optional MessageReference message_reference = 42;
 	// repeated MessageLabel message_labels = 43;
-	// optional int32 number_of_unicode_emojis = 44;
-	// optional bool request_reply_in_thread = 45;
+	optional int32 number_of_unicode_emojis = 44;
+	optional bool request_reply_in_thread = 45;
 	// repeated MessageLabelId message_label_ids = 46;
+	// optional MessageTranslation message_translation = 47;
 }
 
 message DriveMetadata {
@@ -1105,6 +1193,12 @@ message Url {
 message TrustedResourceUrl {
 	//private_do_not_access_or_else_trusted_resource_url_wrapped_value
 	optional string resource_url = 4;
+}
+
+message YoutubeMetadata {
+	optional string id = 1;
+	optional bool should_not_render = 2;
+	optional int32 start_time = 3;
 }
 
 message UrlMetadata {
@@ -1154,6 +1248,10 @@ message UploadMetadata {
 	// optional ComGoogleAppsDriveStorageApiAuthorizedItemId cloned_authorized_item_id = 11;
 }
 
+message InteractionData {
+	optional Url url = 1;
+}
+
 message FormatMetadata {
 	enum FormatType {
 		TYPE_UNSPECIFIED = 0;
@@ -1192,33 +1290,33 @@ message Annotation {
 	optional bool server_invalidated = 13;
 	
 	//oneof Metadata {
-	optional	UserMentionMetadata user_mention_metadata = 5;
-	optional	FormatMetadata format_metadata = 8;
-	optional	SlashCommandMetadata slash_command_metadata = 15;
-	optional	DriveMetadata drive_metadata = 4;
+		optional	UserMentionMetadata user_mention_metadata = 5;
+		optional	FormatMetadata format_metadata = 8;
+		optional	SlashCommandMetadata slash_command_metadata = 15;
+		optional	DriveMetadata drive_metadata = 4;
 		
-		//DYNProtoYoutubeMetadata youtube_metadata = 6;
-	optional	UrlMetadata url_metadata = 7;
-	optional	UploadMetadata upload_metadata = 10;
-	optional	MembershipChangedMetadata membership_changed = 11;
-	optional	VideoCallMetadata video_call_metadata = 12;
-	optional	RoomUpdatedMetadata room_updated = 14;
-	optional GsuiteIntegrationMetadata gsuite_integration_metadata = 16;
+		optional YoutubeMetadata youtube_metadata = 6;
+		optional	UrlMetadata url_metadata = 7;
+		optional	UploadMetadata upload_metadata = 10;
+		optional	MembershipChangedMetadata membership_changed = 11;
+		optional	VideoCallMetadata video_call_metadata = 12;
+		optional	RoomUpdatedMetadata room_updated = 14;
+		optional GsuiteIntegrationMetadata gsuite_integration_metadata = 16;
 		//DYNProtoGroupRetentionSettingsUpdatedMetaData group_retention_settings_updated = 17;
 		//DYNProtoBabelPlaceholderMetadata babel_placeholder_metadata = 18
 		//DYNProtoReadReceiptsSettingsUpdatedMetadata read_receipts_settings_metadata = 21;
 		//DYNProtoIncomingWebhookChangedMetadata incoming_webhook_changed_metadata = 22;
 		//DYNProtoIntegrationConfigUpdatedMetadata integration_config_updated = 23;
 		//DYNProtoConsentedAppUnfurlMetadata consented_app_unfurl_metadata = 24;
-	optional CardCapabilityMetadata card_capability_metadata = 25;
-	optional CustomEmojiMetadata custom_emoji_metadata = 26;
+		optional CardCapabilityMetadata card_capability_metadata = 25;
+		optional CustomEmojiMetadata custom_emoji_metadata = 26;
 		// optional DataLossPreventionMetadata data_loss_prevention_metadata = 27;
-		// optional RequiredMessageFeaturesMetadata required_message_features_metadata = 28;
+		optional RequiredMessageFeaturesMetadata required_message_features_metadata = 28;
 		// optional MigratedFromLegacyThreadedRoomMetadata migrated_from_legacy_threaded_room_metadata = 32;
-		// optional GroupMetadata group_metadata = 33;
+		optional GroupMetadata group_metadata = 33;
 	//}
 	// optional enum inline_render_format = 29;
-	// optional InteractionData interaction_data = 30;
+	optional InteractionData interaction_data = 30;
 	// optional MessageComponentSearchInfo component_search_info = 31;
 }
 
@@ -1245,6 +1343,10 @@ message SetTypingStateResponse {
 	optional int64 start_timestamp_usec = 1;
 }
 
+message AvatarInfo {
+	optional Emoji emoji = 1;
+}
+
 message DmId {
 	optional string dm_id = 1;
 }
@@ -1258,6 +1360,76 @@ message GroupId {
 	optional	SpaceId space_id = 1;
 	optional	DmId dm_id = 3;
 	//}
+}
+
+message SpaceDetails {
+	optional string description = 1;
+	optional string guidelines = 2;
+}
+
+message RolePermission {
+	optional bool owners_allowed = 1;
+	optional bool members_allowed = 2;
+	optional bool invitees_allowed = 3;
+}
+
+enum SpacePermissionType {
+	UNSPECIFIED = 0;
+	TOGGLE_HISTORY = 1;
+	AT_MENTION_ALL = 2;
+	EDIT_SPACE_PROFILE = 3;
+	POST_MESSAGES = 4;
+	REPLY_TO_MESSAGES = 5;
+	REACT_TO_MESSAGES = 6;
+	VIEW_TASKS = 7;
+	MANAGE_MEMBERS = 9;
+	MANAGE_APPS = 20;
+	MANAGE_WEBHOOKS = 21;
+}
+
+// ComGoogleChatV1CallSpaceIntegrationPayload
+message CallSpaceIntegrationPayload {
+	optional CallMetadata call_metadata = 1;
+	enum CallStatus {
+		CALL_STATUS_UNSPECIFIED = 0;
+		CALL_STARTED = 1;
+		CALL_MISSED = 2;
+		CALL_ENDED = 3;
+	}
+	optional CallStatus call_status = 2;
+	optional Timestamp participant_list_revision_timestamp = 3;
+}
+
+// ComGoogleAppsDynamiteV1SharedSpaceIntegrationPayload
+message SpaceIntegrationPayload {
+	enum PayloadType {
+		UNSPECIFIED = 0;
+		TASKS = 1;
+		SHARED_DRIVE = 2;
+		ACTIVITY_FEED = 3;
+		SHORTCUT = 4;
+		CALL = 5;
+		WORKFLOWS = 6;
+	}
+	optional PayloadType type = 1;
+	optional int64 project_number = 2;
+	//oneof {
+		//optional TasksSpaceIntegrationPayload tasks_integration_payload = 101;
+		//optional SharedDriveSpaceIntegrationPayload shared_drive_integration_payload = 102;
+		//optional ActivityFeedSpaceIntegrationPayload activity_feed_integration_payload = 103;
+		//optional ShortcutSpaceIntegrationPayload shortcut_integration_payload = 104;
+		optional CallSpaceIntegrationPayload call_integration_payload = 105;
+		//optional WorkflowSpaceIntegrationPayload workflow_integration_payload = 106;
+	//}
+}
+
+message SpacePermission {
+	optional SpacePermissionType space_permission_type = 1;
+	optional RolePermission role_permission = 2;
+}
+
+message SpacePermissions {
+	repeated SpacePermission space_permission = 1;
 }
 
 message Group {
@@ -1300,22 +1472,23 @@ message Group {
 	
 	optional string avatar_url = 28;
 	//optional DYNProtoGroupIntegrationSettings group_integration_settings = 36;
-	//repeated SpaceIntegrationPayload space_integration_payloads = 29;
-	//optional DYNProtoAvatarInfo avatar_info = 30;
+	repeated SpaceIntegrationPayload space_integration_payloads = 29;
+	optional AvatarInfo avatar_info = 30;
 	optional SharedAttributeCheckerGroupType attribute_checker_group_type = 33;
 	optional NameUsers name_users = 34;
-	//optional SpaceDetails space_details = 37;
+	optional SpaceDetails space_details = 37;
 	optional GroupSupportLevel group_support_level = 38;
 	optional GroupUnsupportedReason group_unsupported_reason = 39;
 	//optional DYNProtoHubGroupProperties hub_group_properties = 41;
 	//optional UfrUpgradeInfo ufr_upgrade_info = 42;
 	optional bool typing_indicators_enabled = 43;
-	// optional bool inline_threading_enabled = 44;
-	// optional bool dm_created_by_admin = 45;
-	// repeated int32 active_backend_group_experiments_for_logging = 46;
+	optional bool inline_threading_enabled = 44;
+	optional bool dm_created_by_admin = 45;
+	repeated int32 active_backend_group_experiments_for_logging = 46;
 	optional SegmentedMembershipCounts segmented_membership_counts = 47;
-	// optional SpacePermissions space_permissions = 48;
+	optional SpacePermissions space_permissions = 48;
 	// optional LTRMigrationStatus ltr_migration_status = 49;
+	repeated GroupLabelId group_label_ids = 50;
 }
 
 enum GroupUnsupportedReason {
@@ -1340,6 +1513,10 @@ message InviteState {
 	optional MessageId invitation_message_id = 2;
 	optional bool show_welcome_mat = 3;
 	optional InviteType invite_type = 5;
+}
+
+message Sorts {
+	repeated Sort sort = 1;
 }
 
 message GroupReadState {
@@ -1371,8 +1548,9 @@ message GroupReadState {
 	//repeated SpaceLabelId space_label_id = 27;
 	optional int64 default_sort = 28;
 	optional int64 last_head_message_create_time_usec = 29;
-	//optional Sorts sorts = 30;
-	//repeated GroupLabelId group_label_id = 31;
+	optional Sorts sorts = 30;
+	repeated GroupLabelId group_label_id = 31;
+	optional int64 user_retention_duration_micros = 33;
 }
 
 message GroupNotificationSettings {
@@ -1422,7 +1600,7 @@ message TopicReadState {
 	optional int64 deleted_message_count = 9;
 	optional int32 total_message_count = 10;
 	repeated TopicLabelId topic_label_id = 11;
-	//optional Sorts sorts = 12;
+	optional Sorts sorts = 12;
 }
 
 message TopicId {
@@ -1518,7 +1696,7 @@ message SpaceCreationInfo {
 	optional bool has_server_generated_name = 7;
 	repeated InviteeMemberInfo invitee_member_infos = 8;
 	// optional RoomInviteNotificationSettings notification_settings = 9;
-	// optional AvatarInfo avatar_info = 10;
+	optional AvatarInfo avatar_info = 10;
 	
 	message SpaceType {
 	
@@ -1711,6 +1889,11 @@ message MembershipChangedEvent {
 	optional EventReason reason = 4;
 }
 
+message GroupHideChangedEvent {
+	optional GroupId group_id = 1;
+	optional bool hidden = 2;	
+}
+
 message MessageDeletedEvent {
 	optional MessageId message_id = 1;
 	optional int64 group_sort_time = 2;
@@ -1720,14 +1903,47 @@ message MessageDeletedEvent {
 	optional bool delete_inline_replies = 6;
 }
 
+message MarkAsUnreadEvent {
+	optional GroupId group_id = 1;
+	optional int64 updated_mark_as_unread_timestamp_usec = 2;
+}
+
 message ReadReceiptChangedEvent {
 	optional GroupId group_id = 1;
 	optional ReadReceiptSet read_receipt_set = 2;
 }
 
+message GroupNoOpEvent {
+	optional GroupId group_id = 1;
+}
+
+message UserNoOpEvent {
+}
+
+message NotificationsCardEvent {
+	optional TopicId topic_id = 1;
+	optional bool show_notifications_card_in_stream = 2;
+	optional GroupId group_id = 3;
+}
+
 message GroupViewedEvent {
 	optional GroupId group_id = 1;
 	optional int64 view_time = 2;
+}
+
+message TopicViewedEvent {
+	optional TopicId topic_id = 1;
+	optional int64 view_time = 2;
+}
+
+message GroupDeletedEvent {
+	repeated GroupId group_ids = 1;
+}
+
+message ClearHistoryEvent {
+	optional GroupId group_id = 1;
+	optional int64 clear_history_timestamp = 2;
+	optional bool hide_group = 3;
 }
 
 message MemberOwnershipUpdate {
@@ -1755,6 +1971,12 @@ message GroupUpdatedEvent {
 	optional GroupUpdateType group_update_type = 4;
 }
 
+message TopicMuteChangedEvent {
+	optional TopicId topic_id = 1;
+	optional bool muted = 2;
+	optional int64 event_time = 3;
+}
+
 message WebPushNotificationEvent {
 	enum DispatchApproachType {
 		DISPATCH_APPROACH_TYPE_UNSPECIFIED = 0;
@@ -1774,6 +1996,12 @@ message WebPushNotificationEvent {
 	repeated EndpointType endpoint_types = 4;
 }
 
+message GroupUnreadSubscribedTopicCountUpdatedEvent {
+	optional int64 unread_subscribed_topic_count = 1;
+	optional int64 update_timestamp = 2;
+	optional GroupId group_id = 3;
+}
+
 message ReactionSummary {
 	optional Emoji emoji = 1;
 	repeated UserId reactors = 2;
@@ -1787,6 +2015,29 @@ message MessageReactionsSummaryEvent {
 	optional MessageId message_id = 1;
 	repeated ReactionSummary reaction_summary = 2;
 	optional int64 update_timestamp_micros = 3;
+}
+
+message TopicLabelEvent {
+	optional TopicId topic_id = 1;
+	optional TopicLabelId topic_label_id = 2;
+	optional ReadRevision group_revision = 3;
+}
+
+message BadgeCount {
+
+}
+
+message BadgeCountUpdatedEvent {
+	repeated BadgeCount badge_counts = 1;
+}
+
+message MessageLabel {
+
+}
+
+message MessageLabelEvent {
+	optional MessageId message_id = 1;
+	optional MessageLabel message_label = 3;
 }
 
 message MessageReactionEvent {
@@ -2102,17 +2353,17 @@ message Event {
 	message EventBody {
 		//oneof Type {
 		optional	GroupViewedEvent group_viewed = 3;
-			//TopicViewedEvent topic_viewed = 4;
+		optional TopicViewedEvent topic_viewed = 4;
 		optional GroupUpdatedEvent group_updated = 5;
 		optional	MessageEvent message_posted = 6;
-			//TopicMuteChangedEvent topic_mute_changed = 7;
+		optional TopicMuteChangedEvent topic_mute_changed = 7;
 			//UserSettingsChangedEvent user_settings_changed = 8;
 			//GroupStarredEvent group_starred = 9;
 		optional	WebPushNotificationEvent web_push_notification = 10;
-			//GroupUnreadSubscribedTopicCountUpdatedEvent group_unread_subscribed_topic_count_updated_event = 11;
+		optional GroupUnreadSubscribedTopicCountUpdatedEvent group_unread_subscribed_topic_count_updated_event = 11;
 			//InviteCountUpdatedEvent invite_count_updated = 13;
 		optional	MembershipChangedEvent membership_changed = 14;
-			//GroupHideChangedEvent group_hide_changed = 15;
+		optional GroupHideChangedEvent group_hide_changed = 15;
 			//DriveAclFixProcessedEvent drive_acl_fix_processed = 16;
 			//GroupNotificationSettingsUpdatedEvent group_notification_settings_updated = 17;
 		optional MessageDeletedEvent message_deleted = 18;
@@ -2123,16 +2374,16 @@ message Event {
 			//WorkingHoursSettingsUpdatedEvent working_hours_settings_updated_event = 24;
 			//MessageSmartRepliesEvent message_smart_replies_event = 25;
 		optional	TypingStateChangedEvent typing_state_changed_event = 26;
-			//GroupDeletedEvent group_deleted_event = 27;
+		optional GroupDeletedEvent group_deleted_event = 27;
 			//BlockStateChangedEvent block_state_changed_event = 28;
-			//ClearHistoryEvent clear_history_event = 29;
+		optional ClearHistoryEvent clear_history_event = 29;
 			//GroupSortTimestampChangedEvent group_sort_timestamp_changed_event = 30;
-			//MarkAsUnreadEvent mark_as_unread_event = 32;
+		optional MarkAsUnreadEvent mark_as_unread_event = 32;
 		optional	ReadReceiptChangedEvent read_receipt_changed = 33;
-			//GroupNoOpEvent group_no_op_event = 34;
-			//UserNoOpEvent user_no_op_event = 35;
+		optional GroupNoOpEvent group_no_op_event = 34;
+		optional UserNoOpEvent user_no_op_event = 35;
 			//UserDenormalizedGroupUpdatedEvent user_denormalized_group_updated_event = 36;
-			//NotificationsCardEvent notifications_card_event = 37;
+		optional NotificationsCardEvent notifications_card_event = 37;
 			// UserHubAvailabilityUpdatedEvent user_hub_availability_event = 38;
 			//PresenceSharedUpdatedEvent presence_shared_updated_event = 39;
 			//UserOwnershipUpdatedEvent user_ownership_updated_event = 40;
@@ -2147,14 +2398,17 @@ message Event {
 			// MessageLabelsUpdatedEvent message_labels_updated_event = 49;
 			optional MessageReactionsSummaryEvent message_reactions_summary = 50;
 			// GroupDefaultSortOrderUpdatedEvent group_default_sort_order_updated_event = 53;
-			// TopicLabelEvent topic_label_event = 54;
+			optional TopicLabelEvent topic_label_event = 54;
 			// StringSortOrderUpdatedEvent string_sort_order_updated_event = 55;
-			// MessageLabelEvent message_label_event = 56;
+			optional MessageLabelEvent message_label_event = 56;
 			// GroupLabelEvent group_label_event = 57;
 			// RosterSectionEvent roster_section_event = 58;
-			// BadgeCountUpdatedEvent badge_count_updated_event = 59;
+			optional BadgeCountUpdatedEvent badge_count_updated_event = 59;
 			// WorldRefreshedEvent world_refreshed_event = 60;
 			// JoinRequestedEvent join_requested_event = 61;
+			// optional GroupEntityEvent group_entity_event = 62;
+			// optional MessageDetectedIntentEvent message_detected_intent_event = 63;
+			// optional TopicMetadataUpdatedEvent topic_metadata_updated_event = 64;
 			optional GroupReadStateUpdatedEvent group_read_state_updated_event = 65;
 		//}
 
@@ -2286,8 +2540,8 @@ message CallAnnotationData {
 		CALL_ENDED = 3;
 	}
 	optional CallStatus call_status = 2;
-	//optional Timestamp call_ended_timestamp = 3;
-	//optional Timestamp participant_list_revision_timestamp = 4;
+	optional Timestamp call_ended_timestamp = 3;
+	optional Timestamp participant_list_revision_timestamp = 4;
 	//optional CalendarEventAnnotationData calendar_event_annotation_data = 5;
 }
 
@@ -2441,8 +2695,8 @@ message MeetingSpace {
 		//repeated ComGoogleRtcMeetingsV1DocumentInfo attached_documents = 12;
 		message PaygateInfo {
 			optional bool show_upgrade_promos = 1;
-			optional ComGoogleProtobufTimestamp call_ending_soon_warning_time = 2;
-			optional ComGoogleProtobufTimestamp call_ending_time = 3;
+			optional Timestamp call_ending_soon_warning_time = 2;
+			optional Timestamp call_ending_time = 3;
 		}
 		optional PaygateInfo paygate_info = 13;
 		repeated string supported_caption_languages = 14;
@@ -2643,17 +2897,12 @@ enum MembershipState {
 	MEMBER_FAILED = 4;
 }
 
-message ComGoogleProtobufTimestamp {
-	optional int64 seconds = 1;
-	optional int32 nanos = 2;
-}
-
 message GetServerTimeRequest {
 	optional RequestHeader request_header = 100;
 }
 
 message GetServerTimeResponse {
-	optional ComGoogleProtobufTimestamp timestamp = 1;
+	optional Timestamp timestamp = 1;
 }
 
 
@@ -2850,6 +3099,11 @@ message SpaceOriginType {
 	// optional enum updated_space_origin = 2;
 }
 
+message UserProfile {
+	optional User user = 1;
+	optional GroupId group_id = 2;
+}
+
 message WorldItemLite {
 	optional GroupId group_id = 1;
 	optional ReadRevision group_revision = 2;
@@ -2877,7 +3131,7 @@ message WorldItemLite {
 		optional bool interop_enabled = 5;
 		//optional DasherDomainPolicies dasher_domain_policies = 6;
 		optional string roster_email = 7;
-		// optional SpaceDetails space_details = 8;
+		optional SpaceDetails space_details = 8;
 	}
 	optional GroupLite group_lite = 7;
 	//optional GroupGuestAccessSettings group_guest_access_settings = 10;
@@ -2894,9 +3148,9 @@ message WorldItemLite {
 	}
 	optional ThreadedGroup threaded_group = 15;
 	optional string avatar_url = 16;
-	//repeated SpaceIntegrationPayload space_integration_payloads = 17;
+	repeated SpaceIntegrationPayload space_integration_payloads = 17;
 	//optional GroupIntegrationSettings group_integration_settings = 22;
-	// optional AvatarInfo avatar_info = 18;
+	optional AvatarInfo avatar_info = 18;
 	optional SharedAttributeCheckerGroupType attribute_checker_group_type = 19;
 	optional GroupSupportLevel group_support_level = 23;
 	optional GroupUnsupportedReason group_unsupported_reason = 24;
@@ -2906,7 +3160,7 @@ message WorldItemLite {
 	repeated int32 active_backend_group_experiments_for_logging = 28;
 	optional bool dm_created_by_admin = 29;
 	optional SegmentedMembershipCounts segmented_membership_counts = 30;
-	// repeated UserProfile user_profile_list = 32;
+	repeated UserProfile user_profile_list = 32;
 	// optional LTRMigrationStatus ltr_migration_status = 33;
 	repeated GroupLabelId group_label_ids = 36;
 	message GroupNameDetails {
@@ -3017,12 +3271,16 @@ message PaginatedWorldRequest {
 		FETCH_SPACE_INTEGRATION_PAYLOADS = 3;
 		FETCH_GROUPS_D3_POLICIES = 4;
 		FETCH_USER_PROFILES_FOR_GROUP_NAMING = 5;
+		FETCH_SNIPPET_SENDER_PROFILES = 6;
+		FETCH_THREAD_MESSAGE_SENDER_PROFILES = 7;
 	}
 	repeated FetchOptions fetch_options = 4;
 	optional bool fetch_from_user_spaces = 5;
 	optional bool receive_world_update_notifications = 6;
 	optional bool fetch_snippets_for_unnamed_rooms = 7;
 	optional bool fetch_blocked_users = 8;
+	optional bool issue_registration_token = 9;
+	//repeated enum badge_count_types = 10;
 }
 
 message PaginatedWorldResponse {
@@ -3030,6 +3288,11 @@ message PaginatedWorldResponse {
 	optional string world_consistency_token = 2;
 	optional ReadRevision user_revision = 3;
 	repeated WorldItemLite world_items = 4;
+	repeated UserId blocked_users = 5;
+	optional bool is_user_active = 6;
+	//repeated WorldEntity world_entities = 7;
+	//repeated BadgeCount badge_counts = 8;
+	//optional RegistrationResponse registration_response = 10;
 }
 
 message RemoveMembershipsRequest {
@@ -3145,8 +3408,10 @@ message UpdateGroupRequest {
 	repeated UpdateMask update_masks = 4;
 	optional string name = 2;
 	optional GroupVisibility visibility = 5;
-	// optional AvatarInfo avatar_info = 6;
-	// optional ?? space_details = 7;
+	optional AvatarInfo avatar_info = 6;
+	optional SpaceDetails space_details = 7;
+	optional SpacePermissions space_permissions = 8;
+	repeated GroupLabelId added_group_label_id = 9;
 }
 
 message UpdateGroupResponse {
@@ -3271,7 +3536,7 @@ message SubmitFormActionRequest {
 }
 
 message SubmitFormActionResponse {
-	//optional BotResponse bot_response = 1;
+	optional BotResponse bot_response = 1;
 	//optional ActionStatus action_status = 2;
 	optional JAddOnsCardItem card_item = 3;
 	optional string setup_url = 4;

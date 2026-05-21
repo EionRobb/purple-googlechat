@@ -48,6 +48,7 @@ void googlechat_received_read_receipt(PurpleConnection *pc, Event *event);
 void googlechat_received_group_viewed(PurpleConnection *pc, Event *event);
 void googlechat_received_membership_changed(PurpleConnection *pc, Event *event);
 void googlechat_received_reaction_event(PurpleConnection *pc, Event *event);
+void googlechat_received_block_state_change_notification(PurpleConnection *pc, Event *event);
 
 //purple_signal_emit(purple_connection_get_protocol(ha->pc), "googlechat-received-event", ha->pc, events_response.event);
 
@@ -62,6 +63,7 @@ googlechat_register_events(gpointer plugin)
 	purple_signal_connect(plugin, "googlechat-received-event", plugin, PURPLE_CALLBACK(googlechat_received_group_viewed), NULL);
 	purple_signal_connect(plugin, "googlechat-received-event", plugin, PURPLE_CALLBACK(googlechat_received_membership_changed), NULL);
 	purple_signal_connect(plugin, "googlechat-received-event", plugin, PURPLE_CALLBACK(googlechat_received_reaction_event), NULL);
+	purple_signal_connect(plugin, "googlechat-received-event", plugin, PURPLE_CALLBACK(googlechat_received_block_state_change_notification), NULL);
 }
 
 void
@@ -160,7 +162,9 @@ googlechat_received_other_notification(PurpleConnection *pc, Event *event)
 		event->type == EVENT__EVENT_TYPE__TYPING_STATE_CHANGED ||
 		event->type == EVENT__EVENT_TYPE__GROUP_VIEWED ||
 		event->type == EVENT__EVENT_TYPE__USER_STATUS_UPDATED_EVENT ||
-		event->type == EVENT__EVENT_TYPE__READ_RECEIPT_CHANGED
+		event->type == EVENT__EVENT_TYPE__READ_RECEIPT_CHANGED ||
+		event->type == EVENT__EVENT_TYPE__BLOCK_STATE_CHANGED ||
+		event->type == EVENT__EVENT_TYPE__MESSAGE_UPDATED
 	) {
 		return;
 	}
@@ -176,6 +180,35 @@ void
 googlechat_process_presence_result(GoogleChatAccount *ha, DYNProtoUserPresence *presence)
 {
 	
+}
+
+void
+googlechat_received_block_state_change_notification(PurpleConnection *pc, Event *event)
+{
+	GoogleChatAccount *ha;
+	BlockStateChangedEvent *block_state_changed_event;
+	
+	if (event->type != EVENT__EVENT_TYPE__BLOCK_STATE_CHANGED) {
+		return;
+	}
+	block_state_changed_event = event->body->block_state_changed_event;
+	
+	ha = purple_connection_get_protocol_data(pc);
+	
+	if (block_state_changed_event->blocked_user_id) {
+		const gchar *user_id = block_state_changed_event->blocked_user_id->id;
+		
+		gboolean blocked = block_state_changed_event->blocked;
+
+		if (blocked) {
+			purple_privacy_deny_add(ha->account, user_id, TRUE);
+		} else {
+			purple_privacy_deny_remove(ha->account, user_id, TRUE);
+		}
+
+	} else if (block_state_changed_event->blocked_group_id) {
+		//TODO mark a group chat as blocked??
+	}
 }
 
 void

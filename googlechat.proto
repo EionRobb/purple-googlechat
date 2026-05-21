@@ -1940,6 +1940,13 @@ message GroupDeletedEvent {
 	repeated GroupId group_ids = 1;
 }
 
+message BlockStateChangedEvent {
+	optional UserId blocked_user_id = 1;
+	optional GroupId blocked_group_id = 2;
+	optional bool blocked = 3;
+	optional UserId blocker = 4;
+}
+
 message ClearHistoryEvent {
 	optional GroupId group_id = 1;
 	optional int64 clear_history_timestamp = 2;
@@ -2375,7 +2382,7 @@ message Event {
 			//MessageSmartRepliesEvent message_smart_replies_event = 25;
 		optional	TypingStateChangedEvent typing_state_changed_event = 26;
 		optional GroupDeletedEvent group_deleted_event = 27;
-			//BlockStateChangedEvent block_state_changed_event = 28;
+		optional BlockStateChangedEvent block_state_changed_event = 28;
 		optional ClearHistoryEvent clear_history_event = 29;
 			//GroupSortTimestampChangedEvent group_sort_timestamp_changed_event = 30;
 		optional MarkAsUnreadEvent mark_as_unread_event = 32;
@@ -3427,11 +3434,20 @@ message BlockEntityRequest {
 	//}
 	optional bool blocked = 3;
 	optional bool reported = 4;
+	optional GroupId user_blocked_in_group_id = 5;
 }
 
 message BlockEntityResponse {
 	optional GroupReadState read_state = 1;
 	optional WriteRevision user_revision = 2;
+}
+
+message ListBlockedUsersRequest {
+	optional RequestHeader request_header = 100;
+}
+
+message ListBlockedUsersResponse {
+	repeated UserId blocked_user_id = 1;
 }
 
 message SetCustomStatusRequest {

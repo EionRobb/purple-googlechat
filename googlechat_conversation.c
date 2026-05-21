@@ -1184,6 +1184,37 @@ googlechat_get_conversation_list(GoogleChatAccount *ha)
 
 
 static void
+googlechat_got_blocked_users(GoogleChatAccount *ha, ListBlockedUsersResponse *response, gpointer user_data)
+{
+	if (response->n_blocked_user_id)
+	{
+		guint i;
+		
+		for (i = 0; i < response->n_blocked_user_id; i++) {
+			const gchar *blocked_user_id = response->blocked_user_id[i]->id;
+			
+			if (blocked_user_id) {
+				purple_privacy_deny_add(ha->account, blocked_user_id, TRUE);
+			}
+		}
+	}
+}
+
+void
+googlechat_get_blocked_users(GoogleChatAccount *ha)
+{
+	ListBlockedUsersRequest request;
+	list_blocked_users_request__init(&request);
+	
+	request.request_header = googlechat_get_request_header(ha);
+	
+	googlechat_api_list_blocked_users(ha, &request, googlechat_got_blocked_users, NULL);
+	
+	googlechat_request_header_free(request.request_header);
+}
+
+
+static void
 googlechat_got_buddy_photo(PurpleHttpConnection *connection, PurpleHttpResponse *response, gpointer user_data)
 {
 	PurpleBuddy *buddy = user_data;
@@ -1353,6 +1384,8 @@ googlechat_block_user(PurpleConnection *pc, const char *who)
 	
 	request.has_blocked = TRUE;
 	request.blocked = TRUE;
+	request.has_reported = TRUE;
+	request.reported = FALSE;
 	
 	googlechat_api_block_entity(ha, &request, NULL, NULL);
 	
@@ -1376,6 +1409,8 @@ googlechat_unblock_user(PurpleConnection *pc, const char *who)
 	
 	request.has_blocked = TRUE;
 	request.blocked = FALSE;
+	request.has_reported = TRUE;
+	request.reported = FALSE;
 	
 	googlechat_api_block_entity(ha, &request, NULL, NULL);
 	

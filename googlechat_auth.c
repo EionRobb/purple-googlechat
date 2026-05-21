@@ -376,7 +376,8 @@ googlechat_auth_finished_auth(GoogleChatAccount *ha)
 	//TODO trigger event instead
 	googlechat_get_self_user_status(ha);
 	googlechat_get_conversation_list(ha);
-	
+	googlechat_get_blocked_users(ha);
+
 	if (ha->poll_buddy_status_timeout) {
 		g_source_remove(ha->poll_buddy_status_timeout);
 	}

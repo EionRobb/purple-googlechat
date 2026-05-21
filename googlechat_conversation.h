@@ -41,6 +41,7 @@ void googlechat_add_person_to_blist(GoogleChatAccount *ha, const gchar *gaia_id,
 
 void googlechat_get_self_user_status(GoogleChatAccount *ha);
 void googlechat_get_conversation_list(GoogleChatAccount *ha);
+void googlechat_get_blocked_users(GoogleChatAccount *ha);
 void googlechat_get_buddy_list(GoogleChatAccount *ha);
 
 gint googlechat_send_im(PurpleConnection *pc, 

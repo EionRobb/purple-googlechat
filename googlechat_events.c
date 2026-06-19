@@ -542,110 +542,111 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 		}
 	}
 	
-	if (format_annotations == NULL) {
-		//shortcut
-		msg = purple_markup_escape_text(message->text_body, -1);
+	GString *msg_out = g_string_sized_new(strlen(message->text_body));
+	if (event->type == EVENT__EVENT_TYPE__MESSAGE_UPDATED) {
+		g_string_append(msg_out, "Edit: ");
+	}
+	const gchar *current_char = message->text_body;
+	gunichar c;
+	gint32 pos = 0;
+	GList *format;
+	gint hidden_output = 0;
 		
-	} else {
-		GString *msg_out = g_string_new(event->type == EVENT__EVENT_TYPE__MESSAGE_UPDATED ? _("Edit: ") : NULL);
-		const gchar *current_char = message->text_body;
-		gunichar c;
-		gint32 pos = 0;
-		GList *format;
-		gint hidden_output = 0;
-		
-		do {
-			if (format_annotations != NULL) {
-				format = format_annotations;
-				while(format != NULL) {
-					GList *next_format = format->next;
-					Annotation *annotation = format->data;
-					FormatMetadata__FormatType format_type = annotation->format_metadata ? annotation->format_metadata->format_type : 0;
+	do {
+		if (format_annotations != NULL) {
+			format = format_annotations;
+			while(format != NULL) {
+				GList *next_format = format->next;
+				Annotation *annotation = format->data;
+				FormatMetadata__FormatType format_type = annotation->format_metadata ? annotation->format_metadata->format_type : 0;
 					
-					// Opening
-					if (annotation->start_index == pos) {
-						if (format_type == FORMAT_METADATA__FORMAT_TYPE__HIDDEN) {
-							hidden_output++;
+				// Opening
+				if (annotation->start_index == pos) {
+					if (format_type == FORMAT_METADATA__FORMAT_TYPE__HIDDEN) {
+						hidden_output++;
 						
-						} else if (format_type == FORMAT_METADATA__FORMAT_TYPE__FONT_COLOR) {
-							g_string_append_printf(msg_out, "<span style='color: #%02x%02x%02x'>", 
-								annotation->format_metadata->font_color >> 16,
-								annotation->format_metadata->font_color >> 8 & 0xFF,
-								annotation->format_metadata->font_color & 0xFF);
+					} else if (format_type == FORMAT_METADATA__FORMAT_TYPE__FONT_COLOR) {
+						g_string_append_printf(msg_out, "<span style='color: #%02x%02x%02x'>", 
+							annotation->format_metadata->font_color >> 16,
+							annotation->format_metadata->font_color >> 8 & 0xFF,
+							annotation->format_metadata->font_color & 0xFF);
 						
-						} else if (annotation->type == ANNOTATION_TYPE__URL) {
-							UrlMetadata *url_metadata = annotation->url_metadata;
-							if (url_metadata && url_metadata->url && url_metadata->url->url) {
-								gchar *escaped = g_markup_escape_text(url_metadata->url->url, -1);
-								g_string_append_printf(msg_out, "<A HREF=\"%s\">", escaped);
-								// TODO this is likely a tenor gif, so we should download it
-								if (annotation->length == 0 && url_metadata->has_should_not_render && url_metadata->should_not_render == FALSE) {
-									g_string_append(msg_out, escaped);
-								}
-								g_free(escaped);
+					} else if (annotation->type == ANNOTATION_TYPE__URL) {
+						UrlMetadata *url_metadata = annotation->url_metadata;
+						if (url_metadata && url_metadata->url && url_metadata->url->url) {
+							gchar *escaped = g_markup_escape_text(url_metadata->url->url, -1);
+							g_string_append_printf(msg_out, "<A HREF=\"%s\">", escaped);
+							// TODO this is likely a tenor gif, so we should download it
+							if (annotation->length == 0 && url_metadata->has_should_not_render && url_metadata->should_not_render == FALSE) {
+								g_string_append(msg_out, escaped);
 							}
-						} else {
-							g_string_append(msg_out, googlechat_format_type_to_string(format_type, FALSE));
+							g_free(escaped);
 						}
-					
-					// Closing
-					} else if (annotation->length + annotation->start_index == pos) {
-						if (format_type == FORMAT_METADATA__FORMAT_TYPE__HIDDEN) {
-							hidden_output--;
-						} else if (annotation->type == ANNOTATION_TYPE__URL) {
-							g_string_append(msg_out, "</A>");
-						} else if (format_type == FORMAT_METADATA__FORMAT_TYPE__FONT_COLOR) {
-							g_string_append(msg_out, "</span>");
-						} else {
-							g_string_append(msg_out, googlechat_format_type_to_string(format_type, TRUE));
-						}
-						
-						format_annotations = g_list_delete_link(format_annotations, format);
+					} else {
+						g_string_append(msg_out, googlechat_format_type_to_string(format_type, FALSE));
 					}
 					
-					format = next_format;
+					// Closing
+				} else if (annotation->length + annotation->start_index == pos) {
+					if (format_type == FORMAT_METADATA__FORMAT_TYPE__HIDDEN) {
+						hidden_output--;
+					} else if (annotation->type == ANNOTATION_TYPE__URL) {
+						g_string_append(msg_out, "</A>");
+					} else if (format_type == FORMAT_METADATA__FORMAT_TYPE__FONT_COLOR) {
+						g_string_append(msg_out, "</span>");
+					} else {
+						g_string_append(msg_out, googlechat_format_type_to_string(format_type, TRUE));
+					}
+						
+					format_annotations = g_list_delete_link(format_annotations, format);
 				}
+					
+				format = next_format;
 			}
+		}
 			
-			if (hidden_output == 0) {
-				// from libpurple/util.c
-				switch (*current_char)
-				{
-					case '&':
-						g_string_append(msg_out, "&amp;");
-						break;
+		if (hidden_output == 0) {
+			// adapted from libpurple/util.c
+			switch (*current_char)
+			{
+			case '&':
+				g_string_append(msg_out, "&amp;");
+				break;
 
-					case '<':
-						g_string_append(msg_out, "&lt;");
-						break;
+			case '<':
+				g_string_append(msg_out, "&lt;");
+				break;
 
-					case '>':
-						g_string_append(msg_out, "&gt;");
-						break;
+			case '>':
+				g_string_append(msg_out, "&gt;");
+				break;
 
-					case '"':
-						g_string_append(msg_out, "&quot;");
-						break;
+			case '"':
+				g_string_append(msg_out, "&quot;");
+				break;
 
-					default:
-						c = g_utf8_get_char(current_char);
-						if ((0x1 <= c && c <= 0x8) ||
-								(0xb <= c && c <= 0xc) ||
-								(0xe <= c && c <= 0x1f) ||
-								(0x7f <= c && c <= 0x84) ||
-								(0x86 <= c && c <= 0x9f))
-							g_string_append_printf(msg_out, "&#x%x;", c);
-						else
-							g_string_append_unichar(msg_out, c);
-						break;
-				}
+			case '\n':
+				g_string_append(msg_out, "<br>");
+				break;
+
+			default:
+				c = g_utf8_get_char(current_char);
+				if ((0x1 <= c && c <= 0x8) ||
+				    	(0xb <= c && c <= 0xc) ||
+				    	(0xe <= c && c <= 0x1f) ||
+				    	(0x7f <= c && c <= 0x84) ||
+				    	(0x86 <= c && c <= 0x9f))
+					g_string_append_printf(msg_out, "&#x%x;", c);
+				else
+					g_string_append_unichar(msg_out, c);
+				break;
 			}
-			pos++;
+		}
+		pos++;
 			
-		} while ((current_char = g_utf8_next_char(current_char)) && *current_char);
+	} while ((current_char = g_utf8_next_char(current_char)) && *current_char);
 		
-		msg = g_string_free(msg_out, FALSE);
-	}
+	msg = g_string_free(msg_out, FALSE);
 	
 	if (!is_dm) {
 		PurpleChatConversation *chatconv = purple_conversations_find_chat_with_account(conv_id, ha->account);

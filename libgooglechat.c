@@ -25,6 +25,7 @@
 
 #include <purple.h>
 
+#include "glibcompat.h"
 #include "googlechat_auth.h"
 #include "googlechat_events.h"
 #include "googlechat_connection.h"
@@ -495,6 +496,8 @@ googlechat_login(PurpleAccount *account)
 	ha->one_to_ones = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
 	ha->one_to_ones_rev = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
 	ha->group_chats = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+	ha->recent_messages = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
+	ha->recent_message_ids = g_queue_new();
 	
 	ha->slash_commands = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, googlechat_free_slash_command);
 	
@@ -634,9 +637,47 @@ googlechat_close(PurpleConnection *pc)
 	g_hash_table_unref(ha->one_to_ones_rev);
 	g_hash_table_remove_all(ha->group_chats);
 	g_hash_table_unref(ha->group_chats);
+	if (ha->recent_messages != NULL) {
+		g_hash_table_remove_all(ha->recent_messages);
+		g_hash_table_unref(ha->recent_messages);
+	}
+	if (ha->recent_message_ids != NULL) {
+		g_queue_free_full(ha->recent_message_ids, g_free);
+	}
 	g_hash_table_unref(ha->slash_commands);
 	
 	g_free(ha);
+}
+
+void
+googlechat_cache_message_text(GoogleChatAccount *ha, const gchar *message_id, const gchar *text)
+{
+	if (ha == NULL || message_id == NULL || *message_id == '\0' || text == NULL || *text == '\0') {
+		return;
+	}
+
+	if (ha->recent_messages == NULL || ha->recent_message_ids == NULL) {
+		return;
+	}
+
+	gchar *clean_text = g_strdup(text);
+	g_strdelimit(clean_text, "\r\n\t", ' ');
+
+	if (g_hash_table_contains(ha->recent_messages, message_id)) {
+		g_hash_table_insert(ha->recent_messages, g_strdup(message_id), clean_text);
+		return;
+	}
+
+	while (g_queue_get_length(ha->recent_message_ids) >= GOOGLECHAT_RECENT_MESSAGES_MAX) {
+		gchar *old_id = g_queue_pop_head(ha->recent_message_ids);
+		if (old_id != NULL) {
+			g_hash_table_remove(ha->recent_messages, old_id);
+			g_free(old_id);
+		}
+	}
+
+	g_queue_push_tail(ha->recent_message_ids, g_strdup(message_id));
+	g_hash_table_insert(ha->recent_messages, g_strdup(message_id), clean_text);
 }
 
 

@@ -501,6 +501,10 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 	Message *message = message_event->message;
 	guint i;
 	
+	if (message->id && message->id->message_id && message->text_body) {
+		googlechat_cache_message_text(ha, message->id->message_id, message->text_body);
+	}
+	
 	if (message->local_id && g_hash_table_remove(ha->sent_message_ids, message->local_id)) {
 		// This probably came from us
 		return;
@@ -1374,7 +1378,12 @@ googlechat_received_reaction_event(PurpleConnection *pc, Event *event)
 		buddy_name = _("You");
 	}
 	const gchar *reacted_type = reaction->option == REACTION_OPTION__ADD ? _("reacted") : _("unreacted");
-	g_string_append_printf(msg_out, _("%s %s to %s with %s"), buddy_name, reacted_type, message_id->message_id, emoji->unicode);
+	const gchar *cached_text = ha->recent_messages ? g_hash_table_lookup(ha->recent_messages, message_id->message_id) : NULL;
+	if (cached_text && *cached_text) {
+		g_string_append_printf(msg_out, _("%s %s to \"%s\" with %s"), buddy_name, reacted_type, cached_text, emoji->unicode);
+	} else {
+		g_string_append_printf(msg_out, _("%s %s to %s with %s"), buddy_name, reacted_type, message_id->message_id, emoji->unicode);
+	}
 
 	if (msg_out->len > 0) {
 		if (g_hash_table_contains(ha->group_chats, conv_id)) {

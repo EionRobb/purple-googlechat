@@ -7,6 +7,7 @@
 
 #if !GLIB_CHECK_VERSION(2, 32, 0)
 #define g_hash_table_contains(hash_table, key) g_hash_table_lookup_extended(hash_table, key, NULL, NULL)
+#define g_queue_free_full(queue, free_func) do { g_queue_foreach((queue), (GFunc)(free_func), NULL); g_queue_free((queue)); } while(0)
 #endif /* 2.32.0 */
 
 #if !GLIB_CHECK_VERSION(2, 28, 0)

@@ -41,6 +41,8 @@
 #define GOOGLECHAT_BUFFER_DEFAULT_SIZE 4096
 #define GOOGLECHAT_MAX_HTTP_RESPONSE_SIZE 10485760 // 10MB
 
+#define GOOGLECHAT_RECENT_MESSAGES_MAX 50
+
 #ifdef ENABLE_NLS
 #	define GETTEXT_PACKAGE "purple-googlechat"
 #	include <glib/gi18n-lib.h>
@@ -113,6 +115,8 @@ typedef struct {
 	GHashTable *one_to_ones_rev; // A store of known gaia_id's->conv_id's
 	GHashTable *group_chats;     // A store of known conv_id's
 	GHashTable *sent_message_ids;// A store of message id's that we generated from this instance
+	GHashTable *recent_messages; // A store of message_id -> message text snippet
+	GQueue     *recent_message_ids;// Queue of message_ids to limit cache size
 	
 	GHashTable *slash_commands; // bot_id:command_name -> GoogleChatSlashCommand
 	
@@ -149,5 +153,6 @@ typedef struct {
 
 gboolean googlechat_is_valid_id(const gchar *id);
 const gchar *googlechat_get_convid_of_conv(PurpleConversation *conv);
+void googlechat_cache_message_text(GoogleChatAccount *ha, const gchar *message_id, const gchar *text);
 
 #endif /*_LIBGOOGLECHAT_H_*/

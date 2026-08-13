@@ -1,0 +1,78 @@
+name: macOS
+on:
+  - push
+  - pull_request
+jobs:
+  build:
+    name: build
+    runs-on: macos-latest
+    permissions:
+      id-token: write
+      contents: write
+      attestations: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install native arm64 deps
+        run: |
+          brew install pidgin json-glib gettext pkg-config protobuf-c
+
+      - name: Cache x86_64 Homebrew & deps
+        id: cache-x64-brew
+        uses: actions/cache@v4
+        with:
+          path: /usr/local
+          key: macos-x86_64-brew-pidgin-v1
+
+      - name: install rosetta x86_64 brew & deps
+        if: steps.cache-x64-brew.outputs.cache-hit != 'true'
+        run: |
+          if [ ! -f /usr/local/bin/brew ]; then
+            arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+          fi
+          arch -x86_64 /usr/local/bin/brew install pidgin json-glib gettext pkg-config protobuf-c
+
+      - name: build universal binaries
+        run: |
+          # 1. Build arm64
+          ARM64_PKG="$(brew --prefix)/lib/pkgconfig:$(brew --prefix)/opt/pidgin/lib/pkgconfig:$(brew --prefix)/opt/gettext/lib/pkgconfig"
+          PKG_CONFIG_PATH="$ARM64_PKG" make CFLAGS="-O2 -g -pipe -arch arm64" LDFLAGS="-arch arm64"
+          mv libgooglechat.so libgooglechat_arm64.so
+          make clean
+
+          # 2. Build x86_64 under Rosetta
+          X86_PKG="/usr/local/lib/pkgconfig:/usr/local/opt/pidgin/lib/pkgconfig:/usr/local/opt/gettext/lib/pkgconfig"
+          PKG_CONFIG_PATH="$X86_PKG" arch -x86_64 make CFLAGS="-O2 -g -pipe -arch x86_64" LDFLAGS="-arch x86_64"
+          mv libgooglechat.so libgooglechat_x86_64.so
+
+          # 3. Create universal fat binaries with lipo
+          lipo -create libgooglechat_x86_64.so libgooglechat_arm64.so -output libgooglechat_macos.so
+          file libgooglechat_macos.so
+
+      - name: archive
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master' && !env.ACT
+        uses: actions/upload-artifact@v4
+        with: 
+            name: plugin 
+            path: lib*_macos.so
+
+      - name: Set date
+        id: date
+        run: echo "DATE=$(date +%Y-%m-%d)" >> $GITHUB_OUTPUT
+
+      - name: release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master' && !env.ACT
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: lib*_macos.so
+          tag: daily-${{ steps.date.outputs.DATE }}
+          name: Daily ${{ steps.date.outputs.DATE }}
+          allowUpdates: true
+          makeLatest: true
+
+      - name: attest
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master' && !env.ACT
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: lib*_macos.so

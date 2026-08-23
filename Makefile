@@ -8,18 +8,18 @@ PROTOBUF_C_DIR ?= $(WIN32_DEV_TOP)/protobuf-c-Release-2.6
 WIN32_CC ?= $(WIN32_DEV_TOP)/mingw-4.7.2/bin/gcc
 WIXL ?= wixl
 
-PROTOC_C ?= protoc-c
 PKG_CONFIG ?= pkg-config
 
 # Handle protoc-c deprecation since version 1.5.1
 ifeq ($(shell (command -v protoc-gen-c && command -v protoc) >/dev/null 2>&1 && echo "true"),true)
-  PROTOC_CMD = protoc --c_out=.
-  PROTOC_DESC_CMD = protoc -o googlechat.proto.desc
+  PROTOC_C_DEFAULT = protoc
 else
-  # Fallback to traditional protoc-c command
-  PROTOC_CMD = $(PROTOC_C) --c_out=.
-  PROTOC_DESC_CMD = $(PROTOC_C) -o googlechat.proto.desc
+  PROTOC_C_DEFAULT = protoc-c
 endif
+
+PROTOC_C ?= $(PROTOC_C_DEFAULT)
+PROTOC_CMD = $(PROTOC_C) --c_out=.
+PROTOC_DESC_CMD = $(PROTOC_C) -o googlechat.proto.desc
 
 CFLAGS	?= -O2 -g -pipe
 LDFLAGS ?=

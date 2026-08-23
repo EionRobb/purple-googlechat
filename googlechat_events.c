@@ -289,64 +289,104 @@ googlechat_got_http_image_for_conv(PurpleHttpConnection *connection, PurpleHttpR
 	const gchar *drive_url;
 	const gchar *sender_id;
 	const gchar *conv_id;
+	const gchar *content_name;
 	PurpleMessageFlags msg_flags;
 	time_t message_timestamp;
-	PurpleImage *image;
+	PurpleImage *image = NULL;
 	const gchar *response_data;
-	size_t response_size;
-	guint image_id;
-	gchar *msg;
+	size_t response_size = 0;
+	guint image_id = 0;
+	gchar *msg = NULL;
 	gchar *escaped_image_url;
-	
-	if (purple_http_response_get_error(response) != NULL) {
-		g_dataset_destroy(connection);
-		return;
-	}
-	
+	gboolean is_video;
+
 	url = g_dataset_get_data(connection, "url");
 	drive_url = g_dataset_get_data(connection, "drive_url");
 	sender_id = g_dataset_get_data(connection, "sender_id");
 	conv_id = g_dataset_get_data(connection, "conv_id");
+	content_name = g_dataset_get_data(connection, "content_name");
+	is_video = GPOINTER_TO_INT(g_dataset_get_data(connection, "is_video"));
 	msg_flags = GPOINTER_TO_INT(g_dataset_get_data(connection, "msg_flags"));
 	message_timestamp = GPOINTER_TO_INT(g_dataset_get_data(connection, "message_timestamp"));
-	
-	response_data = purple_http_response_get_data(response, &response_size);
-	image = purple_image_new_from_data(g_memdup2(response_data, response_size), response_size);
-	image_id = purple_image_store_add(image);
-	escaped_image_url = g_markup_escape_text(purple_http_request_get_url(purple_http_conn_get_request(connection)), -1);
-	if (drive_url) {
-		msg = g_strdup_printf("<a href='%s'>%s\n<img id='%u' src='%s' /></a>", drive_url, _("View in Drive"), image_id, escaped_image_url);
-	} else {
-		const gchar *url_suffix = "";
-		if (strstr(url, "FIFE_URL")) {
-			// Display original image size for FIFE URLs
-			url_suffix = "&width=0";
-		}
-		msg = g_strdup_printf("<a href='%s%s'>%s\n<img id='%u' src='%s' /></a>", url, url_suffix, _("View full image"), image_id, escaped_image_url);
-	}
-	msg_flags |= PURPLE_MESSAGE_IMAGES;
-		
-	if (g_hash_table_contains(ha->group_chats, conv_id)) {
-		purple_serv_got_chat_in(ha->pc, g_str_hash(conv_id), sender_id, msg_flags, msg, message_timestamp);
-	} else {
-		if (msg_flags & PURPLE_MESSAGE_RECV) {
-			purple_serv_got_im(ha->pc, sender_id, msg, msg_flags, message_timestamp);
-		} else {
-			sender_id = g_hash_table_lookup(ha->one_to_ones, conv_id);
-			if (sender_id) {
-				PurpleIMConversation *imconv = purple_conversations_find_im_with_account(sender_id, ha->account);
-				PurpleMessage *message = purple_message_new_outgoing(sender_id, msg, msg_flags);
-				if (imconv == NULL) {
-					imconv = purple_im_conversation_new(ha->account, sender_id);
+
+	if (purple_http_response_is_successful(response)) {
+		response_data = purple_http_response_get_data(response, &response_size);
+		if (response_data && response_size > 0) {
+			if (response_size < 512 && (g_strstr_len(response_data, response_size, "<html") || g_strstr_len(response_data, response_size, "<h1"))) {
+				image = NULL;
+			} else {
+				image = purple_image_new_from_data(g_memdup2(response_data, response_size), response_size);
+				if (image) {
+					image_id = purple_image_store_add(image);
 				}
-				purple_message_set_time(message, message_timestamp);
-				purple_conversation_write_message(PURPLE_CONVERSATION(imconv), message);
 			}
 		}
 	}
-	
+
+	escaped_image_url = g_markup_escape_text(purple_http_request_get_url(purple_http_conn_get_request(connection)), -1);
+
+	if (image_id > 0) {
+		msg_flags |= PURPLE_MESSAGE_IMAGES;
+		if (drive_url) {
+			msg = g_strdup_printf("<a href='%s'>%s\n<img id='%u' src='%s' /></a>", drive_url, _("View in Drive"), image_id, escaped_image_url);
+		} else {
+			const gchar *link_title;
+			if (content_name && *content_name) {
+				link_title = content_name;
+			} else if (is_video) {
+				link_title = _("View video");
+			} else {
+				link_title = _("View full image");
+			}
+			gchar *escaped_title = g_markup_escape_text(link_title, -1);
+			const gchar *url_suffix = "";
+			if (url && strstr(url, "FIFE_URL") && !is_video) {
+				// Display original image size for FIFE URLs
+				url_suffix = "&width=0";
+			}
+			msg = g_strdup_printf("<a href='%s%s'>%s\n<img id='%u' src='%s' /></a>", url ? url : "", url_suffix, escaped_title, image_id, escaped_image_url);
+			g_free(escaped_title);
+		}
+	} else if (url || drive_url) {
+		const gchar *link_url = drive_url ? drive_url : url;
+		const gchar *link_title;
+		if (content_name && *content_name) {
+			link_title = content_name;
+		} else if (drive_url) {
+			link_title = _("View in Drive");
+		} else if (is_video) {
+			link_title = _("View video");
+		} else {
+			link_title = _("View attachment");
+		}
+		gchar *escaped_title = g_markup_escape_text(link_title, -1);
+		msg = g_strdup_printf("<a href='%s'>%s</a>", link_url, escaped_title);
+		g_free(escaped_title);
+	}
+
+	if (msg != NULL) {
+		if (g_hash_table_contains(ha->group_chats, conv_id)) {
+			purple_serv_got_chat_in(ha->pc, g_str_hash(conv_id), sender_id, msg_flags, msg, message_timestamp);
+		} else {
+			if (msg_flags & PURPLE_MESSAGE_RECV) {
+				purple_serv_got_im(ha->pc, sender_id, msg, msg_flags, message_timestamp);
+			} else {
+				sender_id = g_hash_table_lookup(ha->one_to_ones, conv_id);
+				if (sender_id) {
+					PurpleIMConversation *imconv = purple_conversations_find_im_with_account(sender_id, ha->account);
+					PurpleMessage *message = purple_message_new_outgoing(sender_id, msg, msg_flags);
+					if (imconv == NULL) {
+						imconv = purple_im_conversation_new(ha->account, sender_id);
+					}
+					purple_message_set_time(message, message_timestamp);
+					purple_conversation_write_message(PURPLE_CONVERSATION(imconv), message);
+				}
+			}
+		}
+		g_free(msg);
+	}
+
 	g_free(escaped_image_url);
-	g_free(msg);
 	g_dataset_destroy(connection);
 }
 
@@ -774,63 +814,79 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 	for (i = 0; i < message->n_annotations; i++) {
 		Annotation *annotation = message->annotations[i];
 		gchar *image_url = NULL; // Direct image URL
+		gchar *url_allocated = NULL;
 		const gchar *url = NULL; // Display URL
+		gchar *drive_url_allocated = NULL;
 		const gchar *drive_url = NULL; // Google Drive URL
+		const gchar *content_name = NULL;
+		gboolean is_video = FALSE;
 		
 		if (annotation->upload_metadata) {
 			UploadMetadata *upload_metadata = annotation->upload_metadata;
-			
-			//const gchar *content_type = upload_metadata->content_type;
+			const gchar *content_type = upload_metadata->content_type;
 			const gchar *attachment_token = upload_metadata->attachment_token;
+			content_name = upload_metadata->content_name;
+			is_video = (content_type && g_str_has_prefix(content_type, "video/")) || (upload_metadata->video_reference != NULL);
+			gboolean is_image = (content_type == NULL || g_str_has_prefix(content_type, "image/"));
 			
-			GString *image_url_str = g_string_new(NULL);
-			
-			g_string_append(image_url_str, "https://chat.google.com/api/get_attachment_url" "?");
-			//could also be THUMBNAIL_URL
-			// or DOWNLOAD_URL for a file
-			g_string_append(image_url_str, "url_type=FIFE_URL&");
-			//g_string_append_printf(image_url_str, "sz=w%d-h%d&", 0, 0); //TODO
-			//g_string_append_printf(image_url_str, "content_type=%s&", purple_url_encode(content_type));
-			g_string_append_printf(image_url_str, "attachment_token=%s&", purple_url_encode(attachment_token));
-			
-			// this url redirects to the actual url
-			url = image_url = g_string_free(image_url_str, FALSE);
+			if (attachment_token) {
+				GString *download_url_str = g_string_new("https://chat.google.com/api/get_attachment_url?");
+				if (is_image) {
+					g_string_append(download_url_str, "url_type=FIFE_URL&");
+				} else {
+					g_string_append(download_url_str, "url_type=DOWNLOAD_URL&");
+				}
+				if (content_type) {
+					g_string_append_printf(download_url_str, "content_type=%s&", purple_url_encode(content_type));
+				}
+				g_string_append_printf(download_url_str, "attachment_token=%s", purple_url_encode(attachment_token));
+				url = url_allocated = g_string_free(download_url_str, FALSE);
+
+				if (is_image || is_video) {
+					GString *image_url_str = g_string_new("https://chat.google.com/api/get_attachment_url?");
+					g_string_append(image_url_str, "url_type=FIFE_URL&allow_caching=true&sz=w512&");
+					if (content_type) {
+						g_string_append_printf(image_url_str, "content_type=%s&", purple_url_encode(content_type));
+					}
+					g_string_append_printf(image_url_str, "attachment_token=%s", purple_url_encode(attachment_token));
+					image_url = g_string_free(image_url_str, FALSE);
+				}
+			}
 		}
 		
 		if (annotation->drive_metadata) {
 			DriveMetadata *drive_metadata = annotation->drive_metadata;
+			content_name = drive_metadata->title;
 			
 			if (drive_metadata->thumbnail_url) {
 				image_url = g_strdup(drive_metadata->thumbnail_url);
 				url = drive_metadata->url_fragment;
-				
 			} else {
 				const gchar *drive_id = drive_metadata->id;
 				
 				GString *image_url_str = g_string_new(NULL);
-				
 				g_string_append(image_url_str, "https://lh3.googleusercontent.com/d/");
 				g_string_append(image_url_str, purple_url_encode(drive_id));
 				
 				// the preview
-				url = image_url = g_string_free(image_url_str, FALSE);
+				image_url = g_string_free(image_url_str, FALSE);
 
 				GString *drive_url_str = g_string_new(NULL);
 				g_string_append(drive_url_str, "https://drive.google.com/open?id=");
 				g_string_append(drive_url_str, purple_url_encode(drive_id));
 
 				// the link
-				drive_url = g_string_free(drive_url_str, FALSE);
+				url = drive_url = drive_url_allocated = g_string_free(drive_url_str, FALSE);
 			}
 		}
 		
 		if (annotation->url_metadata) {
 			UrlMetadata *url_metadata = annotation->url_metadata;
+			content_name = url_metadata->title;
 			
 			if (url_metadata->image_url) {
 				image_url = g_strdup(url_metadata->image_url);
 				url = url_metadata->url ? url_metadata->url->url : url_metadata->image_url;
-				
 			}
 		}
 		
@@ -863,14 +919,37 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 				g_dataset_set_data_full(connection, "drive_url", g_strdup(drive_url), g_free);
 				g_dataset_set_data_full(connection, "sender_id", g_strdup(sender_id), g_free);
 				g_dataset_set_data_full(connection, "conv_id", g_strdup(conv_id), g_free);
+				g_dataset_set_data_full(connection, "content_name", g_strdup(content_name), g_free);
+				g_dataset_set_data(connection, "is_video", GINT_TO_POINTER(is_video));
 				g_dataset_set_data(connection, "msg_flags", GINT_TO_POINTER(msg_flags));
 				g_dataset_set_data(connection, "message_timestamp", GINT_TO_POINTER(message_timestamp));
 				
 				purple_http_request_unref(request);
 			}
+		} else if (url != NULL || drive_url != NULL) {
+			const gchar *link_url = drive_url ? drive_url : url;
+			const gchar *link_title = (content_name && *content_name) ? content_name : (drive_url ? _("View in Drive") : (is_video ? _("View video") : _("View attachment")));
+			gchar *escaped_title = g_markup_escape_text(link_title, -1);
+			gchar *msg_out = g_strdup_printf("<a href='%s'>%s</a>", link_url, escaped_title);
+			g_free(escaped_title);
+
+			if (g_hash_table_contains(ha->group_chats, conv_id)) {
+				purple_serv_got_chat_in(pc, g_str_hash(conv_id), sender_id, msg_flags, msg_out, message_timestamp);
+			} else {
+				if (msg_flags & PURPLE_MESSAGE_RECV) {
+					purple_serv_got_im(pc, sender_id, msg_out, msg_flags, message_timestamp);
+				} else {
+					PurpleMessage *img_message = purple_message_new_outgoing(sender_id, msg_out, msg_flags);
+					purple_message_set_time(img_message, message_timestamp);
+					purple_conversation_write_message(pconv, img_message);
+				}
+			}
+			g_free(msg_out);
 		}
 		
 		g_free(image_url);
+		g_free(url_allocated);
+		g_free(drive_url_allocated);
 	}
 
 	// Display incoming calls

@@ -630,8 +630,10 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 						g_string_append(msg_out, googlechat_format_type_to_string(format_type, FALSE));
 					}
 					
-					// Closing
-				} else if (annotation->length + annotation->start_index == pos) {
+				}
+
+				// Closing
+				if (annotation->length + annotation->start_index == pos) {
 					if (format_type == FORMAT_METADATA__FORMAT_TYPE__HIDDEN) {
 						hidden_output--;
 					} else if (annotation->type == ANNOTATION_TYPE__URL) {
@@ -692,7 +694,7 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 		}
 		pos++;
 		current_char = g_utf8_next_char(current_char);
-	} while (*current_char);
+	} while (TRUE);
 		
 	msg = g_string_free(msg_out, FALSE);
 	

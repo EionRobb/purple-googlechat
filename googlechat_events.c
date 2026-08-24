@@ -488,8 +488,13 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 	GoogleChatAccount *ha;
 	MessageEvent *message_event;
 	const gchar *conv_id;
+	const gchar *message_id = NULL;
 	const gchar *sender_id;
 	
+	if (event == NULL || event->body == NULL) {
+		return;
+	}
+
 	if (event->type != EVENT__EVENT_TYPE__MESSAGE_POSTED && 
 		event->type != EVENT__EVENT_TYPE__MESSAGE_UPDATED) {
 		return;
@@ -498,21 +503,46 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 	
 	ha = purple_connection_get_protocol_data(pc);
 	
+	if (message_event == NULL || message_event->message == NULL) {
+		purple_debug_error("googlechat", "Received message event with no message\n");
+		return;
+	}
+
 	Message *message = message_event->message;
 	guint i;
 	
-	if (message->id && message->id->message_id && message->text_body) {
-		googlechat_cache_message_text(ha, message->id->message_id, message->text_body);
+	if (message->id != NULL) {
+		message_id = message->id->message_id;
+	}
+
+	if (message_id && message->text_body) {
+		googlechat_cache_message_text(ha, message_id, message->text_body);
 	}
 	
 	if (message->local_id && g_hash_table_remove(ha->sent_message_ids, message->local_id)) {
 		// This probably came from us
+		if (event->type == EVENT__EVENT_TYPE__MESSAGE_POSTED) {
+			googlechat_mark_message_id_seen(ha, message_id);
+		}
 		return;
 	}
 	
 	if (message->creator == NULL || message->creator->user_id == NULL || message->creator->user_id->id == NULL) {
 		purple_debug_error("googlechat", "Received message with no creator/user_id\n");
 		return;
+	}
+	if (message->id == NULL || message->id->parent_id == NULL ||
+		message->id->parent_id->topic_id == NULL ||
+		message->id->parent_id->topic_id->group_id == NULL) {
+		purple_debug_error("googlechat", "Received message with no id/topic/group_id\n");
+		return;
+	}
+	if (event->type == EVENT__EVENT_TYPE__MESSAGE_POSTED) {
+		if (googlechat_has_seen_message_id(ha, message_id)) {
+			purple_debug_info("googlechat", "Ignoring duplicate MESSAGE_POSTED event\n");
+			return;
+		}
+		googlechat_mark_message_id_seen(ha, message_id);
 	}
 	//TODO safety checks
 	sender_id = message->creator->user_id->id;

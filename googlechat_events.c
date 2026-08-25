@@ -486,10 +486,18 @@ void
 googlechat_received_message_event(PurpleConnection *pc, Event *event)
 {
 	GoogleChatAccount *ha;
+	GroupId *group_id;
 	MessageEvent *message_event;
 	const gchar *conv_id;
+	const gchar *message_id;
 	const gchar *sender_id;
+	const gchar *text_body;
+	gboolean is_dm;
 	
+	if (event == NULL || event->body == NULL) {
+		return;
+	}
+
 	if (event->type != EVENT__EVENT_TYPE__MESSAGE_POSTED && 
 		event->type != EVENT__EVENT_TYPE__MESSAGE_UPDATED) {
 		return;
@@ -498,15 +506,47 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 	
 	ha = purple_connection_get_protocol_data(pc);
 	
+	if (message_event == NULL || message_event->message == NULL) {
+		purple_debug_error("googlechat", "Received message event with no message\n");
+		return;
+	}
+
 	Message *message = message_event->message;
 	guint i;
-	
-	if (message->id && message->id->message_id && message->text_body) {
-		googlechat_cache_message_text(ha, message->id->message_id, message->text_body);
+
+	if (message->id == NULL || message->id->message_id == NULL ||
+		*message->id->message_id == '\0' || message->id->parent_id == NULL ||
+		message->id->parent_id->topic_id == NULL ||
+		message->id->parent_id->topic_id->group_id == NULL) {
+		purple_debug_error("googlechat", "Received message with invalid id/topic/group_id\n");
+		return;
 	}
-	
-	if (message->local_id && g_hash_table_remove(ha->sent_message_ids, message->local_id)) {
+	message_id = message->id->message_id;
+	group_id = message->id->parent_id->topic_id->group_id;
+
+	if (group_id->dm_id != NULL && group_id->dm_id->dm_id != NULL &&
+		*group_id->dm_id->dm_id != '\0') {
+		is_dm = TRUE;
+		conv_id = group_id->dm_id->dm_id;
+	} else if (group_id->space_id != NULL && group_id->space_id->space_id != NULL &&
+		*group_id->space_id->space_id != '\0') {
+		is_dm = FALSE;
+		conv_id = group_id->space_id->space_id;
+	} else {
+		purple_debug_error("googlechat", "Received message with no dm_id/space_id\n");
+		return;
+	}
+
+	text_body = message->text_body != NULL ? message->text_body : "";
+
+	if (*text_body != '\0') {
+		googlechat_cache_message_text(ha, message_id, text_body);
+	}
+
+	if (event->type == EVENT__EVENT_TYPE__MESSAGE_POSTED && message->local_id &&
+		g_hash_table_remove(ha->sent_message_ids, message->local_id)) {
 		// This probably came from us
+		googlechat_mark_message_id_seen(ha, message_id);
 		return;
 	}
 	
@@ -514,16 +554,16 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 		purple_debug_error("googlechat", "Received message with no creator/user_id\n");
 		return;
 	}
+	if (event->type == EVENT__EVENT_TYPE__MESSAGE_POSTED) {
+		if (googlechat_has_seen_message_id(ha, message_id)) {
+			purple_debug_info("googlechat", "Ignoring duplicate MESSAGE_POSTED event\n");
+			return;
+		}
+		googlechat_mark_message_id_seen(ha, message_id);
+	}
 	//TODO safety checks
 	sender_id = message->creator->user_id->id;
-	GroupId *group_id = message->id->parent_id->topic_id->group_id;
-	gboolean is_dm = !!group_id->dm_id;
-	if (is_dm) {
-		conv_id = group_id->dm_id->dm_id;
-	} else {
-		conv_id = group_id->space_id->space_id;
-	}
-	
+
 	if (event->type == EVENT__EVENT_TYPE__MESSAGE_UPDATED && message->last_update_time > message->last_edit_time) {
 		return; // Ignore updates that are not edits
 	}
@@ -546,11 +586,11 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 		}
 	}
 	
-	GString *msg_out = g_string_sized_new(strlen(message->text_body));
+	GString *msg_out = g_string_sized_new(strlen(text_body));
 	if (event->type == EVENT__EVENT_TYPE__MESSAGE_UPDATED) {
 		g_string_append(msg_out, "Edit: ");
 	}
-	const gchar *current_char = message->text_body;
+	const gchar *current_char = text_body;
 	gunichar c;
 	gint32 pos = 0;
 	GList *format;
@@ -590,8 +630,10 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 						g_string_append(msg_out, googlechat_format_type_to_string(format_type, FALSE));
 					}
 					
-					// Closing
-				} else if (annotation->length + annotation->start_index == pos) {
+				}
+
+				// Closing
+				if (annotation->length + annotation->start_index == pos) {
 					if (format_type == FORMAT_METADATA__FORMAT_TYPE__HIDDEN) {
 						hidden_output--;
 					} else if (annotation->type == ANNOTATION_TYPE__URL) {
@@ -609,6 +651,10 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 			}
 		}
 			
+		if (*current_char == '\0') {
+			break;
+		}
+
 		if (hidden_output == 0) {
 			// adapted from libpurple/util.c
 			switch (*current_char)
@@ -647,8 +693,8 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 			}
 		}
 		pos++;
-			
-	} while ((current_char = g_utf8_next_char(current_char)) && *current_char);
+		current_char = g_utf8_next_char(current_char);
+	} while (TRUE);
 		
 	msg = g_string_free(msg_out, FALSE);
 	

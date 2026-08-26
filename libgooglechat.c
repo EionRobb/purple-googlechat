@@ -498,6 +498,8 @@ googlechat_login(PurpleAccount *account)
 	ha->group_chats = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 	ha->recent_messages = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
 	ha->recent_message_ids = g_queue_new();
+	ha->seen_message_ids = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+	ha->seen_message_id_queue = g_queue_new();
 	
 	ha->slash_commands = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, googlechat_free_slash_command);
 	
@@ -644,6 +646,13 @@ googlechat_close(PurpleConnection *pc)
 	if (ha->recent_message_ids != NULL) {
 		g_queue_free_full(ha->recent_message_ids, g_free);
 	}
+	if (ha->seen_message_ids != NULL) {
+		g_hash_table_remove_all(ha->seen_message_ids);
+		g_hash_table_unref(ha->seen_message_ids);
+	}
+	if (ha->seen_message_id_queue != NULL) {
+		g_queue_free_full(ha->seen_message_id_queue, g_free);
+	}
 	g_hash_table_unref(ha->slash_commands);
 	
 	g_free(ha);
@@ -678,6 +687,43 @@ googlechat_cache_message_text(GoogleChatAccount *ha, const gchar *message_id, co
 
 	g_queue_push_tail(ha->recent_message_ids, g_strdup(message_id));
 	g_hash_table_insert(ha->recent_messages, g_strdup(message_id), clean_text);
+}
+
+gboolean
+googlechat_has_seen_message_id(GoogleChatAccount *ha, const gchar *message_id)
+{
+	if (ha == NULL || message_id == NULL || *message_id == '\0' || ha->seen_message_ids == NULL) {
+		return FALSE;
+	}
+
+	return g_hash_table_contains(ha->seen_message_ids, message_id);
+}
+
+void
+googlechat_mark_message_id_seen(GoogleChatAccount *ha, const gchar *message_id)
+{
+	if (ha == NULL || message_id == NULL || *message_id == '\0') {
+		return;
+	}
+
+	if (ha->seen_message_ids == NULL || ha->seen_message_id_queue == NULL) {
+		return;
+	}
+
+	if (g_hash_table_contains(ha->seen_message_ids, message_id)) {
+		return;
+	}
+
+	while (g_queue_get_length(ha->seen_message_id_queue) >= GOOGLECHAT_SEEN_MESSAGE_IDS_MAX) {
+		gchar *old_id = g_queue_pop_head(ha->seen_message_id_queue);
+		if (old_id != NULL) {
+			g_hash_table_remove(ha->seen_message_ids, old_id);
+			g_free(old_id);
+		}
+	}
+
+	g_queue_push_tail(ha->seen_message_id_queue, g_strdup(message_id));
+	g_hash_table_insert(ha->seen_message_ids, g_strdup(message_id), NULL);
 }
 
 

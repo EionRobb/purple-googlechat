@@ -1685,6 +1685,19 @@ message CreateMessageResponse {
 	optional ReadRevision current_group_revision = 4;
 }
 
+message EditMessageRequest {
+	optional MessageId id = 1;
+	optional string text_body = 2;
+	repeated Annotation annotations = 3;
+	optional MessageInfo message_info = 5;
+	optional RequestHeader request_header = 100;
+}
+
+message EditMessageResponse {
+	optional Message message = 1;
+	optional WriteRevision group_revision = 3;
+}
+
 message InviteeInfo {
 	optional UserId user_id = 1;
 	optional string email = 2;

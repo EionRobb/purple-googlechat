@@ -112,5 +112,6 @@ GOOGLECHAT_DEFINE_API_REQUEST_FUNC(create_video_call, CreateVideoCall, "create_v
 GOOGLECHAT_DEFINE_API_REQUEST_FUNC(autocomplete_slash_commands, AutocompleteSlashCommands, "autocomplete_slash_commands");
 GOOGLECHAT_DEFINE_API_REQUEST_FUNC(submit_form_action, SubmitFormAction, "submit_form_action");
 GOOGLECHAT_DEFINE_API_REQUEST_FUNC(list_blocked_users, ListBlockedUsers, "list_blocked_users");
+GOOGLECHAT_DEFINE_API_REQUEST_FUNC(edit_message, EditMessage, "edit_message");
 
 #endif /*_GOOGLECHAT_CONNECTION_H_*/

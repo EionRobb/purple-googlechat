@@ -231,6 +231,27 @@ googlechat_send_stream_event(GoogleChatAccount *ha, StreamEventsRequest *events_
 {
 	GString *url;
 	GString *postdata;
+	ClientInfo client_info;
+	ClientFeatureCapabilities *cfc = NULL;
+	gboolean attached_client_info = FALSE;
+	
+	if (events_request->client_info == NULL) {
+		client_info__init(&client_info);
+		client_info.has_platform = TRUE;
+		client_info.platform = PLATFORM__MOBILE;
+		client_info.has_origin = TRUE;
+		client_info.origin = EVENT_ORIGIN__IOS_PROD;
+
+		cfc = googlechat_get_client_feature_capabilities();
+		
+		client_info.client_feature_capabilities = cfc;
+		events_request->client_info = &client_info;
+		if (!events_request->has_platform) {
+			events_request->has_platform = TRUE;
+			events_request->platform = PLATFORM__MOBILE;
+		}
+		attached_client_info = TRUE;
+	}
 	
 	url = g_string_new("https://chat.google.com/webchannel/events_encoded" "?");
 	if (ha->csessionid_param) {
@@ -261,6 +282,11 @@ googlechat_send_stream_event(GoogleChatAccount *ha, StreamEventsRequest *events_
 	guchar *request_data = g_new0(uint8_t, request_len);
 	request_len = protobuf_c_message_pack((ProtobufCMessage *) events_request, request_data);
 	gchar *base64_request_data = g_base64_encode(request_data, request_len);
+	
+	if (attached_client_info) {
+		events_request->client_info = NULL;
+		g_free(cfc);
+	}
 	
 	g_string_append(postdata, "req0___data__=");
 	g_string_append(postdata, purple_url_encode("{\"data\": \""));

@@ -37,11 +37,50 @@
 // From googlechat_pblite
 gchar *pblite_dump_json(ProtobufCMessage *message);
 
+ClientFeatureCapabilities *
+googlechat_get_client_feature_capabilities(void)
+{
+	ClientFeatureCapabilities *cfc = g_new0(ClientFeatureCapabilities, 1);
+	
+	client_feature_capabilities__init(cfc);
+	
+	cfc->has_enable_all_features = TRUE;
+	cfc->enable_all_features = TRUE;
+	
+	cfc->has_spam_room_invites_level = TRUE;
+	cfc->spam_room_invites_level = CLIENT_FEATURE_CAPABILITIES__CAPABILITY_LEVEL__FULLY_SUPPORTED;
+	
+	cfc->has_rich_text_viewing_level = TRUE;
+	cfc->rich_text_viewing_level = CLIENT_FEATURE_CAPABILITIES__CAPABILITY_LEVEL__FULLY_SUPPORTED;
+	
+	cfc->has_custom_hyperlink_level = TRUE;
+	cfc->custom_hyperlink_level = CLIENT_FEATURE_CAPABILITIES__CAPABILITY_LEVEL__FULLY_SUPPORTED;
+	
+	cfc->has_drive_smart_chip_level = TRUE;
+	cfc->drive_smart_chip_level = CLIENT_FEATURE_CAPABILITIES__CAPABILITY_LEVEL__FULLY_SUPPORTED;
+	
+	cfc->has_gsuite_integration_in_native_renderer_level = TRUE;
+	cfc->gsuite_integration_in_native_renderer_level = CLIENT_FEATURE_CAPABILITIES__CAPABILITY_LEVEL__FULLY_SUPPORTED;
+	
+	cfc->has_quoted_message_support_level = TRUE;
+	cfc->quoted_message_support_level = CLIENT_FEATURE_CAPABILITIES__CAPABILITY_LEVEL__FULLY_SUPPORTED;
+	
+	cfc->has_spaces_level_for_testing = TRUE;
+	cfc->spaces_level_for_testing = CLIENT_FEATURE_CAPABILITIES__CAPABILITY_LEVEL__FULLY_SUPPORTED;
+	
+	cfc->has_dms_level_for_testing = TRUE;
+	cfc->dms_level_for_testing = CLIENT_FEATURE_CAPABILITIES__CAPABILITY_LEVEL__FULLY_SUPPORTED;
+	
+	cfc->has_threaded_spaces_level = TRUE;
+	cfc->threaded_spaces_level = CLIENT_FEATURE_CAPABILITIES__CAPABILITY_LEVEL__FULLY_SUPPORTED;
+	
+	return cfc;
+}
+
 RequestHeader *
 googlechat_get_request_header(GoogleChatAccount *ha)
 {
 	RequestHeader *header = g_new0(RequestHeader, 1);
-	ClientFeatureCapabilities *cfc = g_new0(ClientFeatureCapabilities, 1);
 	
 	request_header__init(header);
 	
@@ -54,11 +93,7 @@ googlechat_get_request_header(GoogleChatAccount *ha)
 	header->has_trace_id = TRUE;
 	header->trace_id = g_random_int();
 	
-	client_feature_capabilities__init(cfc);
-	header->client_feature_capabilities = cfc;
-	
-	cfc->has_spam_room_invites_level = TRUE;
-	cfc->spam_room_invites_level = CLIENT_FEATURE_CAPABILITIES__CAPABILITY_LEVEL__FULLY_SUPPORTED;
+	header->client_feature_capabilities = googlechat_get_client_feature_capabilities();
 	
 	return header;
 }

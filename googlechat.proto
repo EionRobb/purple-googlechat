@@ -300,6 +300,14 @@ message ClientFeatureCapabilities {
 	optional CapabilityLevel add_existing_members_level = 36;
 	optional CapabilityLevel request_to_join_level = 37;
 	optional CapabilityLevel threads_in_home_level = 38;
+	optional CapabilityLevel scalable_roster_level = 40;
+	optional CapabilityLevel custom_sections_level = 41;
+	optional CapabilityLevel notify_all_level = 42;
+	optional CapabilityLevel dm_inline_threading_support_level = 43;
+	optional CapabilityLevel named_gdms_support_level = 44;
+	optional CapabilityLevel add_existing_apps_level = 45;
+	optional CapabilityLevel auto_translation_level = 46;
+	optional CapabilityLevel voice_transcript_level = 47;
 }
 
 message RequestHeader {

@@ -25,6 +25,7 @@
 
 #include "googlechat.pb-c.h"
 
+ClientFeatureCapabilities *googlechat_get_client_feature_capabilities(void);
 RequestHeader *googlechat_get_request_header(GoogleChatAccount *ha);
 void googlechat_request_header_free(RequestHeader *header);
 

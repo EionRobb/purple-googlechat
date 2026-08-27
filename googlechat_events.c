@@ -504,32 +504,26 @@ googlechat_formattedtext_append_to_string(JAddOnsFormattedText *text_paragraph, 
 static const gchar *
 googlechat_format_type_to_string(FormatMetadata__FormatType format_type, gboolean close)
 {
-	static gchar output[16];
-	int p = 1;
-	
-	output[0] = '<';
-	if (close) {
-		output[1] = '/';
-		p = 2;
+	switch (format_type) {
+		case FORMAT_METADATA__FORMAT_TYPE__BOLD:
+			return close ? "</b>" : "<b>";
+		case FORMAT_METADATA__FORMAT_TYPE__ITALIC:
+			return close ? "</i>" : "<i>";
+		case FORMAT_METADATA__FORMAT_TYPE__UNDERLINE:
+			return close ? "</u>" : "<u>";
+		case FORMAT_METADATA__FORMAT_TYPE__STRIKE:
+			return close ? "</s>" : "<s>";
+		case FORMAT_METADATA__FORMAT_TYPE__MONOSPACE:
+		case FORMAT_METADATA__FORMAT_TYPE__SOURCE_CODE:
+		case FORMAT_METADATA__FORMAT_TYPE__MONOSPACE_BLOCK:
+			return close ? "</pre>" : "<pre>";
+		case FORMAT_METADATA__FORMAT_TYPE__BULLETED_LIST:
+			return close ? "</ul>" : "<ul>";
+		case FORMAT_METADATA__FORMAT_TYPE__BULLETED_LIST_ITEM:
+			return close ? "</li>" : "<li>";
+		default:
+			return "";
 	}
-	
-	if (format_type == FORMAT_METADATA__FORMAT_TYPE__BOLD) {
-		output[p] = 'B';  p++;
-	} else if (format_type == FORMAT_METADATA__FORMAT_TYPE__ITALIC) {
-		output[p] = 'I';  p++;
-	} else if (format_type == FORMAT_METADATA__FORMAT_TYPE__UNDERLINE) {
-		output[p] = 'U';  p++;
-	} else if (format_type == FORMAT_METADATA__FORMAT_TYPE__MONOSPACE ||
-				format_type == FORMAT_METADATA__FORMAT_TYPE__SOURCE_CODE) {
-		output[p] = 'P';
-		output[p+1] = 'R';
-		output[p+2] = 'E';  p += 3;
-	} // else //TODO
-	
-	output[p] = '>';
-	output[p + 1] = '\0';
-	
-	return output;
 }
 
 void
@@ -656,14 +650,13 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 					
 				// Opening
 				if (annotation->start_index == pos) {
-					if (format_type == FORMAT_METADATA__FORMAT_TYPE__HIDDEN) {
+					if (format_type == FORMAT_METADATA__FORMAT_TYPE__HIDDEN ||
+					    format_type == FORMAT_METADATA__FORMAT_TYPE__CLIENT_HIDDEN) {
 						hidden_output++;
 						
 					} else if (format_type == FORMAT_METADATA__FORMAT_TYPE__FONT_COLOR) {
-						g_string_append_printf(msg_out, "<span style='color: #%02x%02x%02x'>", 
-							annotation->format_metadata->font_color >> 16,
-							annotation->format_metadata->font_color >> 8 & 0xFF,
-							annotation->format_metadata->font_color & 0xFF);
+						g_string_append_printf(msg_out, "<font color='#%06x'>", 
+							annotation->format_metadata->font_color & 0xFFFFFF);
 						
 					} else if (annotation->type == ANNOTATION_TYPE__URL) {
 						UrlMetadata *url_metadata = annotation->url_metadata;
@@ -684,12 +677,13 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 
 				// Closing
 				if (annotation->length + annotation->start_index == pos) {
-					if (format_type == FORMAT_METADATA__FORMAT_TYPE__HIDDEN) {
+					if (format_type == FORMAT_METADATA__FORMAT_TYPE__HIDDEN ||
+					    format_type == FORMAT_METADATA__FORMAT_TYPE__CLIENT_HIDDEN) {
 						hidden_output--;
 					} else if (annotation->type == ANNOTATION_TYPE__URL) {
 						g_string_append(msg_out, "</A>");
 					} else if (format_type == FORMAT_METADATA__FORMAT_TYPE__FONT_COLOR) {
-						g_string_append(msg_out, "</span>");
+						g_string_append(msg_out, "</font>");
 					} else {
 						g_string_append(msg_out, googlechat_format_type_to_string(format_type, TRUE));
 					}

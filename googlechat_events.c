@@ -424,12 +424,16 @@ googlechat_formattedtext_append_to_string(JAddOnsFormattedText *text_paragraph, 
 		for (l = 0; l < text_paragraph->n_formatted_text_elements; l++) {
 			JAddOnsFormattedText__FormattedTextElement *formatted_text_element = text_paragraph->formatted_text_elements[l];
 			if (formatted_text_element->styled_text) {
-				if (formatted_text_element->styled_text->n_styles > 0) {
+				JAddOnsFormattedText__FormattedTextElement__StyledText *styled_text = formatted_text_element->styled_text;
+				gboolean is_bold = (styled_text->has_font_weight && styled_text->font_weight == JADD_ONS_FORMATTED_TEXT__FORMATTED_TEXT_ELEMENT__STYLED_TEXT__FONT_WEIGHT__BOLD) ||
+				                   (styled_text->font_weight == JADD_ONS_FORMATTED_TEXT__FORMATTED_TEXT_ELEMENT__STYLED_TEXT__FONT_WEIGHT__BOLD);
+
+				if (styled_text->n_styles > 0) {
 					guint m;
-					for (m = 0; m < formatted_text_element->styled_text->n_styles; m++) {
-						JAddOnsFormattedText__FormattedTextElement__StyledText__Style style = formatted_text_element->styled_text->styles[m];
+					for (m = 0; m < styled_text->n_styles; m++) {
+						JAddOnsFormattedText__FormattedTextElement__StyledText__Style style = styled_text->styles[m];
 						if (style == JADD_ONS_FORMATTED_TEXT__FORMATTED_TEXT_ELEMENT__STYLED_TEXT__STYLE__BOLD_DEPRECATED) {
-							g_string_append(msg_out, "<b>");
+							is_bold = TRUE;
 						} else if (style == JADD_ONS_FORMATTED_TEXT__FORMATTED_TEXT_ELEMENT__STYLED_TEXT__STYLE__ITALIC) {
 							g_string_append(msg_out, "<i>");
 						} else if (style == JADD_ONS_FORMATTED_TEXT__FORMATTED_TEXT_ELEMENT__STYLED_TEXT__STYLE__UNDERLINE) {
@@ -438,39 +442,33 @@ googlechat_formattedtext_append_to_string(JAddOnsFormattedText *text_paragraph, 
 							g_string_append(msg_out, "<s>");
 						} else if (style == JADD_ONS_FORMATTED_TEXT__FORMATTED_TEXT_ELEMENT__STYLED_TEXT__STYLE__BR) {
 							g_string_append(msg_out, "<br>");
-						} else if (style == JADD_ONS_FORMATTED_TEXT__FORMATTED_TEXT_ELEMENT__STYLED_TEXT__STYLE__UPPERCASE) {
-							//TODO
 						}
 					}
 				}
-				if (formatted_text_element->styled_text->font_weight == JADD_ONS_FORMATTED_TEXT__FORMATTED_TEXT_ELEMENT__STYLED_TEXT__FONT_WEIGHT__BOLD) {
+				if (is_bold) {
 					g_string_append(msg_out, "<b>");
 				}
-				if (formatted_text_element->styled_text->has_color) {
-					gint color = formatted_text_element->styled_text->color;
-					g_string_append_printf(msg_out, "<span style='color: #%02x%02x%02x'>", 
-						color >> 16,
-						color >> 8 & 0xFF,
-						color & 0xFF);
+				if (styled_text->has_color) {
+					g_string_append_printf(msg_out, "<font color='#%06x'>", styled_text->color & 0xFFFFFF);
 				}
 
-				gchar *escaped_text = g_markup_escape_text(formatted_text_element->styled_text->text, -1);
-				g_string_append(msg_out, escaped_text);
-				g_free(escaped_text);
-				
-				if (formatted_text_element->styled_text->has_color) {
-					g_string_append(msg_out, "</span>");
+				if (styled_text->text != NULL) {
+					gchar *escaped_text = g_markup_escape_text(styled_text->text, -1);
+					g_string_append(msg_out, escaped_text);
+					g_free(escaped_text);
 				}
-				if (formatted_text_element->styled_text->font_weight == JADD_ONS_FORMATTED_TEXT__FORMATTED_TEXT_ELEMENT__STYLED_TEXT__FONT_WEIGHT__BOLD) {
+				
+				if (styled_text->has_color) {
+					g_string_append(msg_out, "</font>");
+				}
+				if (is_bold) {
 					g_string_append(msg_out, "</b>");
 				}
-				if (formatted_text_element->styled_text->n_styles > 0) {
+				if (styled_text->n_styles > 0) {
 					gint m;
-					for (m = formatted_text_element->styled_text->n_styles - 1; m >= 0 ; m--) {
-						JAddOnsFormattedText__FormattedTextElement__StyledText__Style style = formatted_text_element->styled_text->styles[m];
-						if (style == JADD_ONS_FORMATTED_TEXT__FORMATTED_TEXT_ELEMENT__STYLED_TEXT__STYLE__BOLD_DEPRECATED) {
-							g_string_append(msg_out, "</b>");
-						} else if (style == JADD_ONS_FORMATTED_TEXT__FORMATTED_TEXT_ELEMENT__STYLED_TEXT__STYLE__ITALIC) {
+					for (m = styled_text->n_styles - 1; m >= 0 ; m--) {
+						JAddOnsFormattedText__FormattedTextElement__StyledText__Style style = styled_text->styles[m];
+						if (style == JADD_ONS_FORMATTED_TEXT__FORMATTED_TEXT_ELEMENT__STYLED_TEXT__STYLE__ITALIC) {
 							g_string_append(msg_out, "</i>");
 						} else if (style == JADD_ONS_FORMATTED_TEXT__FORMATTED_TEXT_ELEMENT__STYLED_TEXT__STYLE__UNDERLINE) {
 							g_string_append(msg_out, "</u>");
@@ -483,9 +481,21 @@ googlechat_formattedtext_append_to_string(JAddOnsFormattedText *text_paragraph, 
 						}
 					}
 				}
+			} else if (formatted_text_element->hyperlink) {
+				JAddOnsFormattedText__FormattedTextElement__HyperLink *hyperlink = formatted_text_element->hyperlink;
+				const gchar *url = hyperlink->original_link ? hyperlink->original_link : hyperlink->link;
+				const gchar *text = hyperlink->text ? hyperlink->text : url;
+				if (url && text) {
+					gchar *escaped_url = g_markup_escape_text(url, -1);
+					gchar *escaped_text = g_markup_escape_text(text, -1);
+					g_string_append_printf(msg_out, "<a href='%s'>%s</a>", escaped_url, escaped_text);
+					g_free(escaped_url);
+					g_free(escaped_text);
+				}
 			}
-			//TODO handle formatted_text_element->hyperlink
 		}
+	} else if (text_paragraph && text_paragraph->original_text) {
+		g_string_append(msg_out, text_paragraph->original_text);
 	}
 
 	return msg_out;
@@ -695,9 +705,10 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 			break;
 		}
 
+		c = g_utf8_get_char(current_char);
 		if (hidden_output == 0) {
 			// adapted from libpurple/util.c
-			switch (*current_char)
+			switch (c)
 			{
 			case '&':
 				g_string_append(msg_out, "&amp;");
@@ -720,7 +731,6 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 				break;
 
 			default:
-				c = g_utf8_get_char(current_char);
 				if ((0x1 <= c && c <= 0x8) ||
 				    	(0xb <= c && c <= 0xc) ||
 				    	(0xe <= c && c <= 0x1f) ||
@@ -732,7 +742,8 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 				break;
 			}
 		}
-		pos++;
+		// Fix offsets for UTF-16 surrogate pairs
+		pos += (c >= 0x10000 ? 2 : 1);
 		current_char = g_utf8_next_char(current_char);
 	} while (TRUE);
 		
@@ -1053,21 +1064,88 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 			continue;
 		}
 
-		if (card->n_sections > 0) {
+		if (card->n_sections > 0 || card->header) {
 			GString *msg_out = g_string_new(event->type == EVENT__EVENT_TYPE__MESSAGE_UPDATED ? _("Edit: ") : NULL);
 			guint j;
 			
+			if (card->header) {
+				if (card->header->title) {
+					g_string_append(msg_out, "<b>");
+					msg_out = googlechat_formattedtext_append_to_string(card->header->title, msg_out);
+					g_string_append(msg_out, "</b><br>\n");
+				}
+				if (card->header->subtitle) {
+					g_string_append(msg_out, "<i>");
+					msg_out = googlechat_formattedtext_append_to_string(card->header->subtitle, msg_out);
+					g_string_append(msg_out, "</i><br>\n");
+				}
+			}
+
 			for (j = 0; j < card->n_sections; j++) {
 				JAddOnsCardItem__CardItemSection *section = card->sections[j];
+				if (msg_out->len > 0) {
+					g_string_append(msg_out, "<hr>");
+				}
+				if (section->header) {
+					g_string_append(msg_out, "<b>");
+					msg_out = googlechat_formattedtext_append_to_string(section->header, msg_out);
+					g_string_append(msg_out, "</b><br>\n");
+				}
 				if (section->n_widgets > 0) {
 					guint k;
 					for (k = 0; k < section->n_widgets; k++) {
 						JAddOnsWidget *widget = section->widgets[k];
-						g_string_append(msg_out, "<hr>");
+						if (widget->divider) {
+							g_string_append(msg_out, "<hr>");
+						}
 						if (widget->text_paragraph) {
 							g_string_append(msg_out, "<p>");
 							JAddOnsFormattedText *text_paragraph = widget->text_paragraph->text;
 							msg_out = googlechat_formattedtext_append_to_string(text_paragraph, msg_out);
+							g_string_append(msg_out, "</p>\n");
+						}
+						if (widget->key_value) {
+							JAddOnsWidget__KeyValue *key_value = widget->key_value;
+							g_string_append(msg_out, "<p>");
+							if (key_value->top_label) {
+								msg_out = googlechat_formattedtext_append_to_string(key_value->top_label, msg_out);
+								g_string_append(msg_out, "<br>");
+							}
+							if (key_value->content) {
+								msg_out = googlechat_formattedtext_append_to_string(key_value->content, msg_out);
+							}
+							if (key_value->bottom_label) {
+								g_string_append(msg_out, "<br>");
+								msg_out = googlechat_formattedtext_append_to_string(key_value->bottom_label, msg_out);
+							}
+							if (key_value->button && key_value->button->text_button) {
+								JAddOnsWidget__TextButton *text_button = key_value->button->text_button;
+								GString *escaped_text = googlechat_formattedtext_append_to_string(text_button->text, NULL);
+								gchar *escaped_url = googlechat_get_url_from_onclick(text_button->on_click);
+								g_string_append_printf(msg_out, " <a href='%s'>%s</a> ", escaped_url, escaped_text->str);
+								g_string_free(escaped_text, TRUE);
+								g_free(escaped_url);
+							}
+							g_string_append(msg_out, "</p>\n");
+						}
+						if (widget->text_key_value) {
+							JAddOnsWidget__TextKeyValue *text_key_value = widget->text_key_value;
+							g_string_append(msg_out, "<p>");
+							if (text_key_value->key) {
+								msg_out = googlechat_formattedtext_append_to_string(text_key_value->key, msg_out);
+								g_string_append(msg_out, ": ");
+							}
+							if (text_key_value->text) {
+								msg_out = googlechat_formattedtext_append_to_string(text_key_value->text, msg_out);
+							}
+							g_string_append(msg_out, "</p>\n");
+						}
+						if (widget->image_key_value) {
+							JAddOnsWidget__ImageKeyValue *image_key_value = widget->image_key_value;
+							g_string_append(msg_out, "<p>");
+							if (image_key_value->text) {
+								msg_out = googlechat_formattedtext_append_to_string(image_key_value->text, msg_out);
+							}
 							g_string_append(msg_out, "</p>\n");
 						}
 						if (widget->buttons) {

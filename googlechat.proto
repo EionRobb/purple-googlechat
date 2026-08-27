@@ -3597,3 +3597,20 @@ message SubmitFormActionResponse {
 	optional JAddOnsCardItem card_item = 3;
 	optional string setup_url = 4;
 }
+
+message HeartbeatRequest {
+	optional RequestHeader request_header = 1;
+	message PresenceUpdateRequest {
+		enum UserState {
+			USER_PRESENCE_STATE_UNSPECIFIED = 0;
+			ACTIVE = 1;
+			INACTIVE = 2;
+		}
+		optional UserState user_state = 1;
+		optional bool dark_launch = 2;
+	}
+	optional PresenceUpdateRequest presence_update_request = 2;
+}
+
+message HeartbeatResponse {
+}

@@ -113,5 +113,6 @@ GOOGLECHAT_DEFINE_API_REQUEST_FUNC(autocomplete_slash_commands, AutocompleteSlas
 GOOGLECHAT_DEFINE_API_REQUEST_FUNC(submit_form_action, SubmitFormAction, "submit_form_action");
 GOOGLECHAT_DEFINE_API_REQUEST_FUNC(list_blocked_users, ListBlockedUsers, "list_blocked_users");
 GOOGLECHAT_DEFINE_API_REQUEST_FUNC(edit_message, EditMessage, "edit_message");
+GOOGLECHAT_DEFINE_API_REQUEST_FUNC(heartbeat, Heartbeat, "heartbeat");
 
 #endif /*_GOOGLECHAT_CONNECTION_H_*/

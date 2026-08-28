@@ -2064,12 +2064,6 @@ const gchar *who, const gchar *message, PurpleMessageFlags flags)
 	ha = purple_connection_get_protocol_data(pc);
 	conv_id = g_hash_table_lookup(ha->one_to_ones_rev, who);
 	if (conv_id == NULL) {
-		if (G_UNLIKELY(!googlechat_is_valid_id(who))) {
-			googlechat_search_users_text(ha, who);
-			purple_conv_present_error(who, purple_connection_get_account(pc), _("Cannot send message directly to an email address.  Attempting to search for this user...\nIf the search fails, you may need to start the conversation on another device first."));
-			return 0;
-		}
-		
 		//We don't have any known conversations for this person
 		googlechat_create_conversation(ha, TRUE, who, message);
 		return 0;
@@ -2348,14 +2342,17 @@ googlechat_create_conversation(GoogleChatAccount *ha, gboolean is_one_to_one, co
 	UserId user_id;
 	InviteeInfo invitee_info;
 	gchar *message_dup = NULL;
+	gboolean is_gaia_id = googlechat_is_valid_id(who);
 	
 	user_id__init(&user_id);
-	user_id.id = (gchar *) who;
-		
 	invitee_info__init(&invitee_info);
-	invitee_info.user_id = &user_id;
-	//TODO
-	//invitee_info.email = (gchar *) "foo@bar.com";
+	
+	if (is_gaia_id) {
+		user_id.id = (gchar *) who;
+		invitee_info.user_id = &user_id;
+	} else {
+		invitee_info.email = (gchar *) who;
+	}
 	
 	if (optional_message != NULL) {
 		message_dup = g_strdup(optional_message);
@@ -2370,9 +2367,11 @@ googlechat_create_conversation(GoogleChatAccount *ha, gboolean is_one_to_one, co
 		create_dm_request__init(&request);
 		request.request_header = googlechat_get_request_header(ha);
 		
-		members = &user_id;
-		request.members = &members;
-		request.n_members = 1;
+		if (is_gaia_id) {
+			members = &user_id;
+			request.members = &members;
+			request.n_members = 1;
+		}
 		
 		invitees = &invitee_info;
 		request.invitees = &invitees;
@@ -2387,12 +2386,12 @@ googlechat_create_conversation(GoogleChatAccount *ha, gboolean is_one_to_one, co
 		
 		googlechat_request_header_free(request.request_header);
 		
-		
-		GList tmp_usr_list;
-		tmp_usr_list.next = tmp_usr_list.prev = NULL;
-		tmp_usr_list.data = (gpointer) who;
-		googlechat_get_users_information(ha, &tmp_usr_list);
-		
+		if (is_gaia_id) {
+			GList tmp_usr_list;
+			tmp_usr_list.next = tmp_usr_list.prev = NULL;
+			tmp_usr_list.data = (gpointer) who;
+			googlechat_get_users_information(ha, &tmp_usr_list);
+		}
 		
 	} else {
 		//group chat

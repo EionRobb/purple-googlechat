@@ -37,7 +37,7 @@ gchar *googlechat_get_chat_name(GHashTable *data);
 void googlechat_join_chat_from_url(GoogleChatAccount *ha, const gchar *url);
 
 void googlechat_get_all_events(GoogleChatAccount *ha, guint64 since_timestamp);
-// void googlechat_add_conversation_to_blist(GoogleChatAccount *ha, Conversation *conversation, GHashTable *unique_user_ids);
+void googlechat_add_conversation_to_blist(GoogleChatAccount *ha, Group *group, GHashTable *unique_user_ids);
 void googlechat_add_person_to_blist(GoogleChatAccount *ha, const gchar *gaia_id, const gchar *alias);
 
 void googlechat_get_self_user_status(GoogleChatAccount *ha);

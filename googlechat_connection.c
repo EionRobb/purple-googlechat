@@ -1023,37 +1023,158 @@ message LookupId {
 }
 */
 
+static void
+googlechat_search_users_created_dm_cb(GoogleChatAccount *ha, CreateDmResponse *response, gpointer user_data)
+{
+	gchar *search_term = user_data;
+	PurpleNotifySearchResults *results;
+	PurpleNotifySearchColumn *column;
+	guint i;
+	gboolean found = FALSE;
+	
+	if (purple_debug_is_verbose()) {
+		gchar *dump = pblite_dump_json((ProtobufCMessage *) response);
+		purple_debug_info("googlechat", "%s\n", dump);
+		g_free(dump);
+	}
+	
+	if (response == NULL || response->dm == NULL || response->n_memberships == 0) {
+		gchar *primary_text = g_strdup_printf(_("Your search for the user \"%s\" returned no results"), search_term);
+		purple_notify_warning(ha->pc, _("No users found"), primary_text, "", purple_request_cpar_from_connection(ha->pc));
+		g_free(primary_text);
+		g_free(search_term);
+		return;
+	}
+	
+	googlechat_add_conversation_to_blist(ha, response->dm, NULL);
+	
+	results = purple_notify_searchresults_new();
+	if (results == NULL) {
+		g_free(search_term);
+		return;
+	}
+	
+	column = purple_notify_searchresults_column_new(_("ID"));
+	purple_notify_searchresults_column_add(results, column);
+	column = purple_notify_searchresults_column_new(_("Display Name"));
+	purple_notify_searchresults_column_add(results, column);
+	column = purple_notify_searchresults_column_new(_("Email"));
+	purple_notify_searchresults_column_add(results, column);
+	
+	purple_notify_searchresults_button_add(results, PURPLE_NOTIFY_BUTTON_ADD, googlechat_search_results_add_buddy);
+	purple_notify_searchresults_button_add(results, PURPLE_NOTIFY_BUTTON_INFO, googlechat_search_results_get_info);
+	purple_notify_searchresults_button_add(results, PURPLE_NOTIFY_BUTTON_IM, googlechat_search_results_send_im);
+	
+	for (i = 0; i < response->n_memberships; i++) {
+		Membership *membership = response->memberships[i];
+		if (membership && membership->id && membership->id->member_id && membership->id->member_id->user_id) {
+			const gchar *id = membership->id->member_id->user_id->id;
+			if (id == NULL || !*id) continue;
+			
+			// Skip self user if there are other members
+			if (response->n_memberships > 1 && ha->self_gaia_id && g_strcmp0(id, ha->self_gaia_id) == 0) {
+				continue;
+			}
+			
+			PurpleBuddy *buddy = purple_find_buddy(ha->account, id);
+			const gchar *displayname = buddy ? purple_buddy_get_alias_only(buddy) : NULL;
+			const gchar *email = membership->id->member_id->email;
+			
+			GList *row = NULL;
+			row = g_list_append(row, g_strdup(id));
+			row = g_list_append(row, g_strdup(displayname ? displayname : ""));
+			row = g_list_append(row, g_strdup(email ? email : ""));
+			purple_notify_searchresults_row_add(results, row);
+			found = TRUE;
+			
+			GList tmp_usr_list;
+			tmp_usr_list.next = tmp_usr_list.prev = NULL;
+			tmp_usr_list.data = (gpointer) id;
+			googlechat_get_users_information(ha, &tmp_usr_list);
+		}
+	}
+	
+	if (!found) {
+		purple_notify_searchresults_free(results);
+		gchar *primary_text = g_strdup_printf(_("Your search for the user \"%s\" returned no results"), search_term);
+		purple_notify_warning(ha->pc, _("No users found"), primary_text, "", purple_request_cpar_from_connection(ha->pc));
+		g_free(primary_text);
+	} else {
+		purple_notify_searchresults(ha->pc, NULL, search_term, NULL, results, NULL, NULL);
+	}
+	
+	g_free(search_term);
+}
+
 void
 googlechat_search_users_text(GoogleChatAccount *ha, const gchar *text)
 {
-	PurpleHttpRequest *request;
-	const gchar *url = "https://peoplestack-pa.googleapis.com/v1/autocomplete/lookup?alt=json";
-	PurpleHttpConnection *connection;
-	GString *postdata = g_string_new(NULL);
+	if (ha->access_token != NULL) {
+		PurpleHttpRequest *request;
+		const gchar *url = "https://peoplestack-pa.googleapis.com/v1/autocomplete/lookup?alt=json";
+		PurpleHttpConnection *connection;
+		GString *postdata = g_string_new(NULL);
 
-	g_string_append_printf(postdata, "[165, [4], [[\"%s\"]]]", text);
-	
-	request = purple_http_request_new(url);
-	purple_http_request_set_method(request, "POST");
-	purple_http_request_set_cookie_jar(request, ha->cookie_jar);
-	purple_http_request_set_contents(request, postdata->str, postdata->len);
-	purple_http_request_header_set(request, "Content-Type", "application/json+protobuf");
-	purple_http_request_set_max_len(request, GOOGLECHAT_MAX_HTTP_RESPONSE_SIZE);
-	
-	gchar *sapisid_auth = googlechat_get_sapisid_auth_header(ha);
-	if (sapisid_auth) {
-		purple_http_request_header_set(request, "Authorization", sapisid_auth);
-		g_free(sapisid_auth);
+		g_string_append_printf(postdata, "[165, [4], [[\"%s\"]]]", text);
+		
+		request = purple_http_request_new(url);
+		purple_http_request_set_method(request, "POST");
+		purple_http_request_set_cookie_jar(request, ha->cookie_jar);
+		purple_http_request_set_contents(request, postdata->str, postdata->len);
+		purple_http_request_header_set(request, "Content-Type", "application/json+protobuf");
+		purple_http_request_set_max_len(request, GOOGLECHAT_MAX_HTTP_RESPONSE_SIZE);
+		
+		gchar *sapisid_auth = googlechat_get_sapisid_auth_header(ha);
+		if (sapisid_auth) {
+			purple_http_request_header_set(request, "Authorization", sapisid_auth);
+			g_free(sapisid_auth);
+		} else {
+			googlechat_set_auth_headers(ha, request);
+		}
+
+		connection = purple_http_request(ha->pc, request, googlechat_search_users_text_cb, ha);
+		purple_http_request_unref(request);
+		
+		g_dataset_set_data_full(connection, "search_term", g_strdup(text), g_free);
+		
+		g_string_free(postdata, TRUE);
 	} else {
-		googlechat_set_auth_headers(ha, request);
+		CreateDmRequest request;
+		UserId user_id;
+		UserId *members;
+		InviteeInfo invitee_info;
+		InviteeInfo *invitees;
+		RetentionSettings retention_settings;
+		gboolean is_gaia_id = googlechat_is_valid_id(text);
+		
+		create_dm_request__init(&request);
+		request.request_header = googlechat_get_request_header(ha);
+		
+		user_id__init(&user_id);
+		invitee_info__init(&invitee_info);
+		
+		if (is_gaia_id) {
+			user_id.id = (gchar *) text;
+			members = &user_id;
+			request.members = &members;
+			request.n_members = 1;
+			invitee_info.user_id = &user_id;
+		} else {
+			invitee_info.email = (gchar *) text;
+		}
+		
+		invitees = &invitee_info;
+		request.invitees = &invitees;
+		request.n_invitees = 1;
+		
+		retention_settings__init(&retention_settings);
+		request.retention_settings = &retention_settings;
+		retention_settings.has_state = TRUE;
+		retention_settings.state = RETENTION_SETTINGS__RETENTION_STATE__PERMANENT;
+		
+		googlechat_api_create_dm(ha, &request, googlechat_search_users_created_dm_cb, g_strdup(text));
+		googlechat_request_header_free(request.request_header);
 	}
-
-	connection = purple_http_request(ha->pc, request, googlechat_search_users_text_cb, ha);
-	purple_http_request_unref(request);
-	
-	g_dataset_set_data_full(connection, "search_term", g_strdup(text), g_free);
-	
-	g_string_free(postdata, TRUE);
 }
 
 void

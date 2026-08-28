@@ -1771,6 +1771,14 @@ message CreateGroupResponse {
 	// optional Failure creator_membership_failure = 5;
 }
 
+message MessageCreationInfo {
+	optional string text_body = 1;
+	repeated Annotation annotations = 2;
+	repeated Attachment attachments = 3;
+	optional bool accept_format_annotations = 4;
+	//repeated OriginAppSuggestion origin_app_suggestions = 5;
+}
+
 message CreateDmRequest {
 	optional RequestHeader request_header = 100;
 	enum FetchOptions {
@@ -1780,10 +1788,12 @@ message CreateDmRequest {
 	repeated FetchOptions fetch_options = 8;
 	repeated UserId members = 1;
 	repeated InviteeInfo invitees = 7;
-	// optional MessageCreationInfo message_creation_info = 2;
+	optional MessageCreationInfo message_creation_info = 2;
 	optional RetentionSettings retention_settings = 3;
 	optional string local_id = 4;
 	optional string topic_and_message_id = 5;
+	// optional enum space_origin = 9;
+	optional bool force_empty_dm_visible = 10;
 }
 
 message CreateDmResponse {

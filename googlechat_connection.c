@@ -808,6 +808,27 @@ googlechat_set_active_client(PurpleConnection *pc)
 	
 	googlechat_send_ping_event(ha, &ping_event);
 	
+	HeartbeatRequest heartbeat_request;
+	HeartbeatRequest__PresenceUpdateRequest presence_update;
+	
+	heartbeat_request__init(&heartbeat_request);
+	heartbeat_request__presence_update_request__init(&presence_update);
+	
+	heartbeat_request.request_header = googlechat_get_request_header(ha);
+	
+	presence_update.has_user_state = TRUE;
+	if (ha->idle_time > GOOGLECHAT_ACTIVE_CLIENT_TIMEOUT ||
+	    !purple_presence_is_status_primitive_active(purple_account_get_presence(ha->account), PURPLE_STATUS_AVAILABLE)) {
+		presence_update.user_state = HEARTBEAT_REQUEST__PRESENCE_UPDATE_REQUEST__USER_STATE__INACTIVE;
+	} else {
+		presence_update.user_state = HEARTBEAT_REQUEST__PRESENCE_UPDATE_REQUEST__USER_STATE__ACTIVE;
+	}
+	
+	heartbeat_request.presence_update_request = &presence_update;
+	
+	googlechat_api_heartbeat(ha, &heartbeat_request, NULL, NULL);
+	googlechat_request_header_free(heartbeat_request.request_header);
+	
 	return TRUE;
 }
 

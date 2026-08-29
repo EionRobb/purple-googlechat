@@ -2266,14 +2266,19 @@ googlechat_chat_kick(PurpleConnection *pc, int id, const gchar *who)
 	return googlechat_chat_leave_by_conv_id(pc, conv_id, who);
 }
 
+typedef struct {
+	gchar *who;
+	gchar *message;
+} GoogleChatCreateDmData;
+
 static void 
 googlechat_created_dm(GoogleChatAccount *ha, CreateDmResponse *response, gpointer user_data)
 {
-	Group *dm = response->dm;
-	gchar *message = user_data;
+	Group *dm = response ? response->dm : NULL;
+	GoogleChatCreateDmData *dm_data = user_data;
 	const gchar *conv_id;
 	
-	if (purple_debug_is_verbose()) {
+	if (purple_debug_is_verbose() && response) {
 		gchar *dump = pblite_dump_json((ProtobufCMessage *) response);
 		purple_debug_info("googlechat", "%s\n", dump);
 		g_free(dump);
@@ -2281,29 +2286,50 @@ googlechat_created_dm(GoogleChatAccount *ha, CreateDmResponse *response, gpointe
 	
 	if (dm == NULL) {
 		purple_debug_error("googlechat", "Could not create DM\n");
-		g_free(message);
+		if (dm_data) {
+			g_free(dm_data->who);
+			g_free(dm_data->message);
+			g_free(dm_data);
+		}
 		return;
 	}
 	
 	googlechat_add_conversation_to_blist(ha, dm, NULL);
 	conv_id = dm->group_id->dm_id->dm_id;
-	googlechat_get_conversation_events(ha, conv_id, 0);
+	googlechat_get_conversation_events(ha, conv_id, ha->last_event_timestamp);
 	
-	if (message != NULL) {
-		if (googlechat_conversation_send_message(ha, conv_id, message) > 0) {
-			//TODO write into chat
-			// if (sender_id) {
-				// imconv = purple_conversations_find_im_with_account(sender_id, ha->account);
-				// PurpleMessage *pmessage = purple_message_new_outgoing(sender_id, msg, msg_flags);
-				// if (imconv == NULL)
-				// {
-					// imconv = purple_im_conversation_new(ha->account, sender_id);
-				// }
-				// purple_message_set_time(pmessage, message_timestamp);
-				// purple_conversation_write_message(PURPLE_CONVERSATION(imconv), pmessage);
-			// }
+	if (dm_data != NULL) {
+		const gchar *who = dm_data->who;
+		const gchar *message = dm_data->message;
+		const gchar *sender_id = g_hash_table_lookup(ha->one_to_ones, conv_id);
+		PurpleIMConversation *imconv = NULL;
+		
+		if (sender_id != NULL) {
+			imconv = purple_conversations_find_im_with_account(sender_id, ha->account);
 		}
-		g_free(message);
+		if (imconv == NULL && who != NULL) {
+			imconv = purple_conversations_find_im_with_account(who, ha->account);
+			if (imconv != NULL && sender_id != NULL) {
+				purple_conversation_set_name(PURPLE_CONVERSATION(imconv), sender_id);
+			}
+		}
+		if (imconv == NULL && sender_id != NULL) {
+			imconv = purple_im_conversation_new(ha->account, sender_id);
+		}
+		
+		if (message != NULL && *message != '\0') {
+			if (googlechat_conversation_send_message(ha, conv_id, message) > 0) {
+				if (imconv != NULL) {
+					PurpleMessage *pmessage = purple_message_new_outgoing(sender_id ? sender_id : who, message, PURPLE_MESSAGE_SEND);
+					purple_message_set_time(pmessage, time(NULL));
+					purple_conversation_write_message(PURPLE_CONVERSATION(imconv), pmessage);
+				}
+			}
+		}
+		
+		g_free(dm_data->who);
+		g_free(dm_data->message);
+		g_free(dm_data);
 	}
 }
 
@@ -2328,7 +2354,7 @@ googlechat_created_group(GoogleChatAccount *ha, CreateGroupResponse *response, g
 	
 	googlechat_add_conversation_to_blist(ha, group, NULL);
 	conv_id = group->group_id->space_id->space_id;
-	googlechat_get_conversation_events(ha, conv_id, 0);
+	googlechat_get_conversation_events(ha, conv_id, ha->last_event_timestamp);
 	
 	if (message != NULL) {
 		googlechat_conversation_send_message(ha, conv_id, message);
@@ -2341,7 +2367,6 @@ googlechat_create_conversation(GoogleChatAccount *ha, gboolean is_one_to_one, co
 {
 	UserId user_id;
 	InviteeInfo invitee_info;
-	gchar *message_dup = NULL;
 	gboolean is_gaia_id = googlechat_is_valid_id(who);
 	
 	user_id__init(&user_id);
@@ -2354,15 +2379,12 @@ googlechat_create_conversation(GoogleChatAccount *ha, gboolean is_one_to_one, co
 		invitee_info.email = (gchar *) who;
 	}
 	
-	if (optional_message != NULL) {
-		message_dup = g_strdup(optional_message);
-	}
-	
 	if (is_one_to_one) {
 		CreateDmRequest request;
 		UserId *members;
 		InviteeInfo *invitees;
 		RetentionSettings retention_settings;
+		GoogleChatCreateDmData *dm_data;
 		
 		create_dm_request__init(&request);
 		request.request_header = googlechat_get_request_header(ha);
@@ -2382,7 +2404,11 @@ googlechat_create_conversation(GoogleChatAccount *ha, gboolean is_one_to_one, co
 		retention_settings.has_state = TRUE;
 		retention_settings.state = RETENTION_SETTINGS__RETENTION_STATE__PERMANENT;
 		
-		googlechat_api_create_dm(ha, &request, googlechat_created_dm, message_dup);
+		dm_data = g_new0(GoogleChatCreateDmData, 1);
+		dm_data->who = g_strdup(who);
+		dm_data->message = g_strdup(optional_message);
+		
+		googlechat_api_create_dm(ha, &request, googlechat_created_dm, dm_data);
 		
 		googlechat_request_header_free(request.request_header);
 		
@@ -2416,7 +2442,7 @@ googlechat_create_conversation(GoogleChatAccount *ha, gboolean is_one_to_one, co
 		space.invitee_member_infos = &invitee_member_infos;
 		space.n_invitee_member_infos = 1;
 		
-		googlechat_api_create_group(ha, &request, googlechat_created_group, message_dup);
+		googlechat_api_create_group(ha, &request, googlechat_created_group, g_strdup(optional_message));
 		
 		googlechat_request_header_free(request.request_header);
 		

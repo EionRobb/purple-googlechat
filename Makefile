@@ -160,4 +160,4 @@ build-locales: $(LOCALES)
 
 
 installer: purple-googlechat.wxs libgooglechat.dll
-	$(WIXL) -I . -v purple-googlechat.wxs -o purple-googlechat.msi --arch x86
+	$(WIXL) -I . -v purple-googlechat.wxs --ext ui -o purple-googlechat.msi --arch x86

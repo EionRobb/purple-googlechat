@@ -13,6 +13,11 @@
 
     <Media Id="1" Cabinet="purple-googlechat.cab" EmbedCab="yes" />
     
+    <Property Id="PIDGINDIR">
+      <RegistrySearch Id="PidginDirSearchHKLM" Root="HKLM" Key="Software\Pidgin" Name="" Type="raw" />
+      <RegistrySearch Id="PidginDirSearchHKCU" Root="HKCU" Key="Software\Pidgin" Name="" Type="raw" />
+    </Property>
+    
     <Feature Id="ProductFeature" Title="Purple Google Chat Plugin" Level="1">
       <ComponentRef Id="PluginComponent" />
       <ComponentRef Id="JsonGlibComponent" />
@@ -75,5 +80,20 @@
       </Component>
     </DirectoryRef>
     
+    <UIRef Id="FinishUI" />
   </Product>
+
+  <Fragment>
+    <UI Id="FinishUI">
+      <Dialog Id="FinishDlg" Width="370" Height="180" Title="[ProductName] Setup">
+        <Control Id="Text" Type="Text" X="20" Y="40" Width="330" Height="40" Text="[ProductName] setup has completed successfully." />
+        <Control Id="Finish" Type="PushButton" X="150" Y="130" Width="70" Height="24" Default="yes" Cancel="yes" Text="Finish">
+          <Publish Event="EndDialog" Value="Return">1</Publish>
+        </Control>
+      </Dialog>
+      <InstallUISequence>
+        <Show Dialog="FinishDlg" OnExit="success" />
+      </InstallUISequence>
+    </UI>
+  </Fragment>
 </Wix>

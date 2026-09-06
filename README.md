@@ -23,9 +23,15 @@ json-glib-devel libpurple-devel glib2-devel libpurple-devel protobuf-c-devel pro
 ```
 
 ## Windows ##
-Builds of Windows dll's are [here](https://github.com/EionRobb/purple-googlechat/releases/latest) - copy this into your C:\Program Files (x86)\Pidgin\plugins folder.  You'll also need [libprotobuf-c-1.dll](https://github.com/EionRobb/purple-googlechat/raw/master/libprotobuf-c-1.dll) and [libjson-glib-1.0.dll](https://github.com/EionRobb/purple-googlechat/raw/master/libjson-glib-1.0.dll) in your C:\Program Files (x86)\Pidgin folder (*not* the plugins subfolder)
+The easiest way to install is using the Windows installer (`purple-googlechat.msi`) available from the [latest release](https://github.com/EionRobb/purple-googlechat/releases/latest). This automatically installs the plugin, required dependency DLLs, and protocol icons into Pidgin.
 
-Until there's some kind of helper/installer, you might want to copy in the protocol icons into the pixmaps folder, eg copy [github.com/EionRobb/purple-googlechat/googlechat16.png](https://github.com/EionRobb/purple-googlechat/raw/master/googlechat16.png) to C:\Program Files (x86)\Pidgin\pixmaps\pidgin\protocols\16\googlechat.png (and the same for the 22 and 48 png files)
+Alternatively, for manual installation:
+1. Download `libgooglechat.dll` from the [latest release](https://github.com/EionRobb/purple-googlechat/releases/latest) and copy it into your `C:\Program Files (x86)\Pidgin\plugins` folder.
+2. Download [libprotobuf-c-1.dll](https://github.com/EionRobb/purple-googlechat/raw/master/libprotobuf-c-1.dll) and [libjson-glib-1.0.dll](https://github.com/EionRobb/purple-googlechat/raw/master/libjson-glib-1.0.dll) and copy them into your `C:\Program Files (x86)\Pidgin` folder (*not* the `plugins` subfolder).
+3. (Optional) Copy the protocol icons into your pixmaps folder:
+   - [googlechat16.png](https://github.com/EionRobb/purple-googlechat/raw/master/googlechat16.png) to `C:\Program Files (x86)\Pidgin\pixmaps\pidgin\protocols\16\googlechat.png`
+   - [googlechat22.png](https://github.com/EionRobb/purple-googlechat/raw/master/googlechat22.png) to `C:\Program Files (x86)\Pidgin\pixmaps\pidgin\protocols\22\googlechat.png`
+   - [googlechat48.png](https://github.com/EionRobb/purple-googlechat/raw/master/googlechat48.png) to `C:\Program Files (x86)\Pidgin\pixmaps\pidgin\protocols\48\googlechat.png`
 
 ## Authentication ##
 The plugin uses cookies from a logged in browser to authenticate

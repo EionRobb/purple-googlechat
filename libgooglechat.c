@@ -372,6 +372,18 @@ googlechat_cmd_slashcommands(PurpleConversation *conv, const gchar *cmd, gchar *
 	return PURPLE_CMD_RET_OK;
 }
 
+const gchar *
+googlechat_list_emblem(PurpleBuddy *buddy)
+{
+	if (buddy != NULL) {
+		GoogleChatBuddy *hbuddy = purple_buddy_get_protocol_data(buddy);
+		if (hbuddy && hbuddy->is_bot) {
+			return "bot";
+		}
+	}
+	return NULL;
+}
+
 static GList *
 googlechat_node_menu(PurpleBlistNode *node)
 {
@@ -1015,6 +1027,7 @@ googlechat_protocol_client_iface_init(PurpleProtocolClientIface *prpl_info)
 	prpl_info->tooltip_text = googlechat_tooltip_text;
 	prpl_info->buddy_free = googlechat_buddy_free;
  	prpl_info->offline_message = googlechat_offline_message;
+	prpl_info->list_emblem = googlechat_list_emblem;
 }
 
 static void
@@ -1268,6 +1281,7 @@ init_plugin(PurplePlugin *plugin)
 	prpl_info->set_status = googlechat_set_status;
 	prpl_info->set_idle = googlechat_set_idle;
 	
+	prpl_info->list_emblem = googlechat_list_emblem;
 	prpl_info->blist_node_menu = googlechat_node_menu;
 	
 	prpl_info->send_im = googlechat_send_im;

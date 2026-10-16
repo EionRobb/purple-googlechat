@@ -94,7 +94,8 @@ C_FILES := \
 	googlechat_connection.c \
 	googlechat_auth.c \
 	googlechat_events.c \
-	googlechat_conversation.c
+	googlechat_conversation.c \
+	googlechat_media.c
 	
 PURPLE_COMPAT_FILES := purple2compat/http.c purple2compat/purple-socket.c
 PURPLE_C_FILES := libgooglechat.c $(C_FILES)

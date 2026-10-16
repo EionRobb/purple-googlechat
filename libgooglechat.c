@@ -30,6 +30,7 @@
 #include "googlechat_events.h"
 #include "googlechat_connection.h"
 #include "googlechat_conversation.h"
+#include "googlechat_media.h"
 #include "http.h"
 
 
@@ -50,12 +51,6 @@ googlechat_is_valid_id(const gchar *id)
 	return TRUE;
 }
 
-PurpleMediaCaps
-googlechat_get_media_caps(PurpleAccount *account, const char *who)
-{
-	return PURPLE_MEDIA_CAPS_AUDIO | PURPLE_MEDIA_CAPS_VIDEO | PURPLE_MEDIA_CAPS_AUDIO_VIDEO | PURPLE_MEDIA_CAPS_MODIFY_SESSION;
-}
-
 void
 googlechat_set_idle(PurpleConnection *pc, int time)
 {
@@ -72,7 +67,7 @@ googlechat_add_account_options(GList *account_options)
 {
 	PurpleAccountOption *option;
 	
-	option = purple_account_option_bool_new(N_("Show call links in chat"), "show-call-links", !purple_media_manager_get());
+	option = purple_account_option_bool_new(N_("Show call links in chat"), "show-call-links", !googlechat_media_is_supported());
 	account_options = g_list_append(account_options, option);
 	
 	option = purple_account_option_bool_new(N_("Un-Googlify URLs"), "unravel_google_url", FALSE);
@@ -926,6 +921,8 @@ googlechat_uri_handler(const char *proto, const char *cmd, GHashTable *params)
 static gboolean
 plugin_load(PurplePlugin *plugin, GError **error)
 {
+	googlechat_media_init();
+
 	purple_cmd_register("leave", "", PURPLE_CMD_P_PLUGIN, PURPLE_CMD_FLAG_CHAT |
 						PURPLE_CMD_FLAG_PROTOCOL_ONLY | PURPLE_CMD_FLAG_ALLOW_WRONG_ARGS,
 						GOOGLECHAT_PLUGIN_ID, googlechat_cmd_leave,
@@ -965,6 +962,7 @@ plugin_load(PurplePlugin *plugin, GError **error)
 static gboolean
 plugin_unload(PurplePlugin *plugin, GError **error)
 {
+	googlechat_media_uninit();
 	purple_signals_disconnect_by_handle(plugin);
 	
 	return TRUE;
@@ -1067,8 +1065,8 @@ googlechat_protocol_chat_iface_init(PurpleProtocolChatIface *prpl_info)
 static void 
 googlechat_protocol_media_iface_init(PurpleProtocolMediaIface *prpl_info)
 {
-	//prpl_info->get_caps = googlechat_get_media_caps;
-	//prpl_info->initiate_session = googlechat_initiate_media;
+	prpl_info->get_caps = googlechat_get_media_caps;
+	prpl_info->initiate_session = googlechat_initiate_media;
 }
 
 static void 
@@ -1294,8 +1292,8 @@ init_plugin(PurplePlugin *plugin)
 	prpl_info->chat_invite = googlechat_chat_invite;
 	prpl_info->set_chat_topic = googlechat_chat_set_topic;
 	
-	//prpl_info->get_media_caps = googlechat_get_media_caps;
-	//prpl_info->initiate_media = googlechat_initiate_media;
+	prpl_info->get_media_caps = googlechat_get_media_caps;
+	prpl_info->initiate_media = googlechat_initiate_media;
 	
 	prpl_info->add_deny = googlechat_block_user;
 	prpl_info->rem_deny = googlechat_unblock_user;

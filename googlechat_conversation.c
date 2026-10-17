@@ -105,6 +105,29 @@ googlechat_request_header_free(RequestHeader *header)
 	g_free(header);
 }
 
+static gchar *
+googlechat_generate_id(void)
+{
+	guint32 rand_bytes[2];
+	gchar *b64;
+	gchar *p;
+	
+	rand_bytes[0] = g_random_int();
+	rand_bytes[1] = g_random_int();
+	
+	b64 = g_base64_encode((const guchar *)rand_bytes, sizeof(rand_bytes));
+	b64[11] = '\0';
+	for (p = b64; *p; p++) {
+		if (*p == '+') {
+			*p = '-';
+		} else if (*p == '/') {
+			*p = '_';
+		}
+	}
+	return b64;
+}
+
+
 static void 
 googlechat_got_self_user_status(GoogleChatAccount *ha, GetSelfUserStatusResponse *response, gpointer user_data)
 {
@@ -1703,6 +1726,8 @@ googlechat_conversation_send_image_part2_cb(PurpleHttpConnection *connection, Pu
 {
 	GoogleChatAccount *ha;
 	gchar *conv_id;
+	gchar *topic_and_message_id;
+	gchar *annotation_local_id;
 	const gchar *response_raw;
 	guchar *decoded_response;
 	size_t response_len;
@@ -1715,6 +1740,7 @@ googlechat_conversation_send_image_part2_cb(PurpleHttpConnection *connection, Pu
 	GroupId group_id;
 	SpaceId space_id;
 	DmId dm_id;
+	RetentionSettings retention_settings;
 	
 	if (purple_http_response_get_error(response) != NULL) {
 		purple_notify_error(pc, _("Image Send Error"), _("There was an error sending the image"), purple_http_response_get_error(response), purple_request_cpar_from_connection(pc));
@@ -1727,11 +1753,14 @@ googlechat_conversation_send_image_part2_cb(PurpleHttpConnection *connection, Pu
 	
 	decoded_response = g_base64_decode(response_raw, &response_len);
 	unpacked_message = protobuf_c_message_unpack(&upload_metadata__descriptor, NULL, response_len, decoded_response);
+	g_free(decoded_response);
 			
 	if (unpacked_message != NULL) {
 		upload_metadata = (UploadMetadata *) unpacked_message;
 		
 		conv_id = g_dataset_get_data(connection, "conv_id");
+		topic_and_message_id = g_dataset_get_data(connection, "topic_and_message_id");
+		annotation_local_id = g_dataset_get_data(connection, "annotation_local_id");
 		
 		create_topic_request__init(&request);
 		annotation__init(&photo_annotation);
@@ -1739,11 +1768,16 @@ googlechat_conversation_send_image_part2_cb(PurpleHttpConnection *connection, Pu
 		
 		request.request_header = googlechat_get_request_header(ha);
 		
-		gchar *message_id = g_strdup_printf("purple%" G_GUINT32_FORMAT, (guint32) g_random_int());
-		request.local_id = message_id;
+		request.topic_and_message_id = topic_and_message_id;
+		request.local_id = topic_and_message_id;
 		request.has_history_v2 = TRUE;
 		request.history_v2 = TRUE;
 		request.text_body = (gchar *) "";
+		
+		retention_settings__init(&retention_settings);
+		request.retention_settings = &retention_settings;
+		retention_settings.has_state = TRUE;
+		retention_settings.state = RETENTION_SETTINGS__RETENTION_STATE__PERMANENT;
 		
 		request.group_id = &group_id;
 		if (g_hash_table_lookup(ha->one_to_ones, conv_id)) {
@@ -1761,6 +1795,10 @@ googlechat_conversation_send_image_part2_cb(PurpleHttpConnection *connection, Pu
 		photo_annotation.upload_metadata = upload_metadata;
 		photo_annotation.has_chip_render_type = TRUE;
 		photo_annotation.chip_render_type = ANNOTATION__CHIP_RENDER_TYPE__RENDER;
+		photo_annotation.local_id = annotation_local_id;
+		if (upload_metadata->local_id == NULL) {
+			upload_metadata->local_id = annotation_local_id;
+		}
 		
 		annotations = &photo_annotation;
 		request.annotations = &annotations;
@@ -1768,12 +1806,13 @@ googlechat_conversation_send_image_part2_cb(PurpleHttpConnection *connection, Pu
 		
 		googlechat_api_create_topic(ha, &request, NULL, NULL);
 		
-		g_hash_table_insert(ha->sent_message_ids, message_id, NULL);
+		if (topic_and_message_id != NULL) {
+			g_hash_table_insert(ha->sent_message_ids, g_strdup(topic_and_message_id), NULL);
+		}
 		
 		g_dataset_destroy(connection);
 		googlechat_request_header_free(request.request_header);
 		protobuf_c_message_free_unpacked(unpacked_message, NULL);
-	
 	}
 }
 
@@ -1783,6 +1822,8 @@ googlechat_conversation_send_image_part1_cb(PurpleHttpConnection *connection, Pu
 {
 	GoogleChatAccount *ha;
 	gchar *conv_id;
+	gchar *topic_and_message_id;
+	gchar *annotation_local_id;
 	PurpleImage *image;
 	const gchar *upload_url;
 	guint chunk_granularity;
@@ -1800,6 +1841,8 @@ googlechat_conversation_send_image_part1_cb(PurpleHttpConnection *connection, Pu
 	
 	ha = user_data;
 	conv_id = g_dataset_get_data(connection, "conv_id");
+	topic_and_message_id = g_dataset_get_data(connection, "topic_and_message_id");
+	annotation_local_id = g_dataset_get_data(connection, "annotation_local_id");
 	image = g_dataset_get_data(connection, "image");
 	
 	//x-guploader-uploadid: ADP...
@@ -1845,6 +1888,8 @@ googlechat_conversation_send_image_part1_cb(PurpleHttpConnection *connection, Pu
 		if (is_final_chunk) {
 			new_connection = purple_http_request(ha->pc, request, googlechat_conversation_send_image_part2_cb, ha);
 			g_dataset_set_data_full(new_connection, "conv_id", g_strdup(conv_id), g_free);
+			g_dataset_set_data_full(new_connection, "topic_and_message_id", g_strdup(topic_and_message_id), g_free);
+			g_dataset_set_data_full(new_connection, "annotation_local_id", g_strdup(annotation_local_id), g_free);
 		} else {
 			purple_http_request(ha->pc, request, NULL, NULL);
 		}
@@ -1854,6 +1899,8 @@ googlechat_conversation_send_image_part1_cb(PurpleHttpConnection *connection, Pu
 		offset += chunk_size;
 		remaining -= chunk_size;
 	}
+
+	g_dataset_destroy(connection);
 }
 
 static void
@@ -1863,6 +1910,8 @@ googlechat_conversation_send_image(GoogleChatAccount *ha, const gchar *conv_id, 
 	PurpleHttpConnection *connection;
 	gchar *filename;
 	gchar *url;
+	gchar *topic_and_message_id;
+	gchar *annotation_local_id;
 	
 	filename = (gchar *)purple_image_get_path(image);
 	if (filename != NULL) {
@@ -1871,7 +1920,13 @@ googlechat_conversation_send_image(GoogleChatAccount *ha, const gchar *conv_id, 
 		filename = g_strdup_printf("purple%u.%s", g_random_int(), purple_image_get_extension(image));
 	}
 	
-	url = g_strdup_printf("https://chat.google.com/uploads?group_id=%s", purple_url_encode(conv_id));
+	topic_and_message_id = googlechat_generate_id();
+	annotation_local_id = purple_uuid_random();
+	
+	url = g_strdup_printf("https://chat.google.com/uploads?group_id=%s&topic_id=%s&message_id=%s&otr=false",
+		purple_url_encode(conv_id),
+		purple_url_encode(topic_and_message_id),
+		purple_url_encode(topic_and_message_id));
 	request = purple_http_request_new(url);
 	purple_http_request_set_cookie_jar(request, ha->cookie_jar);
 	purple_http_request_set_method(request, "POST");
@@ -1888,8 +1943,11 @@ googlechat_conversation_send_image(GoogleChatAccount *ha, const gchar *conv_id, 
 	purple_http_request_unref(request);
 	
 	g_dataset_set_data_full(connection, "conv_id", g_strdup(conv_id), g_free);
+	g_dataset_set_data_full(connection, "topic_and_message_id", topic_and_message_id, g_free);
+	g_dataset_set_data_full(connection, "annotation_local_id", annotation_local_id, g_free);
 	g_dataset_set_data_full(connection, "image", image, NULL);
 	
+	g_free(url);
 	g_free(filename);
 }
 

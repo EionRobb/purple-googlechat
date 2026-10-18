@@ -48,7 +48,7 @@ else
     #
     INCLUDES = -I/opt/local/include/protobuf-c  -I/opt/local/include -lz $(OS)
 
-    CC = gcc
+    CC ?= gcc
   else
     INCLUDES = -I/usr/include/protobuf-c
     CC ?= gcc
@@ -58,10 +58,18 @@ else
   endif
 
   ifeq ($(shell $(PKG_CONFIG) --exists libprotobuf-c && echo "true"),true)
-    PROTOBUF_OPTS := $(shell $(PKG_CONFIG) --cflags --libs libprotobuf-c)
+    PROTOBUF_CFLAGS ?= $(shell $(PKG_CONFIG) --cflags libprotobuf-c)
+    PROTOBUF_LIBS ?= $(shell $(PKG_CONFIG) --libs libprotobuf-c)
   else
-    PROTOBUF_OPTS := -I/usr/include/google -I/usr/include/google/protobuf-c -lprotobuf-c
+    PROTOBUF_CFLAGS ?= -I/usr/include/google -I/usr/include/google/protobuf-c
+    PROTOBUF_LIBS ?= -lprotobuf-c
   endif
+  PROTOBUF_OPTS ?= $(PROTOBUF_CFLAGS) $(PROTOBUF_LIBS)
+
+  PURPLE_CFLAGS ?= $(shell $(PKG_CONFIG) purple glib-2.0 json-glib-1.0 zlib --cflags)
+  PURPLE_LIBS ?= $(shell $(PKG_CONFIG) purple glib-2.0 json-glib-1.0 zlib --libs)
+  PURPLE3_CFLAGS ?= $(shell $(PKG_CONFIG) purple-3 glib-2.0 json-glib-1.0 zlib --cflags)
+  PURPLE3_LIBS ?= $(shell $(PKG_CONFIG) purple-3 glib-2.0 json-glib-1.0 zlib --libs)
 
   ifeq ($(shell $(PKG_CONFIG) --exists purple-3 2>/dev/null && echo "true"),)
     ifeq ($(shell $(PKG_CONFIG) --exists purple 2>/dev/null && echo "true"),)
@@ -111,10 +119,10 @@ googlechat.pb-c.c: googlechat.proto
 	$(PROTOC_DESC_CMD) googlechat.proto
 
 libgooglechat.so: $(PURPLE_C_FILES) $(PURPLE_COMPAT_FILES)
-	$(CC) -fPIC $(CFLAGS) -shared -o $@ $^ $(LDFLAGS) $(PROTOBUF_OPTS) `$(PKG_CONFIG) purple glib-2.0 json-glib-1.0 zlib --libs --cflags` $(INCLUDES) -Ipurple2compat -g -ggdb
+	$(CC) -fPIC $(CFLAGS) -shared -o $@ $^ $(LDFLAGS) $(PROTOBUF_OPTS) $(PURPLE_CFLAGS) $(PURPLE_LIBS) $(INCLUDES) -Ipurple2compat -g -ggdb
 
 libgooglechat3.so: $(PURPLE_C_FILES)
-	$(CC) -fPIC $(CFLAGS) -shared -o $@ $^ $(LDFLAGS) $(PROTOBUF_OPTS) `$(PKG_CONFIG) purple-3 glib-2.0 json-glib-1.0 zlib --libs --cflags` $(INCLUDES) -g -ggdb
+	$(CC) -fPIC $(CFLAGS) -shared -o $@ $^ $(LDFLAGS) $(PROTOBUF_OPTS) $(PURPLE3_CFLAGS) $(PURPLE3_LIBS) $(INCLUDES) -g -ggdb
 
 version.o:
 	i686-w64-mingw32-windres -D VERSION_TAG=`date +"%-Y,%-m,%-d,%-H%-M"` version.rc -O coff -o version.o

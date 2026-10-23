@@ -67,7 +67,7 @@ jobs:
         run: |
           make CFLAGS="-O2 -g -pipe -arch ${{ matrix.arch }} -mmacosx-version-min=${{ matrix.deployment_target }}" \
                LDFLAGS="-arch ${{ matrix.arch }} -mmacosx-version-min=${{ matrix.deployment_target }} -Wl,-undefined,dynamic_lookup" \
-               PROTOBUF_OPTS="" \
+               PROTOBUF_OPTS="$(pkg-config --cflags libprotobuf-c)" \
                PURPLE_LIBS="-lz $PROTOBUF_A $JSON_GLIB_A"
           mv libgooglechat.so libgooglechat_${{ matrix.arch }}.so
           file libgooglechat_${{ matrix.arch }}.so

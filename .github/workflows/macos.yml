@@ -37,7 +37,15 @@ jobs:
       - name: install x86_64 deps (MacPorts)
         if: matrix.setup == 'macports'
         run: |
-          sudo port -N install pidgin json-glib protobuf-c pkgconfig || {
+          # libpurple's bundled Zephyr code uses function definitions removed in C23.
+          printf '\nconfigure.cflags-append -std=gnu17\n' | sudo tee -a "$(port file libpurple)"
+          sudo port -N -s install libpurple || {
+            sudo find /opt/local/var/macports/logs \
+              -path '*/libpurple/main.log' \
+              -exec tail -n 200 {} \;
+            exit 1
+          }
+          sudo port -N install json-glib protobuf-c pkgconfig || {
             sudo find /opt/local/var/macports/logs \
               -path '*/libpurple/main.log' \
               -exec tail -n 200 {} \;

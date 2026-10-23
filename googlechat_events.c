@@ -526,6 +526,30 @@ googlechat_format_type_to_string(FormatMetadata__FormatType format_type, gboolea
 	}
 }
 
+static gboolean
+googlechat_is_tenor_url_annotation(Annotation *annotation)
+{
+	if (annotation == NULL || annotation->url_metadata == NULL) {
+		return FALSE;
+	}
+	UrlMetadata *url_metadata = annotation->url_metadata;
+	if (url_metadata->domain && (g_strcmp0(url_metadata->domain, "media.tenor.com") == 0 ||
+	    g_str_has_suffix(url_metadata->domain, ".tenor.com") ||
+	    g_strcmp0(url_metadata->domain, "tenor.com") == 0)) {
+		return TRUE;
+	}
+	if (url_metadata->url && url_metadata->url->url) {
+		const gchar *url_str = url_metadata->url->url;
+		if (strstr(url_str, "media.tenor.com/") != NULL || g_str_has_suffix(url_str, ".gif")) {
+			return TRUE;
+		}
+	}
+	if (url_metadata->mime_type && g_str_equal(url_metadata->mime_type, "image/gif")) {
+		return TRUE;
+	}
+	return FALSE;
+}
+
 void
 googlechat_received_message_event(PurpleConnection *pc, Event *event)
 {
@@ -625,6 +649,10 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 	GList *format_annotations = NULL;
 	for (i = 0; i < message->n_annotations; i++) {
 		Annotation *annotation = message->annotations[i];
+		if (annotation->length == 0 && googlechat_is_tenor_url_annotation(annotation)) {
+			// Skip formatting in message body; will be downloaded and displayed inline as an image
+			continue;
+		}
 		if (annotation->type == ANNOTATION_TYPE__FORMAT_DATA || annotation->type == ANNOTATION_TYPE__URL) {
 			format_annotations = g_list_prepend(format_annotations, annotation);
 		}
@@ -938,6 +966,12 @@ googlechat_received_message_event(PurpleConnection *pc, Event *event)
 			if (url_metadata->image_url) {
 				image_url = g_strdup(url_metadata->image_url);
 				url = url_metadata->url ? url_metadata->url->url : url_metadata->image_url;
+			} else if (url_metadata->url && url_metadata->url->url) {
+				const gchar *raw_url = url_metadata->url->url;
+				if (googlechat_is_tenor_url_annotation(annotation)) {
+					image_url = g_strdup(raw_url);
+					url = raw_url;
+				}
 			}
 		}
 		

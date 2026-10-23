@@ -14,9 +14,11 @@ jobs:
           - arch: arm64
             os: macos-latest
             setup: brew
+            deployment_target: '11.0'
           - arch: x86_64
             os: macos-15-intel
             setup: macports
+            deployment_target: '10.13'
 
     steps:
       - uses: actions/checkout@v4
@@ -35,13 +37,20 @@ jobs:
       - name: install x86_64 deps (MacPorts)
         if: matrix.setup == 'macports'
         run: |
-          sudo port -N install pidgin json-glib protobuf-c pkgconfig
+          sudo port -N install pidgin json-glib protobuf-c pkgconfig || {
+            sudo find /opt/local/var/macports/logs \
+              -path '*/libpurple/main.log' \
+              -exec tail -n 200 {} \;
+            exit 1
+          }
           echo "PKG_CONFIG_PATH=/opt/local/lib/pkgconfig" >> $GITHUB_ENV
           echo "PROTOBUF_A=/opt/local/lib/libprotobuf-c.a" >> $GITHUB_ENV
 
       - name: build static json-glib
         run: |
-          python3 -m pip install --upgrade meson ninja
+          python3 -m venv "$RUNNER_TEMP/build-tools"
+          source "$RUNNER_TEMP/build-tools/bin/activate"
+          python -m pip install --upgrade meson ninja
           git clone --depth 1 --branch 1.10.6 https://gitlab.gnome.org/GNOME/json-glib.git json-glib-src
           meson setup json-glib-src/build json-glib-src \
             --default-library=static \
@@ -49,15 +58,15 @@ jobs:
             -Dtests=false \
             -Ddocumentation=disabled \
             -Dnls=disabled \
-            -Dc_args="-arch ${{ matrix.arch }} -mmacosx-version-min=10.13" \
-            -Dc_link_args="-arch ${{ matrix.arch }} -mmacosx-version-min=10.13"
+            -Dc_args="-arch ${{ matrix.arch }} -mmacosx-version-min=${{ matrix.deployment_target }}" \
+            -Dc_link_args="-arch ${{ matrix.arch }} -mmacosx-version-min=${{ matrix.deployment_target }}"
           ninja -C json-glib-src/build
           echo "JSON_GLIB_A=$PWD/json-glib-src/build/json-glib/libjson-glib-1.0.a" >> $GITHUB_ENV
 
       - name: build slice
         run: |
-          make CFLAGS="-O2 -g -pipe -arch ${{ matrix.arch }} -mmacosx-version-min=10.13" \
-               LDFLAGS="-arch ${{ matrix.arch }} -mmacosx-version-min=10.13 -Wl,-undefined,dynamic_lookup" \
+          make CFLAGS="-O2 -g -pipe -arch ${{ matrix.arch }} -mmacosx-version-min=${{ matrix.deployment_target }}" \
+               LDFLAGS="-arch ${{ matrix.arch }} -mmacosx-version-min=${{ matrix.deployment_target }} -Wl,-undefined,dynamic_lookup" \
                PROTOBUF_OPTS="" \
                PURPLE_LIBS="-lz $PROTOBUF_A $JSON_GLIB_A"
           mv libgooglechat.so libgooglechat_${{ matrix.arch }}.so

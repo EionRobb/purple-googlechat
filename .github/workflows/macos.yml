@@ -39,7 +39,7 @@ jobs:
         run: |
           # libpurple's bundled Zephyr code uses function definitions removed in C23.
           printf '\nconfigure.cflags-append -std=gnu17\n' | sudo tee -a "$(port file libpurple)"
-          sudo port -N -s install libpurple || {
+          sudo port -N install libpurple || {
             sudo find /opt/local/var/macports/logs \
               -path '*/libpurple/main.log' \
               -exec tail -n 200 {} \;

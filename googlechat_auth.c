@@ -497,28 +497,40 @@ googlechat_auth_refresh_xsrf_token_cb(PurpleHttpConnection *http_conn, PurpleHtt
 	obj = json_decode_object(wiz_data, -1);
 
 	if (obj) {
-		if (ha->xsrf_token) {
-			g_free(ha->xsrf_token);
-			ha->xsrf_token = NULL;
-		}
-
 		const gchar *signin_ui_type = json_object_get_string_member(obj, "qwAQke");
 		if (purple_strequal(signin_ui_type, "AccountsSignInUi")) {
-			purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
-			_("Invalid response"));
-		} else {
-			gchar *xsrf_token = g_strdup(json_object_get_string_member(obj, "SMqcke"));
-			ha->xsrf_token = xsrf_token;
+			purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED,
+				_("Authentication failed (cookies expired)"));
+			json_object_unref(obj);
+			g_free(wiz_data);
+			return;
 		}
+
+		gchar *xsrf_token = g_strdup(json_object_get_string_member(obj, "SMqcke"));
+		if (xsrf_token == NULL || *xsrf_token == '\0') {
+			g_free(xsrf_token);
+			purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED,
+				_("Missing XSRF token in response"));
+			json_object_unref(obj);
+			g_free(wiz_data);
+			return;
+		}
+		if (ha->xsrf_token) {
+			g_free(ha->xsrf_token);
+		}
+		ha->xsrf_token = xsrf_token;
 
 		const gchar *sapisid_cookie = json_object_get_string_member(obj, "WZsZ1e");
 		if (sapisid_cookie && *sapisid_cookie) {
 			// set the sapisid cookie
 			purple_http_cookie_jar_set(ha->cookie_jar, "SAPISID", sapisid_cookie);
 		}
+
 	} else {
 		purple_connection_error(ha->pc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
 			_("Invalid response"));
+		g_free(wiz_data);
+		return;
 	}
 
 	json_object_unref(obj);
@@ -555,6 +567,7 @@ googlechat_auth_refresh_xsrf_token(GoogleChatAccount *ha)
 	purple_http_request_header_set(request, "Referer", "https://mail.google.com/");
 	purple_http_request_header_set_printf(request, "User-Agent", GOOGLECHAT_USER_AGENT);
 	purple_http_request_set_max_len(request, GOOGLECHAT_MAX_HTTP_RESPONSE_SIZE);
+	purple_http_request_set_keepalive_pool(request, ha->channel_keepalive_pool);
 
 	purple_http_request(pc, request, googlechat_auth_refresh_xsrf_token_cb, ha);
 	purple_http_request_unref(request);

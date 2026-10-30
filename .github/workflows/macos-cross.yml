@@ -101,6 +101,7 @@ jobs:
           [binaries]
           c = '$cc'
           cpp = '$OSXCROSS/bin/$triplet-clang++'
+          objc = '$cc'
           ar = '$OSXCROSS/bin/$triplet-ar'
           strip = '$OSXCROSS/bin/$triplet-strip'
           pkg-config = '/usr/bin/pkg-config'

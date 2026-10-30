@@ -69,31 +69,90 @@ jobs:
           x86_64-apple-${DARWIN_TARGET}-clang -O2 -c protobuf-c-src/protobuf-c/protobuf-c.c -Iprotobuf-c-src -o protobuf-c_x86_64.o
           $OSXCROSS/bin/x86_64-apple-${DARWIN_TARGET}-ar rcs libprotobuf-c_x86_64.a protobuf-c_x86_64.o
 
+      - name: Cross-build macOS GLib and static json-glib
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --user meson ninja
+          export PATH="$HOME/.local/bin:$PATH"
+          # Host Linux pkg-config files must never be used to link Mach-O binaries.
+          git clone -q --depth 1 --branch 2.80.5 https://gitlab.gnome.org/GNOME/glib.git glib-src
+          git clone -q --depth 1 --branch 1.10.8 https://gitlab.gnome.org/GNOME/json-glib.git json-glib-src
+          git clone -q --depth 1 --branch pcre2-10.44 https://github.com/PCRE2Project/pcre2.git pcre2-src
+          curl -fsSL https://github.com/libffi/libffi/releases/download/v3.4.6/libffi-3.4.6.tar.gz | tar xz
+          for arch in x86_64 arm64; do
+            prefix="$PWD/macos-deps/$arch"
+            mkdir -p "$prefix/lib/pkgconfig"
+            triplet="$arch-apple-$DARWIN_TARGET"
+            cc="$OSXCROSS/bin/$triplet-clang"
+            # Both dependency projects are built for the same Darwin target.
+            cmake -S pcre2-src -B "pcre2-$arch" \
+              -DCMAKE_SYSTEM_NAME=Darwin \
+              -DCMAKE_C_COMPILER="$cc" \
+              -DCMAKE_INSTALL_PREFIX="$prefix" \
+              -DBUILD_SHARED_LIBS=OFF -DPCRE2_BUILD_PCRE2_8=ON \
+              -DPCRE2_BUILD_PCRE2_16=OFF -DPCRE2_BUILD_PCRE2_32=OFF \
+              -DPCRE2_BUILD_TESTS=OFF -DPCRE2_BUILD_PCRE2GREP=OFF
+            cmake --build "pcre2-$arch" --parallel 2
+            cmake --install "pcre2-$arch"
+            (cd "libffi-3.4.6" && ./configure --host="$triplet" --prefix="$prefix" \
+              CC="$cc" --disable-shared --enable-static && make -j2 && make install)
+            cat > "cross-$arch.ini" <<EOF
+          [binaries]
+          c = '$cc'
+          cpp = '$OSXCROSS/bin/$triplet-clang++'
+          ar = '$OSXCROSS/bin/$triplet-ar'
+          strip = '$OSXCROSS/bin/$triplet-strip'
+          pkg-config = '/usr/bin/pkg-config'
+          [properties]
+          pkg_config_libdir = '$prefix/lib/pkgconfig:$prefix/lib64/pkgconfig'
+          [host_machine]
+          system = 'darwin'
+          cpu_family = '$([ "$arch" = arm64 ] && echo aarch64 || echo x86_64)'
+          cpu = '$arch'
+          endian = 'little'
+          EOF
+            export PKG_CONFIG_LIBDIR="$prefix/lib/pkgconfig:$prefix/lib64/pkgconfig"
+            export PKG_CONFIG_SYSROOT_DIR=""
+            meson setup "glib-$arch" glib-src --cross-file "cross-$arch.ini" \
+              --prefix="$prefix" --default-library=shared \
+              -Dtests=false -Dinstalled_tests=false -Ddocumentation=false \
+              -Dintrospection=disabled -Dlibmount=disabled -Dnls=disabled
+            meson compile -C "glib-$arch"
+            meson install -C "glib-$arch"
+            meson setup "json-$arch" json-glib-src --cross-file "cross-$arch.ini" \
+              --prefix="$prefix" --default-library=static \
+              -Dintrospection=disabled -Dtests=false -Ddocumentation=disabled -Dnls=disabled
+            meson compile -C "json-$arch"
+            meson install -C "json-$arch"
+            test -s "$prefix/lib/libjson-glib-1.0.a"
+          done
+
       - name: Build plugin slices
         run: |
-          GLIB_CFLAGS=$(pkg-config --cflags glib-2.0 json-glib-1.0 purple)
+          GLIB_CFLAGS=$(pkg-config --cflags purple)
           COMMON_LDFLAGS="-Wl,-undefined,dynamic_lookup -Wl,-rpath,/opt/homebrew/lib -Wl,-rpath,/usr/local/lib -Wl,-rpath,/opt/local/lib"
 
           # 1. arm64 slice
           rm -f libgooglechat.so
           make CC=arm64-apple-${DARWIN_TARGET}-clang \
-               CFLAGS="-O2 -g -pipe $GLIB_CFLAGS -I$PWD/protobuf-c-src" \
+               CFLAGS="-O2 -g -pipe $GLIB_CFLAGS -I$PWD/macos-deps/arm64/include/glib-2.0 -I$PWD/macos-deps/arm64/lib/glib-2.0/include -I$PWD/macos-deps/arm64/include/json-glib-1.0 -I$PWD/protobuf-c-src" \
                LDFLAGS="$COMMON_LDFLAGS" \
                PURPLE_CFLAGS="$GLIB_CFLAGS" \
                PROTOBUF_OPTS="" \
                INCLUDES="" \
-               PURPLE_LIBS="-lz $PWD/libprotobuf-c_arm64.a"
+               PURPLE_LIBS="$PWD/macos-deps/arm64/lib/libjson-glib-1.0.a -lz $PWD/libprotobuf-c_arm64.a"
           mv libgooglechat.so libgooglechat_arm64.so
 
           # 2. x86_64 slice
           rm -f libgooglechat.so
           make CC=x86_64-apple-${DARWIN_TARGET}-clang \
-               CFLAGS="-O2 -g -pipe $GLIB_CFLAGS -I$PWD/protobuf-c-src" \
+               CFLAGS="-O2 -g -pipe $GLIB_CFLAGS -I$PWD/macos-deps/x86_64/include/glib-2.0 -I$PWD/macos-deps/x86_64/lib/glib-2.0/include -I$PWD/macos-deps/x86_64/include/json-glib-1.0 -I$PWD/protobuf-c-src" \
                LDFLAGS="$COMMON_LDFLAGS" \
                PURPLE_CFLAGS="$GLIB_CFLAGS" \
                PROTOBUF_OPTS="" \
                INCLUDES="" \
-               PURPLE_LIBS="-lz $PWD/libprotobuf-c_x86_64.a"
+               PURPLE_LIBS="$PWD/macos-deps/x86_64/lib/libjson-glib-1.0.a -lz $PWD/libprotobuf-c_x86_64.a"
           mv libgooglechat.so libgooglechat_x86_64.so
 
       - name: Assemble fat binary

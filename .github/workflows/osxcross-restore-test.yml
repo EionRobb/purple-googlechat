@@ -1,0 +1,48 @@
+name: Test released osxcross on purple-googlechat
+on:
+  push:
+    branches:
+      - test/osxcross-restore-v1
+  workflow_dispatch:
+jobs:
+  macos-cross:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install host LLVM linker and build prerequisites
+        shell: bash
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends clang lld llvm-dev make pkg-config protobuf-c-compiler
+          if ! command -v ld64.lld >/dev/null 2>&1; then
+            linker="$(find /usr/bin /usr/lib/llvm-*/bin -maxdepth 1 -name 'ld64.lld*' -print 2>/dev/null | sort -V | tail -n 1)"
+            test -n "$linker"
+            sudo ln -s "$linker" /usr/local/bin/ld64.lld
+          fi
+      - name: Restore released SDK-free osxcross toolchain
+        uses: EionRobb/libpurple-build-actions/restore-osxcross@main
+        with:
+          release-tag: osxcross-llvm-ubuntu24-v1
+          sdk-url: https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX11.3.sdk.tar.xz
+          sdk-sha256: cd4f08a75577145b8f05245a2975f7c81401d75e9535dcffbb879ee1deefcbf4
+      - name: Verify both restored target compilers
+        shell: bash
+        run: |
+          set -euo pipefail
+          for arch in x86_64 arm64; do
+            cc="/opt/osxcross/bin/${arch}-apple-${DARWIN_TARGET}-clang"
+            printf 'int main(void) { return 0; }\n' | "$cc" -x c - -o "$RUNNER_TEMP/googlechat-smoke-$arch"
+            file "$RUNNER_TEMP/googlechat-smoke-$arch" | grep -q 'Mach-O'
+          done
+      - name: Attempt real purple-googlechat cross-build
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Deliberately do not use Linux pkg-config libraries as macOS dependencies.
+          # This is the first integration diagnostic; missing target libraries/headers
+          # should fail clearly rather than silently linking host libraries.
+          make CC="/opt/osxcross/bin/x86_64-apple-${DARWIN_TARGET}-clang" \
+            PKG_CONFIG=/bin/false \
+            PROTOBUF_OPTS= PURPLE_CFLAGS= PURPLE_LIBS= \
+            CFLAGS="-O2 -fPIC" LDFLAGS="-Wl,-undefined,dynamic_lookup"

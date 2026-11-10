@@ -42,7 +42,7 @@ jobs:
           # Deliberately do not use Linux pkg-config libraries as macOS dependencies.
           # This is the first integration diagnostic; missing target libraries/headers
           # should fail clearly rather than silently linking host libraries.
-          make CC="/opt/osxcross/bin/x86_64-apple-${DARWIN_TARGET}-clang" \
+          make libgooglechat.so CC="/opt/osxcross/bin/x86_64-apple-${DARWIN_TARGET}-clang" \
             PKG_CONFIG=/bin/false \
             PROTOBUF_OPTS= PURPLE_CFLAGS= PURPLE_LIBS= \
             CFLAGS="-O2 -fPIC" LDFLAGS="-Wl,-undefined,dynamic_lookup"

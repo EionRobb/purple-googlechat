@@ -50,7 +50,7 @@ else
 
     CC ?= gcc
   else
-    INCLUDES = -I/usr/include/protobuf-c
+    INCLUDES =
     CC ?= gcc
 	ifeq ($(UNAME_S), Linux)
 		INCLUDES += -ldl

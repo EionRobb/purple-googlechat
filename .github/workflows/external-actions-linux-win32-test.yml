@@ -1,0 +1,41 @@
+name: Trial external libpurple actions (Linux and Win32)
+on:
+  push:
+    branches:
+      - test/external-actions-linux-win32
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EionRobb/libpurple-build-actions/setup-linux@main
+      - name: Install Google Chat dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y libjson-glib-dev libprotobuf-c-dev protobuf-c-compiler
+      - name: Compile Linux plugin
+        run: |
+          make libgooglechat.so
+          test -s libgooglechat.so
+          file libgooglechat.so
+  win32:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EionRobb/libpurple-build-actions/setup-win32@main
+        with:
+          pidgin-version: '2.14.1'
+      - name: Install Google Chat code generator and resource compiler
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y protobuf-c-compiler binutils-mingw-w64-i686
+      - name: Check SDK and compile Windows plugin
+        run: |
+          test -d "$PIDGIN_TREE_TOP/libpurple"
+          test -d "$WIN32_DEV_TOP"
+          make libgooglechat.dll
+          test -s libgooglechat.dll
+          file libgooglechat.dll
